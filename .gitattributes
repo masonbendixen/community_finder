@@ -1,0 +1,8 @@
+*.md text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+
+# If you store big media, consider Git LFS:
+# *.png filter=lfs diff=lfs merge=lfs -text
+# *.jpg filter=lfs diff=lfs merge=lfs -text
+# *.mp4 filter=lfs diff=lfs merge=lfs -text

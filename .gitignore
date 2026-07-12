@@ -1,0 +1,19 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Obsidian device-specific or transient files
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/appearance.json
+.obsidian/app.json
+.obsidian/cache/
+.obsidian/plugins/obsidian-git/*-log.json
+
+# Obsidian trash (if enabled)
+.obsidian/trash/
+.trash/
+
+# Optional: if you want plugin *code* but not their caches, keep plugins/ and remove cache lines above.
+# Keep snippets, themes, and plugin configs versioned:
+# (snippets/, themes/, plugins/*/data.json are useful to sync settings)

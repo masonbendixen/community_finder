@@ -128,3 +128,8 @@ Thumbs.db
 	- git clone https://github.com/masonbendixen/community_finder.git
 	- Turn on community plugins
 	- Did it work? Yes it did.
+- Basic instructions for doing something in Claude
+	- CTRL+P is the command palette and then you can type the name of an Obsidian command
+	- CTRL+P QuickAdd: Run
+	- Claude
+	- Name of note

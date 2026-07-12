@@ -125,6 +125,6 @@ Thumbs.db
 - Adding Levi
 	- Install GIT
 	- Install Obsidian
-	- git clone https://github.com/masonbendixen/machine_learning.git
+	- git clone https://github.com/masonbendixen/community_finder.git
 	- Turn on community plugins
 	- Did it work? Yes it did.

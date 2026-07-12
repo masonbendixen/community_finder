@@ -116,9 +116,15 @@ Thumbs.db
 	- git remote add origin https://github.com/masonbendixen/community_finder.git
 	- git push -u origin master
 - GIT Obsidian Plug In
-	- Settings → Community plugins → install Obsidian Git.
+	- Settings → Community plugins → install Git.
 	- Configure:
 		- Auto commit-and-sync interval (minutes): 5
 		- Auto commit-and-sync after stopping file edits: Enable
 	    - Commit message on auto commit-and-sync: `vault: {date}`.
 	    - Pull on startup: Enabled
+- Adding Levi
+	- Install GIT
+	- Install Obsidian
+	- git clone https://github.com/masonbendixen/machine_learning.git
+	- Turn on community plugins
+	- Did it work? Yes it did.

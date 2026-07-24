@@ -381,8 +381,9 @@ Please answer inline (house style). Recommendations included so you can just say
 10. **test_helper TUI.** Include a `communityfinder_test_helper` (ftxui/replxx REPL) from the start, or defer? *(Rec: defer — the admin CRUD editor covers manual data needs; keeps two Conan deps out.)*
 	- Mason- Actually, I'd like it from the start. It's really useful to be able to have commands to simulate scenarios that are hard to engineer even with database access (ie. create an expired entry, etc.)
 11. **Collaborators.** Will the friends work in the CF repo itself (affects Q2, branch protection at Phase 15, and a LICENSE/contribution note), or only on honuware?
-	- Mason
+	- Mason- Yes they will be working on the repo.
 12. **First job catalog scope.** Beyond `archive_past_events` + `notify_admin_alerts`, should Phase 12 mirror any of knottyyoga's generic jobs (e.g. token cleanup via `TokenCleanupHelper`)? *(Rec: yes — adopt the generic hygiene jobs from knottyyoga's catalog wholesale.)*
+	- Mason- I'll go with your recommendation.
 
 # Suggested Additions (things a public community site will want that weren't on your list)
 

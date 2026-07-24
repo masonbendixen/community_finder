@@ -46,7 +46,12 @@ For now, I want to focus on standing up a minimal server that we can start addin
 - Let's list the work that needs to be done to stand up a very basic version of the site. Please help think of things that need to be done.
 	- I'd like an MVP and then steps to flesh things out a bit.
 	- Start with a basic web server that takes a few endpoint calls, runs gtest, incorporates conan, builds in Visual Studio with CMakeSettings.json, and incorporates the server components.
-	- Add a basic client that 
+	- Add a basic client that uses angular, has a basic server access, has test mocks of server access, unit tests, and makes a simple, dummy call to the server that gets shown
+	- Then add the account creation and user information endpoints and support in the server with tests
+	- Then add the account creation and user profile support with editing in the app using the web components
+	- Then add the database CRUD support endpoints on the server with tests
+	- Then add the database CRUD support in the client in an admin dropdown with all the CRUD support in knottyyoga
+	- Add an admin portal with the neede
 
 # Current State & Inherited Context
 

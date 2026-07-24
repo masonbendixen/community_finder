@@ -373,10 +373,15 @@ Please answer inline (house style). Recommendations included so you can just say
 6. **Dev environment.** Confirm: share the knottyyoga Postgres container (host port **5432** — compose is authoritative; the 5400 in knottyyoga's docs is stale), CF server on **18081**, `ng serve --port 4201` for side-by-side. *(Rec: yes to all.)*
 	- Mason- I'll go with your recommendation.
 7. **Public self-registration at launch.** The endpoints exist regardless; do we show Register in the UI from day one, or hide it (effectively invitation-only) until user-submitted events arrive? *(Rec: hide the link initially; flip it on with the user-submission feature.)*
+	- Mason- Let's allow register for non-admin accounts now.
 8. **Multi-community details (D8).** (a) Confirm communities-as-tenants (Model C, one CloudFront distribution per community, one shared bundle). (b) Day-one site-meta field list *(rec: display name, logo, tagline, about, contact email, social links; add city/region when community #2 exists)*. (c) How per-community meta gets edited *(rec: a small "Site settings" admin page in Phase 14 — generic CRUD over `config_secrets` is awkward with at-rest encryption; until then, values are seeded/set via the helper)*.
+	- Mason- Yes, I want communities as tenants. We should allow admin editing of the tenant info.
 9. **Deploy timing + domain.** CF can deploy single-community fixed-mode any time after Phase 11; control mode only when community #2 onboards. When do you want the domain name bought (it feeds `website_address` prod values and SES setup)?
+	- Mason- I'm leaning towards gay.seattle.antifreeze.com but I'm not sure yet. I need a bit more time to think about this.
 10. **test_helper TUI.** Include a `communityfinder_test_helper` (ftxui/replxx REPL) from the start, or defer? *(Rec: defer — the admin CRUD editor covers manual data needs; keeps two Conan deps out.)*
+	- Mason- Actually, I'd like it from the start. It's really useful to be able to have commands to simulate scenarios that are hard to engineer even with database access (ie. create an expired entry, etc.)
 11. **Collaborators.** Will the friends work in the CF repo itself (affects Q2, branch protection at Phase 15, and a LICENSE/contribution note), or only on honuware?
+	- Mason
 12. **First job catalog scope.** Beyond `archive_past_events` + `notify_admin_alerts`, should Phase 12 mirror any of knottyyoga's generic jobs (e.g. token cleanup via `TokenCleanupHelper`)? *(Rec: yes — adopt the generic hygiene jobs from knottyyoga's catalog wholesale.)*
 
 # Suggested Additions (things a public community site will want that weren't on your list)

@@ -21,7 +21,13 @@ For now, I want to focus on standing up a minimal server that we can start addin
 
 # Mason Update
 - Please update the document based on the notes in this section and then remove this section.
-- Please update the document based on:
+- Please use the code base at: C:\Users\mason\source\repos\knottyyoga as a reference for a project using the server and client components as well as a lot of infrastructure.
+- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Converting the server to a multi tenant Saas architecture.md
+- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Splitting the server up into components.md
+	- Please use C:\Users\mason\source\repos\server_components - as the code base used to componentize the server components that we should incorporate into this project.
+	- Please update this document to use these server components to add to this project these features. Use the knottyyoga and server_components code bases as examples of how to add:
+		- Account creation with email verification
+		- Login with persistent logi
 
 # Current State & Inherited Context
 

@@ -42,7 +42,11 @@ For now, I want to focus on standing up a minimal server that we can start addin
 		- The ability to fetch the roles and permissions that this logged in user has
 - Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Converting the server to a multi tenant Saas architecture.md
 	- Please add anything into this document that needs to be done to support a multi tennant architecture. I would like to have multiple client front ends leveraging the same server to target different communities.
-	- 
+	- Let's be sure to extract the Name of the site and various meta aspects as fields in the database that get used to adapt in the front end.
+- Let's list the work that needs to be done to stand up a very basic version of the site. Please help think of things that need to be done.
+	- I'd like an MVP and then steps to flesh things out a bit.
+	- Start with a basic web server that takes a few endpoint calls, runs gtest, incorporates conan, builds in Visual Studio with CMakeSettings.json, and incorporates the server components.
+	- Add a basic client that 
 
 # Current State & Inherited Context
 

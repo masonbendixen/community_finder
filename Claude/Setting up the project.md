@@ -51,7 +51,9 @@ For now, I want to focus on standing up a minimal server that we can start addin
 	- Then add the account creation and user profile support with editing in the app using the web components
 	- Then add the database CRUD support endpoints on the server with tests
 	- Then add the database CRUD support in the client in an admin dropdown with all the CRUD support in knottyyoga
-	- Add an admin portal with the neede
+	- Add the server support to be able to view and edit roles and permissions for users with the right permissions
+	- Add an admin portal with CRUD support for roles and permissions and the ability to assign roles to users (full CRUD support for that)
+	- Please create numbered phases with checkboxes to implement these things. Please add an open questions section to discuss anything and feel free to suggest additional things that you think we should add.
 
 # Current State & Inherited Context
 

@@ -36,7 +36,13 @@ For now, I want to focus on standing up a minimal server that we can start addin
 	- Please use C:\Users\mason\source\repos\honuware-web-components - as the code base used to componentize the front end angular components that we should incorporate into this project.
 	- Please update this document to use these web_components code bases as examples of how to add:
 		- Creation of a server access to call the server for AJAX Json calls
-		- A local only test mode that mocks the server access with a local test implementation of server ac
+		- A local only test mode that mocks the server access with a local test implementation of server access
+		- The various UI pathways to do the server components user scenarios listed above
+		- Support for the CRUD style database editor for users with admin permissions
+		- The ability to fetch the roles and permissions that this logged in user has
+- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Converting the server to a multi tenant Saas architecture.md
+	- Please add anything into this document that needs to be done to support a multi tennant architecture. I would like to have multiple client front ends leveraging the same server to target different communities.
+	- 
 
 # Current State & Inherited Context
 

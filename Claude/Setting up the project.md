@@ -19,6 +19,10 @@ The basic idea of the website is that we will build out a gay community site. We
 
 For now, I want to focus on standing up a minimal server that we can start adding functionality to.
 
+# Mason Update
+- Please update the document based on the notes in this section and then remove this section.
+- Please update the document based on:
+
 # Current State & Inherited Context
 
 > Conventions carried over from [[Splitting the server up into components]]: checkboxes on work items (checked off as implemented), numbered subsections inside each phase, lower layers first, tests for everything testable, you build/run tests and handle git yourself, and open questions live in this document rather than at the prompt.

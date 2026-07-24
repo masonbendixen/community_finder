@@ -27,7 +27,16 @@ For now, I want to focus on standing up a minimal server that we can start addin
 	- Please use C:\Users\mason\source\repos\server_components - as the code base used to componentize the server components that we should incorporate into this project.
 	- Please update this document to use these server components to add to this project these features. Use the knottyyoga and server_components code bases as examples of how to add:
 		- Account creation with email verification
-		- Login with persistent logi
+		- Login with persistent login with session and device tokens
+		- A user portal
+		- User photo support
+		- The ability to view account information and change first name, last name, email, photo
+		- Show their name and a photo in the upper right corner when logged in like the knottyyoga app
+- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Componentizing the frontend.md
+	- Please use C:\Users\mason\source\repos\honuware-web-components - as the code base used to componentize the front end angular components that we should incorporate into this project.
+	- Please update this document to use these web_components code bases as examples of how to add:
+		- Creation of a server access to call the server for AJAX Json calls
+		- A local only test mode that mocks the server access with a local test implementation of server ac
 
 # Current State & Inherited Context
 

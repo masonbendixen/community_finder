@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Active
 Authors: Mason Bendixen
-Last Updated: 7/11/2026
-Version: 0.1
+Last Updated: 7/24/2026
+Version: 0.2
 tags:
 ---
 # Overview
@@ -19,148 +19,132 @@ The basic idea of the website is that we will build out a gay community site. We
 
 For now, I want to focus on standing up a minimal server that we can start adding functionality to.
 
-# Mason Update
-- Please update the document based on the notes in this section and then remove this section.
-- Please use the code base at: C:\Users\mason\source\repos\knottyyoga as a reference for a project using the server and client components as well as a lot of infrastructure.
-- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Converting the server to a multi tenant Saas architecture.md
-- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Splitting the server up into components.md
-	- Please use C:\Users\mason\source\repos\server_components - as the code base used to componentize the server components that we should incorporate into this project.
-	- Please update this document to use these server components to add to this project these features. Use the knottyyoga and server_components code bases as examples of how to add:
-		- Account creation with email verification
-		- Login with persistent login with session and device tokens
-		- A user portal
-		- User photo support
-		- The ability to view account information and change first name, last name, email, photo
-		- Show their name and a photo in the upper right corner when logged in like the knottyyoga app
-- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Componentizing the frontend.md
-	- Please use C:\Users\mason\source\repos\honuware-web-components - as the code base used to componentize the front end angular components that we should incorporate into this project.
-	- Please update this document to use these web_components code bases as examples of how to add:
-		- Creation of a server access to call the server for AJAX Json calls
-		- A local only test mode that mocks the server access with a local test implementation of server access
-		- The various UI pathways to do the server components user scenarios listed above
-		- Support for the CRUD style database editor for users with admin permissions
-		- The ability to fetch the roles and permissions that this logged in user has
-- Please update the document based on: C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Converting the server to a multi tenant Saas architecture.md
-	- Please add anything into this document that needs to be done to support a multi tennant architecture. I would like to have multiple client front ends leveraging the same server to target different communities.
-	- Let's be sure to extract the Name of the site and various meta aspects as fields in the database that get used to adapt in the front end.
-- Let's list the work that needs to be done to stand up a very basic version of the site. Please help think of things that need to be done.
-	- I'd like an MVP and then steps to flesh things out a bit.
-	- Start with a basic web server that takes a few endpoint calls, runs gtest, incorporates conan, builds in Visual Studio with CMakeSettings.json, and incorporates the server components.
-	- Add a basic client that uses angular, has a basic server access, has test mocks of server access, unit tests, and makes a simple, dummy call to the server that gets shown
-	- Then add the account creation and user information endpoints and support in the server with tests
-	- Then add the account creation and user profile support with editing in the app using the web components
-	- Then add the database CRUD support endpoints on the server with tests
-	- Then add the database CRUD support in the client in an admin dropdown with all the CRUD support in knottyyoga
-	- Add the server support to be able to view and edit roles and permissions for users with the right permissions
-	- Add an admin portal with CRUD support for roles and permissions and the ability to assign roles to users (full CRUD support for that)
-	- Please create numbered phases with checkboxes to implement these things. Please add an open questions section to discuss anything and feel free to suggest additional things that you think we should add.
+# Current State & Inherited Context (re-grounded 7/24/2026)
 
-# Current State & Inherited Context
+> Conventions: checkboxes checked off as implemented; numbered subsections inside each phase; lower layers first; tests for everything testable; open questions live in this document. **Division of labor (adopted from the tenancy project, 7/21/2026): Claude builds and runs all C++ suites in the Linux docker clients as the per-slice gate; Mason does occasional Windows/VS verification and ALL git writes.** CommunityFinder gets its own docker client in Phase 1 to join that workflow.
 
-> Conventions carried over from [[Splitting the server up into components]]: checkboxes on work items (checked off as implemented), numbered subsections inside each phase, lower layers first, tests for everything testable, you build/run tests and handle git yourself, and open questions live in this document rather than at the prompt.
+## What changed since v0.1 of this document (7/11 → 7/24)
 
-## Where the honuware extraction stands (as of 7/11/2026)
+- **The extraction is done.** [[Splitting the server up into components]] Phases 3–4 completed: the server components live standalone at **`github.com/honuware/server_components`** (checkout `C:\Users\mason\source\repos\server_components`), GitHub Actions CI green (Linux `gcc:14.2.0` + Postgres 13.1 service, test-count floor). knottyyoga consumes honuware purely via **CMake FetchContent pinned to a SHA** (currently `8df437d6d8533b92d68ee54205be613e51202f03`); its local `components/` tree is deleted; cross-repo co-dev runs on `FETCHCONTENT_SOURCE_DIR_HONUWARE`. The splitting plan's Phase 5 example server stays demoted — **CommunityFinder is the proving consumer**. Its Phase 4.4 (Conan packaging) remains deferred.
+- **Multi-tenancy landed in honuware** ([[Converting the server to a multi tenant Saas architecture]] Phases 0–7 complete 7/21–7/23; only Phase 8, the AWS wiring, is open): `tenants` control DB (`honuware_control`) + `ControlDbTenantResolver`; **`FixedTenantResolver`** for zero-ceremony single-tenant consumers (its header comment names CommunityFinder as exactly this case); `TenantResolutionGuard` middleware + `X-Honuware-Site`; per-tenant secrets/mail/resources; `ProvisionTenant` + `--create_tenant` + `MigrateAllTenants`; multi-tenant scheduler fan-out; **`GET /api/site_info`** + knottyyoga's `SiteConfigService` pattern. The `HONUWARE_DB_*` and `HONUWARE_VERSION` renames are done (legacy `KNOTTYYOGA_*` fallbacks remain honored).
+- **The frontend components shipped** ([[Componentizing the frontend]] Phases 1–4 complete): **`@honuware/ui@0.1.1`** published to public npm with provenance (repo `github.com/honuware/web_components`, checkout `C:\Users\mason\source\repos\honuware-web-components`), **Angular 21**, eight entry points. knottyyoga's `ui/` consumes the exact-pinned package. Frontend Phase 5 (showcase + "CommunityFinder consumption + docs") is open — this project *is* its 5.2.
+- **Net effect:** v0.1's Phase 0 gate ("honuware exists as a consumable repo") is **SATISFIED**, and the old sequencing note ("start pre-tenancy, adopt `FixedTenantResolver` later via version bump") is obsolete in the good direction — tenancy is already there, and CommunityFinder starts on it in fixed mode.
 
-The components this project will consume do not exist as a consumable artifact yet. Status of the componentization plan (in the Knotty Yoga vault):
+## What the platform provides vs. what this app authors (server)
 
-- **Done (Phases 1–2.6):** all coupling broken in-place; seven CMake targets exist *inside* the knottyyoga repo (`honuware_foundation`, `honuware_data`, `honuware_services`, `honuware_square`, `honuware_platform`, `honuware_testing`, plus the brand-free `knotty_yoga_scheduler` engine). `knotty_yoga_core` is now the app library. Branch `test_target_split`.
-- **Not done:** 2.7 (layering enforcement), 3.1 (physical move to `components/` + per-component include roots), 3.2 (bootstrap-seam audit), 4.x (the actual extraction to a public GitHub `honuware` repo with standalone build + CI), 5.x (example server).
-- **Consequence:** CommunityFinder cannot consume honuware via FetchContent until splitting-plan Phase 4.1/4.2 lands — the components share knottyyoga's `src/` include root and top-level CMakeLists and are not standalone-buildable. This drives decision D1 below.
+**Free from honuware** (7 targets: `honuware_foundation`, `honuware_data`, `honuware_services`, `honuware_square`, `honuware_platform`, `honuware_testing`, `honuware_tests`; build-enforced layer DAG):
 
-## The knottyyoga repo shape we are replicating
+- **Endpoints:** the generic CRUD + admin-metadata suite (`/api/add_item`, `/api/add_item_fetch_primary_key`, `/api/update_item`, `/api/delete_item/…`, `/api/get_table_rows/…`, `/api/get_filtered_table_rows`, `/api/get_row/…`, `/api/get_row_by_values`, `/api/get_rows_by_column/…`, `/api/get_db_schema`, `/api/get_fk_options`, `/api/resolve_fk_display`) = the free admin data editor backend; `GET /api/health` (`{status, db, version}`); `GET /api/site_info`. All self-anchored via `Endpoints::RegisterFrameworkEndpoints()`.
+- **Middleware:** `CloudFrontOriginGuard → TenantResolutionGuard → CookieParser → CORSHandler → CsrfGuard → SecurityHeaders`. CSRF = `csrft` cookie + `X-CSRF-Token` header, with `/api/login`, `/api/register`, `/api/remember`, `/api/verify` bootstrap-exempt.
+- **Auth business logic (not the HTTP endpoints — see below):** `Auth::Session` (`InitializeFromLogin` / `FromCookie` / `FromDeviceToken`, `IsAdmin`, `ActiveUserHasRole/Permission`), `AuthHelper` (Argon2id), `LoginGate` (lockout), `CookieManager(+Factory)`, `PersonHelper`, `PersonVerifyMail`, `QuickAccountHelper` + welcome mail, `TokenCleanupHelper`, service accounts (`EnsureSchedulerServiceAccount`, parameterized email/domain), `EndpointAuthHelper` (per-request façade: session, `RequirePermission`, tenant accessors, `GetService<T>`).
+- **Services & data:** secrets with at-rest encryption (`config_secrets`), `Mail::TenantBranding` / `LoadSenderAddress` / `LoadTenantBranding`, mail via mailio, images business logic + resize, migration runner with namespaced framework/app streams, generic DB access + schema metadata + stored procedures.
+- **Tenancy:** everything listed above, fixed and control modes.
+- **Testing:** `GlobalDatabaseTestSupport` (create-once tables, per-test aborted transactions, DB name taken from the injected `DatabaseInfo`), `EndpointTestHelper` (installs a default fixed test tenant `test-site`; **fabricates authenticated sessions in-transaction, so permission-gated endpoints are testable before any login endpoint exists**), service doubles, matchers. The whole `honuware_tests` bag also runs inside the consumer's suite against the composed schema — free regression coverage.
+- **32 framework tables:** `people` (**the identity table — not `users`**), `sessions`, `device_tokens`, `email_verifications`, `login_attempts`, `auth_events`, `roles`, `permissions`, `role_permissions`, `role_assignments`, `permission_implications`, `config_secrets`, `idempotency_keys`, `schema_migrations`, `allowed_tables`, `admin_alerts`, the 11 other `admin_*` metadata tables, and the photo set (`photo_instances`, `source_photos`, `scaled_photos`, `photo_support_tables`, `table_item_photos`); plus the separate control-plane `tenants` (+ its own `schema_migrations`) via `MakeControlDatabaseInfo`.
 
-Monorepo `knottyyoga/` = `ui/` (Angular 19) + `server/knottyyoga_server/` (CMake 3.24 + Conan 2, C++20) + `database_server/` (Postgres 13.1 docker-compose on host port 5400). The server project builds five executables: `knottyyoga_the_server` (Crow API server, port 18080 dev), `knottyyoga_database_helper` (`--recreate_database` / `--migrate`), `knottyyoga_helper` (scheduled-jobs process), `knottyyoga_test_helper` (ftxui/replxx dev REPL), `knottyyoga_tests` (single gtest exe). The Crow server is **API-only** (`/api/*`); the SPA is served separately (dev: `ng serve` + proxy; prod: S3/CloudFront). Tests run against a real, already-running Postgres; the harness creates all tables once per run and every test rolls back its transaction.
+**Correction to v0.1 — NOT framework (app-authored today, in knottyyoga's `src/endpoints/`):** the account/user/photo HTTP endpoints — `/api/register`, `/api/verify` (+ account activation), `/api/login`, `/api/logout`, `/api/me`, `/api/remember`, `/api/get_user_info`, `/api/set_user_info`, `/api/update_user_password`, photo upload / user-photo / `get_scaled_photo` / delete / has — are thin app-side shims over the framework business logic. `@honuware/ui`'s `AuthHttpAccess`/`PhotoHttpAccess` call **exactly these routes**, and the framework CSRF guard already allow-lists them, so they are framework-shaped in everything but location. Work item **H8** proposes extracting them into `honuware_platform`; the fallback is copying knottyyoga's files. Also app-side: the scheduler **engine** (`knotty_yoga_scheduler`, foundation-only, comment-marked "future honuware_scheduler" — **H9**), the admin-alerts digest endpoint, and all of `create_database.cpp`'s CREATE+POPULATE execution (**H2**, still a 3,018-line monolith in knottyyoga).
 
-Conan third-party set (16 packages): abseil, boost 1.86, crowcpp-crow 1.3.2, date, gtest 1.12.1, libcurl, libjpeg (transitive), libpng, libpqxx 7.10.5, libsodium, libtiff, mailio, openssl 3.5.2, zlib, plus ftxui + replxx (test_helper TUI only). The `conanfile.py`'s `init()` generates `ConanLibImports.cmake` defining the `${XXX_LIB}` variables.
+## The consumer checklist (what CommunityFinder writes — knottyyoga as-built reference)
 
-## What a brand-new consumer app must implement
-
-The extraction left exactly **five app-side composition roots** plus four small config headers. This is the core of Phase 2:
-
-| Seam | knottyyoga file it mirrors |
+| Seam | Reference in knottyyoga (`server/knottyyoga_server/`) |
 |---|---|
-| Server composition root (DB name, secrets bootstrap, mail, cookies, WebApp, `SetService<T>`, endpoint registration, `ServerConfig::Initialize`) | `src/main.cpp` |
-| Schema composition: `MakeAppTables()` + `MakeDatabaseInfo()` = framework tables ++ app tables | `src/db_schema/make_app_tables.*`, `make_database_info.*` |
-| Seed: `CreateAndPopulateDatabases()` — DDL order, allowed_tables, admin metadata, roles/permissions, first admin users, config-secret defaults, service accounts | `src/database_helper/create_database.cpp` |
-| Endpoint anchor table: `web_app.cpp` with one `g_*` pointer per endpoint TU + `Endpoints::RegisterAllEndpoints()` | `src/endpoints/web_app.cpp` |
-| Scheduler catalog + flags main | `src/scheduler/knottyyoga_job_catalog.*`, `scheduler/main.cpp` |
-| Config headers: `App::kDatabaseName`; app secret keys; `App::FillInAppSecretDefaults(...)` (also supplies brand values for framework keys — sender name/address, subjects, website URL); ical branding (optional) | `src/business_logic/app_{database_config,secret_keys,secret_values,ical_config}.*` |
-| Test main: `RegisterAllEndpoints()` + `GlobalDatabaseTestSupport::Initialize(MakeDatabaseInfo(kTestDatabaseName))` | `test/src/main.cpp` |
-| App migrations stream (initially empty) | `src/business_logic/migration/app_migrations.*` |
+| **Server composition root**: `PORT` env, at-rest secrets bootstrap (`HONUWARE_SECRET_KEY` + `MigrateSecretsToEncrypted`), `MailHelper`, `CookieManagerFactory`, column redactions, **tenant mode switch** (`HONUWARE_TENANT_MODE`; default fixed → `FixedTenantResolver` + `TenantResourceRegistry` with an app factory), `RegisterAllEndpoints()` + `RoutingBase::AddRoutes`, `ServerConfig::Initialize/ValidateProdEnvironment` | `src/main.cpp` (223 lines; CF = this minus Square + `SetServerBanner`) |
+| **Endpoint anchor table**: `Endpoints::RegisterAllEndpoints()` → call platform's `RegisterFrameworkEndpoints()` + anchor app endpoints. **Anchors MUST use the volatile-store pattern** — plain unused `g_*` pointers are dead-stripped at `-O2` and every route 404s in Release (proven in the extraction shakeout) | `src/endpoints/web_app.cpp` (515 lines; knottyyoga still enumerates framework endpoints itself because it predates `RegisterFrameworkEndpoints` — CF calls the platform function instead) |
+| **App config headers**: `App::kDatabaseName`; app secret key names; `App::FillInAppSecretDefaults(+String)` (brand values for framework keys: `mail_sender_name/address`, activation + admin-alert subjects, `website_address(_login)` dev/prod, `site_logo_url`); `App::kServiceAccountEmailDomain` + `kSchedulerServiceAccountEmail`; iCal identity | `src/business_logic/app_database_config.h`, `app_secret_keys.h`, `app_secret_values.{h,cpp}`, `app_service_account_config.h`, `app_ical_config.h` |
+| **Schema composition**: `MakeAppTables()`; `MakeDatabaseInfo(name)` = `MakeFrameworkTables` ++ app | `src/db_schema/make_app_tables.*`, `make_database_info.*` |
+| **Seed**: `--recreate_database` (gated by `HONUWARE_ALLOW_DESTRUCTIVE`), `--migrate`, `--create_tenant`; `CreateAndPopulateDatabases()` — after **H2** this composes platform's `CreateFrameworkTables`/`PopulateFrameworkTables` + a small app half | `src/database_helper/main.cpp`, `create_database.cpp` (the pre-split monolith H2 fixes; `CreateSchemaAndPopulate(databaseHelper, databaseInfo)` already exists as the extracted by-database callable) |
+| **Migrations**: empty app stream + framework++app composition (separate id namespaces `honuware/`, `app/`) | `src/business_logic/migration/app_migrations.*`, `all_migrations.*` |
+| **App endpoint auth helper** (typed app services; trivial for CF at MVP) | `src/endpoints/app_endpoint_auth_helper.*` |
+| **Tenant resources factory**: CF has no per-tenant extras → thin factory over `Tenancy::PopulateBaseTenantResources` (knottyyoga's adds Square) | `src/business_logic/app_tenant_resources.*` |
+| **Test main**: app-side `kTestDatabaseName = "test_communityfinder"` (**do NOT reuse the harness's lingering legacy default `test_knottyyoga`**), `RegisterAllEndpoints()`, `Secrets::Test::RegisterAppSecretDefaults(App::FillInAppSecretDefaultsString)`, `Initialize(MakeDatabaseInfo(kTestDatabaseName))` with `MakeTenantsTable` composed on top (the tenancy tests in `honuware_tests` need it) | `test/src/main.cpp` (46 lines) |
+| **Build**: `conanfile.py` with honuware's package set (below) + `init()`-generated `ConanLibImports.cmake`; `conan_provider.cmake`; `CMakeSettings.json` (x64-Debug Ninja + `FETCHCONTENT_SOURCE_DIR_HONUWARE` cache var for co-dev); top-level `CMakeLists.txt`: `include(ConanLibImports)` → `FetchContent(honuware @ SHA)` → app-superset `cmake/honuware_layering.cmake` → targets; `CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON`; the `if(POLICY CMP0167)` guard | `CMakeLists.txt`, `conanfile.py`, `CMakeSettings.json` |
 
-What the platform gives for free once those exist: full auth (register/login/verify/sessions/remember/RBAC), quick accounts, the generic CRUD + admin-metadata endpoint suite (`get_db_schema`, `add_item`, `update_item`, `delete_item`, `get_fk_options`, …) = a free admin data editor, the photo pipeline (upload/scale/serve, linkable to any table via `table_item_photos`), config-secrets with at-rest encryption, mail, admin alerts, CSRF/CORS/security middleware, migration runner, and the whole test harness.
+**Conan set** (honuware's, verbatim — no shared list exists yet, see H6): abseil 20220623.1, boost 1.86.0, crowcpp-crow 1.3.2, date 3.0.4, gtest 1.12.1, libcurl 7.86.0, libjpeg 9e, libpng 1.6.40, libpqxx 7.10.5, libsodium 1.0.20, libtiff 4.6.0, mailio 0.25.3, openssl 3.5.2, zlib 1.3.1. (`ftxui`/`replxx` only if the test_helper TUI happens — Q10.)
 
-## The Angular frontend (for the later frontend phase)
+## @honuware/ui as-built (client)
 
-Angular 19 standalone-components app. Cleanly reusable nearly as-is: the schema-driven admin CRUD (`pages/admin/**` + `controls/**` + `DatabaseSchemaService`/`TableManagementService` + the schema types) — driven entirely by the backend's `/api/get_db_schema` metadata; the auth stack (pages, guards, `AuthService`, CSRF + error interceptors); the `ServerAccess` token/proxy/mock HTTP layer (trim the ~250-method interface); shell/header/footer/toast/error services. Brand-specific bits are concentrated: logo SVG + header constants, `_variables.scss`/`_theme.scss` colors, package name, Square payment service, and the yoga feature areas (which we simply don't copy).
+`@honuware/ui@0.1.1`, **Angular 21** (peers `^21.0.0`; note Angular 22 waits on Node ≥ 22.22.3 per knottyyoga), selector prefix `hw-`, eight entry points, exact-pin install (`npm install @honuware/ui@0.1.1 --save-exact`); cross-repo co-dev via the commented tsconfig `paths` override at the sibling checkout.
 
-## Decisions inherited from the other plans (not re-litigated here)
+- **`/access`** — the trimmed seams: `CrudAccess` (~13 methods), `AuthAccess` (9: register/verify/login/logout/me/remember/getUserInfo/setUserInfo/updateUserPassword), `PhotoAccess` (4: uploadPhoto/uploadUserPhoto/deletePhoto/hasPhoto); DI tokens `HONUWARE_{CRUD,AUTH,PHOTO}_ACCESS` (default → `HonuwareAccessProxy`, which **serializes requests** — the server allows one transaction per session) + `HONUWARE_API_BASE` (default `/api`); `provideHonuwareAccess({mode:'http'|'mock'})`; HTTP impls (`withCredentials: true`); `PhotoUrlBuilder` (`/api/get_scaled_photo/{table}/{id}/{w}/{h}`); `CsrfInterceptor` (double-submit `csrft` → `X-CSRF-Token`); `ErrorService` + `ProblemDetails`; all schema/admin types.
+- **`/auth`** — `AuthService` (`authData$` with roles/permissions/isAdmin/mustChangePassword), **`tryTokenLoginInitializer`** (silent login: `me()` → on 401 `remember()` → `me()` — the session-token + device-token persistent login), guards (`AuthGuard`, `AdminGuard`, `NoAuthGuard`, …), `ErrorInterceptor`, pages `hw-login` / `hw-register` / `hw-verify`, and the **`AUTH_ROUTES` token** (defaults are knottyyoga-flavored — CF overrides paths + returnUrl allowlist).
+- **`/crud`** — `DatabaseSchemaService` (driven wholly by `/api/get_db_schema`, refreshes on auth change), `TableViewPage/TableEditPage/TableNewPage` + `TableViewControl` (pagination, sort, FK display resolution, child-table drilldown, photo thumbnails, delete-confirm), **`CRUD_EDITOR_ROUTES` token** (default basePath `/admin/tables`). *(Note: v0.1 mentioned a `TableManagementService` — it doesn't exist; `DatabaseSchemaService` is the service.)*
+- **`/controls`** — text/long-text/bool/enum/date field controls, `FkPickerComponent`, `CompositeControlComponent`. **`/photos`** — `PhotoUploadComponent` (`userMode` avatar path, `deferUpload`, client-side resize). **`/foundation`** — `ToastService`, `ConfirmDialogComponent`, animations, date utils. **`/square`** — skipped for CF. **`/testing`** — `MockCrudAccess` (schema-driven in-memory store), `MockAuthAccess` (session + remember-token simulator incl. `expireSession()`), `MockPhotoAccess`, `provideHonuwareAccessMock()`.
+- **Gaps CF builds app-side** (knottyyoga reference in parens): header + logged-in **user chip** (`shared/components/header/` + `HeaderService`), **`SiteConfigService`** + a `getSiteInfo` access method (`core/services/site-config.service.ts` — the runtime-branding seam), account/profile + change-password pages (`pages/account/…`; the `mustChangePassword` flow needs the page), admin dashboard/menu (`pages/admin/dashboard/`), an **Angular Material theme** (`mat.theme` — the library renders unstyled without one), the CF domain access superset (events calls), and permission-gated menus (read `authData`; no `*hasPermission` directive exists).
+- **knottyyoga wiring reference** (`ui/src/app/app.config.ts`): `provideHttpClient(withInterceptorsFromDi())`; `CsrfInterceptor` + `ErrorInterceptor` (`HTTP_INTERCEPTORS`, multi); APP_INITIALIZERs = `tryTokenLoginInitializer` + `SiteConfigService.load()`; access tokens `useExisting` its legacy proxy (CF just uses the library default instead). Its `angular.json` **`local` configuration swaps the network access for the mock, and plain `ng serve` defaults to `local`** — zero-backend UI development; `serve:development` proxies `/api` to the server.
 
-- honuware: name, Apache-2.0, public GitHub repo, one repo/one version/layered targets, FetchContent SHA-pinned consumption (P1) with `FETCHCONTENT_SOURCE_DIR_HONUWARE` for local co-dev, Conan registry later, Linux-only CI, fresh history.
-- Global sequencing: componentize → extract → **tenancy** → deploy. CommunityFinder starts on pre-tenancy honuware as a plain single-tenant server (exactly like knottyyoga today); when the tenancy work lands in honuware, single-tenant consumers adopt `FixedTenantResolver` (no control DB, no CloudFront site header) via a version bump — the tenancy plan explicitly designs for this.
-- New sites live on GitHub (splitting plan Q2) — public vs private for *this* repo is Q2 below.
+## Dev environment facts (corrected)
 
-# Key Decisions & Options
+- **Shared Postgres 13.1 container** `knotty-postgres-docker` on docker network `knotty-net`, **host port 5432** (compose maps `5432:5432` — knottyyoga's CLAUDE.md/SERVER.md still say 5400; the compose file is authoritative). In-network alias `postgresql` is the framework's Linux default host, so docker clients need no DB env vars. Databases coexist happily: `knottyyoga`, `test_knottyyoga`, `honuware_test`, `docker`, tenant DBs — CF adds `communityfinder` + `test_communityfinder` (+ per-community DBs in Phase 14). Test DBs are DROP/CREATEd per run — **never run the same suite from Windows and Linux at once**.
+- **Ports:** knottyyoga server 18080 / ui 4200 → CommunityFinder server **18081** / ui **4201** so both stacks run side-by-side (Q6).
+- **The cross-repo loop** (tenancy plan Phase 0, applies verbatim to CF's honuware work): edit both trees with the `/honuware` mount + `FETCHCONTENT_SOURCE_DIR_HONUWARE`; per-slice gate = both docker suites green; at each **⇑ bump point** [Mason] pushes honuware → CI green → re-pin `GIT_TAG` → [Claude] verifies the pinned SHA on a clean volume (no override) → [Mason] commits both repos.
 
-## D1 — Sequencing against the honuware extraction
+# Key Decisions
 
-- **S1 — Wait for the full splitting plan (through Phase 5) before starting.** Cleanest, but blocks this project for weeks and the Phase 5 example server duplicates what CommunityFinder itself will prove.
-- **S2 — Copy the component sources into the new repo now, reconcile later.** Fast start; recreates exactly the fork-divergence problem the whole componentization exists to prevent. Rejected.
-- **S3 (recommended) — CommunityFinder is the real second consumer and drives the extraction.** Finish splitting-plan Phases 3.1/3.2/4.1/4.2 first (that plan tracks the work; this plan's Phase 0 is the gate), then bootstrap CommunityFinder against the honuware GitHub repo, using the `FETCHCONTENT_SOURCE_DIR_HONUWARE` local-checkout override while the two evolve together. Splitting-plan Phase 2.7 (enforcement hardening) does **not** block us. The Phase 5 `examples/hello_server` gets demoted: CommunityFinder is a stronger "no yoga leaked in" regression test than any example (Q3).
-- Work that does not depend on honuware (repo bootstrap, schema design, admin/branding decisions, frontend planning) proceeds in parallel before the gate.
+## D1 — Sequencing (RESOLVED)
 
-## D2 — Repo layout, hosting, naming
+The v0.1 gate is satisfied; S3 happened: CommunityFinder is the real second consumer and now **drives the remaining cross-repo items** (ledger below) through the established co-dev loop. Standing rule: **extract, don't copy** — when CF needs something generic that lives app-side in knottyyoga (account endpoints, scheduler engine, seed halves), the default is moving it into honuware with knottyyoga's suite as the regression gate; copies are a tracked fallback only.
 
-- **Layout (recommended): monorepo mirroring knottyyoga**, slightly flattened: `communityfinder/{ui/, server/, database_server/}` (no extra `server/<name>_server/` nesting — that was an artifact of the sibling `docker_project/`). One clone gives a contributor everything; proven layout; the CLAUDE.md conventions port directly.
-- **Hosting: GitHub** (decided by the splitting plan for new sites). **Public vs private is Q2** — the splitting plan assumed friends' sites are public for portfolio value, but this is your own product idea; my recommendation is private-first with the option to open later (opening later is trivial; un-publishing is not).
-- **Naming:** working name **CommunityFinder** (repo `communityfinder`, targets `communityfinder_*`, DB `communityfinder`, test DB `test_communityfinder`, service account `scheduler@communityfinder.local`). The real product/brand name is Q1 — it only touches the app-side seam files and secrets defaults, so renaming later is cheap, but choosing before Phase 2 avoids churn.
+## D2 — Repo layout, hosting, naming (Q1/Q2 still open)
 
-## D3 — Which honuware components to consume
+Monorepo `communityfinder/{ui/, server/, database_server/}` (flattened — no `server/<name>_server/` nesting). GitHub. Working name **CommunityFinder**: repo `communityfinder`, libs `communityfinder_core` + `communityfinder_test_cases`, exes `communityfinder_server`, `communityfinder_database_helper`, `communityfinder_helper`, `communityfinder_tests`; DB `communityfinder` / `test_communityfinder`; service account `scheduler@communityfinder.local`. Rename before Phase 5 stays cheap (~an hour, mechanical).
 
-Link `honuware_foundation`, `honuware_data`, `honuware_services`, `honuware_platform`, `honuware_testing`, and the scheduler engine. **Skip `honuware_square`** until payments/advertising become real (it's a one-line link to add back). Conan set: knottyyoga's minus nothing critical — mail (mailio/openssl) is needed for verification emails, images (png/tiff/zlib) for event photos, libsodium for secrets/auth, abseil for flags. ftxui/replxx only if/when we build the test_helper TUI (Q10).
+## D3 — Components consumed
 
-## D4 — MVP events domain schema
+Server: `communityfinder_core` PUBLIC-links `honuware_{foundation,data,services,platform}`; the test exe adds `honuware_testing` + `honuware_tests` + `communityfinder_test_cases`. **Skip `honuware_square`** (it still builds — `honuware_testing` links it — but nothing app-side uses it and it costs nothing extra; one-line link to add back for payments/ads). Client: `@honuware/ui` `foundation/access/auth/controls/photos/crud/testing`; skip `/square`.
 
-Options ranged from ultra-minimal (one `events` table) to rich (organizers, recurrence rules, tags, per-source scrape configs). Recommended middle, respecting FK layering (referenced tables first):
+## D4 — MVP events domain schema (unchanged, one addition)
 
-1. **`venues`** — id (BIGSERIAL PK), name, address/city/state/zip, url, description, lat/lng (nullable), status. Events can also carry freeform location text for one-offs.
-2. **`event_sources`** — the "known locations to scan": id, name, url, venue_id (nullable FK), kind (venue site / ticketing page / social / aggregator), enabled, scan_hints (text the scanner prompt can use), last_scanned_at, notes.
-3. **`events`** — id, title, description, starts_at (timestamptz), ends_at (nullable), venue_id (nullable FK) + location_text, url, cost_text, source_id (nullable FK), external_key (source-scoped dedup key), origin (scanned / manual / user_submitted), status (pending / approved / rejected / archived), created_by (nullable FK people), created_at/updated_at. `UNIQUE (source_id, external_key)` is the ingestion idempotency anchor. Images via the framework photo tables + `table_item_photos` — no image columns needed.
-4. **`event_categories`** + **`event_category_assignments`** — optional at MVP (Q4). Cheap to add now, cheap to add later.
-5. **`scan_runs`** — scanner audit trail (source_id, started/finished, status, events_found/ingested, error). Only meaningful once the scanner exists; I recommend deferring to Phase 6 (Q4).
+1. **`venues`** — id BIGSERIAL PK, name, address/city/state/zip, url, description, lat/lng (nullable), status.
+2. **`event_sources`** — the "known locations to scan": name, url, venue_id (nullable FK), kind (venue site / ticketing / social / aggregator), enabled, scan_hints, last_scanned_at, notes.
+3. **`events`** — title, description, starts_at (timestamptz), ends_at (nullable), venue_id (nullable FK) + location_text, url, cost_text, source_id (nullable FK), external_key, origin (scanned/manual/user_submitted), status (pending/approved/rejected/archived), created_by (nullable FK people), created_at/updated_at. **`UNIQUE (source_id, external_key)`** is the ingestion idempotency anchor. Display template `{title} @ {starts_at}`. Images via framework photo tables + `table_item_photos` — no image columns.
+4. **`event_categories`** + assignments — Q4a. **`scan_runs`** — deferred to Phase 13 (Q4b).
+5. Recurrence: one row per occurrence; no rules at MVP.
 
-**Recurrence:** store one row per occurrence; no recurrence rules in MVP (the scanner naturally produces occurrences; a weekly bar night is N rows). Revisit only if manual entry of repeating events becomes painful.
+**New:** under D8 each community is its own database (Model C), so the app schema stays completely tenancy-free — no `tenant_id` columns anywhere, exactly like knottyyoga's app tables.
 
-## D5 — AI event scanner architecture (decide later, design the seam now)
+## D5 — AI event scanner (decide at Phase 13; seam built in Phase 10)
 
-The scanner is deliberately **not** in the minimal-server scope, but the ingestion seam is (Phase 3): a permission-gated, idempotent `POST /api/admin/ingest_events` batch endpoint + the `(source_id, external_key)` upsert in `EventHelper`. Whatever form the scanner takes, it talks to that one endpoint. Options for later (Q5):
+Unchanged options: **A** in-process C++ scheduled job (raw HTTPS to the Claude API, structured outputs); **B** separate Python/TS worker on the official SDK logging in as the scheduler service account and POSTing `/api/admin/ingest_events` (my lean — prompt iteration speed); **C** Anthropic Managed-Agents scheduled deployment (post-deploy hosting option). Whatever wins talks to the one idempotent ingestion endpoint.
 
-- **A — In-process C++ scheduled job.** Scheduler POSTs `/api/admin/run_event_scan`; the endpoint iterates enabled `event_sources`, fetches pages via `Http::HttpClient`, calls the Claude API over raw HTTPS (there is no official C++ SDK) — Messages API with `web_fetch`/`web_search` server tools + structured outputs (`output_config.format` with a JSON schema for the extracted event list; model `claude-opus-4-8`) — then upserts. Pros: one deployable, reuses the whole stack. Cons: hand-rolled HTTP/JSON against the API, slow prompt iteration, long-running scans inside request handlers.
-- **B — Separate worker process** (Python or TypeScript, official Anthropic SDK or Claude Agent SDK) that logs in with the scheduler service account and POSTs to the ingestion endpoint. Pros: real SDK, fast prompt iteration, agentic scraping much easier. Cons: a second runtime to run/deploy.
-- **C — Managed Agents scheduled deployment** (Anthropic-hosted cron agent hitting the ingestion endpoint). Pros: zero scanner infra, built-in scheduling. Cons: beta surface, and the server must be internet-reachable — post-deploy only.
+## D6 — Frontend timing (SUPERSEDED)
 
-My lean: **B** for development velocity (with C as the eventual production hosting for it), keeping A viable for simple, well-structured sources. No commitment needed until Phase 6.
-
-## D6 — Frontend scope and timing
-
-Per your Overview, server first. Recommended: frontend is **Phase 5**, sized minimal — shell + auth + the reused admin CRUD + one public "upcoming events" page with a simple calendar. Rationale for not deferring it entirely: the admin CRUD UI is the *manual event entry* tool, which makes the site useful (and testable end-to-end) before the scanner exists. It can be pulled earlier if you want manual entry sooner (Q6).
+The client lands **immediately after the server skeleton** (Phase 3), per your MVP ladder — `@honuware/ui` makes it cheap, and mock mode means UI work never blocks on the server.
 
 ## D7 — Dev environment
 
-- **Postgres (recommended): share the existing `database_server` container** (port 5400) — `CreateAndPopulateDatabases()` only touches its own named databases, so `communityfinder`/`test_communityfinder` coexist safely with the knottyyoga DBs, and there is zero new setup. Alternative: a copied compose project on its own port for full isolation (Q7). Note Postgres 13.1 is aging; upgrading is a deploy-time question, not a dev blocker.
-- **Ports:** server dev port **18081** (knottyyoga owns 18080) so both stacks run side-by-side; `ui/src/proxy.conf.json` targets 18081; `ng serve --port 4201` when both UIs run at once.
+Share the existing Postgres container (**host port 5432**, network `knotty-net`); no new compose project (a `database_server/README.md` pointer instead). Server dev port **18081**; `ng serve --port 4201` when both UIs run. CF gets its own Linux docker client (Phase 1.2) mirroring `server_components/docker/` + knottyyoga's `docker_project/`: bind-mounted source, honuware co-dev mount, `build_and_test.sh` with a test-count floor.
 
-# Hand-off Requirements to the Componentization Plan
+## D8 — Multi-community architecture (NEW — your multi-tenant ask)
 
-Bootstrapping a genuinely fresh consumer exposes gaps the in-repo extraction couldn't see. These belong in the splitting plan (Phases 3.2/4.1 — most would otherwise be forced by its Phase 5 example server, which CommunityFinder replaces). Listed here so they can be folded into that document; each is `⇦ communityfinder`:
+**Communities-as-tenants on the honuware tenancy stack (Model C, database-per-community):**
 
-1. **Framework endpoint registration must move into platform.** Today the app-authored `web_app.cpp` anchors *every* endpoint TU, framework ones included — a new consumer would have to enumerate ~50 framework `g_*` pointers by hand and silently lose endpoints when honuware adds one. Platform should own `Endpoints::RegisterFrameworkEndpoints()` (anchoring its own endpoint TUs); the app's `RegisterAllEndpoints()` calls it plus its own anchors.
-2. **Split `create_database.cpp` into framework/app halves**, mirroring `MakeFrameworkTables`/`MakeAppTables`: platform exposes `CreateFrameworkTables(transaction, dbInfo)` (DDL + indexes in FK order) and `PopulateFrameworkTables(...)` (admin metadata for the ~33 framework tables, base roles/permissions — Administrator/User + `admin_portal` etc., allowed_tables entries for framework tables, framework config-secret defaults). The consumer's `CreateAndPopulateDatabases()` composes instead of copying ~3,000 lines of seed code it doesn't own.
-3. **`kTestDatabaseName` moves out of `honuware_testing`.** `global_database_test_support.h` hardcodes `"test_knottyyoga"`; the harness already takes the composed `DatabaseInfo` (which carries the name), so the constant belongs in each app's test main.
-4. **Residual brand literals in framework code:** `business_logic/auth/service_account.h` (`scheduler@knottyyoga.local`, `@knottyyoga.local`, role wiring) → parameterized/app-supplied; `endpoints/health.cpp` reads `KNOTTYYOGA_VERSION` → `HONUWARE_VERSION` (legacy fallback); the `KNOTTYYOGA_DB_NAME` / `KNOTTYYOGA_DB_*` connection env vars → `HONUWARE_DB_*` via the existing `GetEnvWithFallback` pattern.
-5. **The `secrets_helper_test_util.cpp → business_logic/app_secret_values.h` reverse dependency** (documented transitional wrinkle from splitting-plan 1.3/2.6) must dissolve at extraction: the testing lib exposes a register-defaults hook; the app's test main injects `App::FillInAppSecretDefaults`.
-6. **The shared third-party Conan requirements list** (already part of the P1 decision) needs its concrete mechanism: honuware ships one requirements list its own `conanfile.py` and every consumer's `conanfile.py` import, so versions can't drift.
-7. **Consumer-facing docs in the honuware repo:** the new-consumer checklist (the table above), layer rules, testing conventions, and the Windows/Crow gotchas (`crow::HTTPMethod` PascalCase, MSVC dead-stripping of unanchored endpoint TUs, `ThreadPool::Shutdown()` after `handle_full()`).
+- **Dev + launch:** fixed mode — `FixedTenantResolver`, zero new env vars, no control DB; site key defaults from app config (`HONUWARE_FIXED_SITE_KEY` optional). Fixed mode serves headerless requests and rejects a contradicting site header (400).
+- **Multi-community:** `HONUWARE_TENANT_MODE=control` + `honuware_control`'s `tenants` rows (`--create_tenant` per community) + **one CloudFront distribution per community** injecting `X-Honuware-Site` — one server process, one database per community, **one shared SPA bundle**.
+- **Site name & meta as DB fields (your ask):** per-community values live in the `tenants` row (`display_name`) + that community's `config_secrets` (framework keys: `mail_sender_name/address`, `website_address(_login)`, `site_logo_url`; app keys added in Phase 14: tagline, about, contact email, social links, city/region — final list Q8). Exposed via the framework **`GET /api/site_info`** (`display_name`, `website_url`, `logo_url`) plus an app **`GET /api/site_meta`** for the richer set; the SPA's `SiteConfigService` fetches at boot (APP_INITIALIZER) and falls back to bundled defaults.
+- **CF adopts `SiteConfigService` + `/api/site_info` from day one** — a deliberate deviation from the tenancy doc's "CommunityFinder runs static branding" note, which predates your multi-community requirement. In fixed mode the endpoint simply serves the single community's values headerless, so the frontend is runtime-branded from the start and adding community #2 needs zero frontend work.
+- Events/users are per-community for free (own DB); the app schema never learns about tenancy.
+
+## D9 — Client server-access + mock strategy (NEW)
+
+- Use the library seams as-is: the **default `HonuwareAccessProxy`** (CF has no legacy 243-method interface to bridge, unlike knottyyoga). Override only `AUTH_ROUTES` + `CRUD_EDITOR_ROUTES` for CF paths.
+- CF domain access = a small **`CommunityAccess`** trio (interface + HTTP impl + mock) following the library's seam pattern: `getHealth()`, `getSiteInfo()`/`getSiteMeta()`, then the events queries.
+- **Local-only test mode (your ask):** a `local` build configuration — and **plain `ng serve` defaults to it**, knottyyoga-style — that swaps in `provideHonuwareAccessMock(...)` + `MockCommunityAccess` via a DI/environment flag (cleaner than knottyyoga's file-replacement mechanics, same effect: the whole app runs with zero backend). Unit tests use the same mocks.
+
+# Cross-Repo Work Ledger (honuware items this project owns or watches)
+
+v0.1's hand-off items reconciled + new ones. Every **[hw]** item runs in the co-dev loop with knottyyoga's full suite as the regression gate, lands in honuware CI, then a re-pin.
+
+| # | Item | Status |
+|---|---|---|
+| H1 | `RegisterFrameworkEndpoints()` in platform | **DONE** (`components/platform/endpoints/register_framework_endpoints.*`, volatile anchor pattern) |
+| H2 | **`create_database` framework/app split**: platform gains `CreateFrameworkTables(...)` (framework DDL + indexes, FK order) + `PopulateFrameworkTables(...)` (framework tables' admin metadata, base roles/permissions, `allowed_tables` entries, framework + registered-app secret defaults, scheduler service account); consumer composes instead of copying ~3,000 seed lines | **OPEN — owned here** (re-scoped out of tenancy 5.1 on 7/23; `CreateSchemaAndPopulate(databaseHelper, databaseInfo)` exists as the extracted by-database callable to build on; delicate: `PopulateConfigSecrets/Roles/Permissions/AllowedTables` intermingle framework+app seed; **gate: knottyyoga `--recreate_database` yields an identical DB**) → Phase 0.1 |
+| H3 | `kTestDatabaseName` out of the harness | **DONE in effect** — the harness resolves the DB name from the injected `DatabaseInfo`; the legacy `"test_knottyyoga"` default constant lingers (cosmetic cleanup, Phase 0.4) |
+| H4 | Brand env vars parameterized | **DONE** — `HONUWARE_DB_*`, `HONUWARE_VERSION`, `HONUWARE_LOG_DEST/ALLOW_DESTRUCTIVE/ORIGIN_SECRET/TRUST_PROXY/DEV_CORS_ORIGIN/SECRET_KEY`, all with legacy fallback; service-account identity fully app-supplied |
+| H5 | Secrets test-defaults hook | **DONE** (`Secrets::Test::RegisterAppSecretDefaults`) |
+| H6 | Shared Conan requirements list | **OPEN (optional)** — versions live independently in each `conanfile.py`; drift is convention-guarded only → Phase 0.4 |
+| H7 | Consumer docs in the honuware repo | **PARTIAL** — README FetchContent section + CLAUDE.md exist; no new-consumer checklist, no example server. CF writes the checklist from its own bootstrap → Phase 0.4 (+ the frontend plan's 5.2 quickstart) |
+| H8 | **NEW — extract the generic account/user/photo endpoints into platform**: register, verify (+ account activation), login, logout, me, remember, get_user_info, set_user_info, update_user_password, photo upload / user-photo / get_scaled_photo / delete / has (candidate: the admin-alerts digest endpoint too) — thin TUs over framework logic, anchored in `RegisterFrameworkEndpoints`; knottyyoga deletes its copies | **OPEN — proposed, owned here** (Q3). The UI package already binds to these exact routes and the CSRF guard already allow-lists them. Fallback: copy knottyyoga's files into CF and leave H8 open (tracked divergence) → Phase 0.2 |
+| H9 | **NEW — extract the scheduler engine → `honuware_scheduler`** (`components/scheduler/`, foundation-only side target like square): `scheduled_job` / `api_client` / `job_scheduler` / `scheduler` incl. the header-aware target key + login headers (multi-tenant-ready); knottyyoga's `knotty_yoga_scheduler` becomes a consumer (catalog + main stay app-side) | **OPEN — owned here**, needed by Phase 12 (the engine is explicitly "lift-ready") → Phase 0.3 |
 
 # Target Architecture
 
@@ -168,169 +152,240 @@ Bootstrapping a genuinely fresh consumer exposes gaps the in-repo extraction cou
 
 ```
 communityfinder/
-├── CLAUDE.md                  adapted conventions (layering, testing, env vars, gotchas)
-├── ui/                        Angular 19 SPA (Phase 5)
+├── CLAUDE.md                    conventions + planning-dir override → this vault (Phase 1.1)
+├── ui/                          Angular 21 SPA
+│   ├── package.json             @honuware/ui@0.1.1 exact-pinned
+│   ├── angular.json             production / development / local(mock); serve default = local
+│   ├── src/proxy.conf.json      /api → http://127.0.0.1:18081
+│   └── src/app/
+│       ├── app.config.ts        interceptors, initializers (silent login, SiteConfig), route/token overrides
+│       ├── core/services/       site-config.service.ts, community-access/ (interface + http + mock)
+│       ├── shared/components/   header (user chip + admin dropdown), footer
+│       └── pages/               home, events/, account/, admin/, auth routes onto hw-* pages
 ├── server/
-│   ├── conanfile.py           subset deps + honuware shared requirements list
-│   ├── conan_provider.cmake   Windows/VS Conan integration (as in knottyyoga)
-│   ├── CMakeLists.txt         project, C++20, per-OS flags, FetchContent(honuware @ SHA)
-│   ├── CMakeSettings.json     VS x64-Debug (Ninja) config
+│   ├── conanfile.py             honuware's 14-package set (init() → ConanLibImports.cmake)
+│   ├── conan_provider.cmake · CMakeSettings.json · CMakeUserPresets.json
+│   ├── CMakeLists.txt           project, C++20, per-OS flags, CMP0167 guard, FetchContent(honuware @ SHA)
+│   ├── cmake/honuware_layering.cmake   app-superset DAG
+│   ├── docker/                  Linux build/test client (build_and_test.sh w/ count floor, co-dev mount)
+│   ├── certs/cacert.pem
 │   ├── src/
-│   │   ├── main.cpp                       server composition root
-│   │   ├── business_logic/
-│   │   │   ├── app_database_config.h      App::kDatabaseName
-│   │   │   ├── app_secret_keys.h          app secret key names (initially ~empty)
-│   │   │   ├── app_secret_values.{h,cpp}  App::FillInAppSecretDefaults (brand values)
-│   │   │   ├── events/                    EventHelper (ingestion/approval/publish)
-│   │   │   └── migration/app_migrations.{h,cpp}
-│   │   ├── db_schema/                     venues, event_sources, events, make_app_tables, make_database_info
-│   │   ├── sql_util/table_helpers/        Venues, EventSources, Events
-│   │   ├── endpoints/                     web_app.cpp anchor table + events endpoints
-│   │   ├── database_helper/               main.cpp + create_database.cpp
-│   │   └── scheduler/                     communityfinder_job_catalog + main.cpp
-│   ├── test/                              src/main.cpp + kTestDatabaseName; app tests live next to code
-│   ├── package/                           Dockerfile + build_linux_release.sh (Phase 7)
-│   └── certs/cacert.pem
-└── database_server/           pointer to shared container OR own compose (per Q7)
+│   │   ├── main.cpp
+│   │   ├── business_logic/      app_*.h/cpp seams · events/ · migration/
+│   │   ├── db_schema/           venues, event_sources, events, … + make_app_tables, make_database_info
+│   │   ├── sql_util/table_helpers/   Venues, EventSources, Events
+│   │   ├── endpoints/           web_app.cpp anchors · app_endpoint_auth_helper · events endpoints
+│   │   ├── database_helper/     main.cpp + create_database.*
+│   │   └── scheduler/           communityfinder_job_catalog.* + main.cpp        (Phase 12)
+│   └── test/                    CMakeLists.txt + src/main.cpp (tests live beside sources)
+└── database_server/README.md    pointer to the shared knotty-net container (host 5432)
 ```
 
-## CMake targets and links
+## CMake targets
 
 ```
-FetchContent: honuware @ pinned SHA  →  honuware_{foundation,data,services,platform,testing} + scheduler engine
-communityfinder_core        PUBLIC-links foundation/data/services/platform  (app library)
-communityfinder_server      = src/main.cpp                     → core
-communityfinder_database_helper                                → core (+ABSL)
-communityfinder_helper      = scheduler main + catalog         → core + scheduler engine (+ABSL)
-communityfinder_tests       = test/src/main.cpp                → core + honuware_testing (+GTest)
+FetchContent honuware @ pinned SHA → honuware_{foundation,data,services,square,platform,testing,tests}
+communityfinder_core            app lib; PUBLIC-links foundation/data/services/platform
+communityfinder_test_cases      app test bag (self-registering gtest TEST()s beside sources)
+communityfinder_server          src/main.cpp → core
+communityfinder_database_helper → core
+communityfinder_helper          scheduler main + catalog → core + honuware_scheduler   (after H9)
+communityfinder_tests           test/src/main.cpp → core + honuware_testing + communityfinder_test_cases + honuware_tests
 ```
 
-Same per-OS flag blocks as knottyyoga (MSVC `/std:c++20 /EHsc`, `_WIN32_WINNT`; Linux gcc, `-lgssapi_krb5` last). `FETCHCONTENT_SOURCE_DIR_HONUWARE` documented for cross-repo co-development.
+## Environment variables (all framework names; defaults work in dev)
+
+`PORT` (18081 dev) · `HONUWARE_DB_HOST/_PORT/_USER/_PASSWORD/_NAME/_SSLMODE/_SSLROOTCERT` · `HONUWARE_LOG_DEST` · `HONUWARE_ALLOW_DESTRUCTIVE` · `HONUWARE_SECRET_KEY` (prod) · `HONUWARE_ORIGIN_SECRET` (prod) · `HONUWARE_TRUST_PROXY` (prod) · `HONUWARE_DEV_CORS_ORIGIN` (dev alternative to the proxy) · `HONUWARE_VERSION` · `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` · `HONUWARE_TENANT_MODE` (unset = fixed; `control` for multi-community) · `HONUWARE_FIXED_SITE_KEY` (optional) · `HONUWARE_CONTROL_DB_NAME` (control mode, default `honuware_control`).
 
 # Phased Implementation Plan
 
-## Phase 0 — Gate: honuware exists as a consumable repo
+**MVP = Phases 1–3** (a booting platform server + a client that talks to it, both test-gated). Phases 4–9 are your build-out ladder, 10–13 the product, 14–15 scale-out and ship. Phase 0 items are cross-repo and interleave: **0.1 gates 2.5**, **0.2 gates Phase 4** (unless the copy fallback is taken), **0.3 gates Phase 12**, 0.4 trails.
 
-The work lives in [[Splitting the server up into components]] (its Phases 3.1, 3.2, 4.1, 4.2 plus the hand-off items above); this phase just states what must be true before our Phase 2:
+## Phase 0 — Cross-repo prerequisites in honuware (the ledger's open items)
 
-- [ ] 0.1 honuware repo on GitHub builds **standalone** (own conanfile/CMake/test exe; component tests green against a Postgres container).
-- [ ] 0.2 knottyyoga consumes it via FetchContent at a pinned SHA and its full suite is green (proves the seam from the first consumer's side).
-- [ ] 0.3 Hand-off items 1–6 above landed (item 7 docs can trail slightly).
+### 0.1 `create_database` framework/app split (H2) **[hw + knottyyoga gate]**
+- [ ] Platform gains `CreateFrameworkTables(...)` + `PopulateFrameworkTables(...)` extracted from knottyyoga's `create_database.cpp` (framework DDL + indexes FK-ordered; framework tables' admin metadata; base roles/permissions incl. Administrator/User + `admin_portal`; framework `allowed_tables` entries; framework + registered-app secret defaults; scheduler service account via the parameterized `EnsureSchedulerServiceAccount`). Home: `components/platform/business_logic/` (beside `migration/`) with the DDL half near `db_schema/`.
+- [ ] knottyyoga's `CreateAndPopulateDatabases()`/`CreateSchemaAndPopulate()` recomposed on the halves. **Gate: `--recreate_database` produces an identical database** (full suite against a recreated DB); both docker suites green; CI; push; re-pin.
+- [ ] Framework-only stand-up test in honuware (its own test main + CI already exercise most of this).
 
-Phases 1 (and the design halves of 3/5) do not wait on this gate.
+### 0.2 Generic account/user/photo endpoints → platform (H8) **[hw + knottyyoga gate]** — or the copy fallback (Q3)
+- [ ] Move/adapt into `components/platform/endpoints/`: register, verify, account activation, login, logout, me, remember, get_user_info, set_user_info, update_user_password, photo upload / user-photo / get_scaled_photo / delete / has (+ their HTTP-driven `_test.cpp`); anchor in `RegisterFrameworkEndpoints`; sweep residual brand strings through `TenantBranding`/secrets.
+- [ ] knottyyoga deletes its copies; full-suite gate; push; re-pin. *(If deferred: CF copies these files in Phase 4 and H8 stays open — record the divergence here.)*
 
-## Phase 1 — Repo & dev-environment bootstrap (no honuware dependency)
+### 0.3 Scheduler engine → `honuware_scheduler` (H9) **[hw + knottyyoga gate]** — needed by Phase 12
+- [ ] `components/scheduler/` foundation-only side target; move `scheduled_job` / `api_client` / `job_scheduler` / `scheduler` + tests; knottyyoga's `knotty_yoga_scheduler` consumes it (catalog + main stay app-side). Gate + re-pin.
+
+### 0.4 Docs & hygiene (H6/H7, trailing)
+- [ ] honuware README **new-consumer checklist** written from this bootstrap's experience; optional shared Conan requirements mechanism; legacy `kTestDatabaseName` default removed; the logged CMake-comment brand scrub.
+
+## Phase 1 — Repo & dev-environment bootstrap
 
 ### 1.1 Repository
-- [ ] Create the GitHub repo (name per Q1, visibility per Q2) with `.gitignore` (VS/CMake/Conan/node artifacts, `out/`, `build/`, `dist/`), README stub, and the `ui/ server/ database_server/` skeleton.
-- [ ] Write the root `CLAUDE.md`, adapted from knottyyoga's: runtime layering (endpoints → business_logic → services → table_helpers → db_schema), component layer order, testing conventions (no fixtures, pre-created tables, HTTP via `handle_full`, `ThreadPool::Shutdown()` race), naming conventions, env-var table (`PORT`, `HONUWARE_*` set), Crow `HTTPMethod` PascalCase + MSVC dead-strip gotchas, and the planning-directory override pointing at this vault.
+- [ ] Create the GitHub repo (name Q1, visibility/org Q2) with the monorepo skeleton, `.gitignore` (VS/CMake/Conan/node artifacts, `out/`, `build/`, `dist/`, `ConanLibImports.cmake`), **`.gitattributes` pinning LF for `*.sh`/`Dockerfile`/`*.yml` and CRLF for `*.cmd`** (the honuware clone lesson — CRLF shebangs break Linux), README stub.
+- [ ] Root `CLAUDE.md` adapted from knottyyoga's: runtime layering (endpoints → business_logic → services → table_helpers → db_schema) + component layer order; thin-endpoint / KeyValueTable-at-boundaries rules; testing conventions (no fixtures, pre-created tables, HTTP via `handle_full`, **`ThreadPool::Shutdown()` before the next DB read**, never assume collection order); **the volatile endpoint-anchor convention** (the `-O2` dead-strip trap); Crow `HTTPMethod` PascalCase gotcha; `FormatString` + `NormalizeCrLf` mail rules; naming conventions; the env-var table above; the FetchContent/co-dev section; **planning-directory override → `C:\Users\mason\Documents\Obsidian\CommunityFinder\Claude\`** and the division-of-labor block (Claude: Linux docker builds/tests + read-only git; Mason: Windows spot-checks + all git writes).
 
-### 1.2 Development database
-- [ ] Per Q7: either document "uses the knottyyoga `database_server` container on port 5400" or copy the compose project onto its own port. Verify `communityfinder` + `test_communityfinder` databases can be created alongside the existing ones.
+### 1.2 Dev database + docker client
+- [ ] `database_server/README.md` documenting the shared container (knotty-net, host 5432, alias `postgresql`, user/pass docker) — no new compose project (Q6).
+- [ ] `server/docker/` Linux client mirroring `server_components/docker/`: `build_container.cmd`, `load_container.cmd <network>`, `build_and_test.sh` (conan + cmake + build + run with a test-count floor; `HONUWARE_SRC_DIR` co-dev mount override). Claude drives it non-interactively (the `docker run --rm … bash docker/build_and_test.sh` pattern from the tenancy plan's Phase 0).
+- [ ] Verify `communityfinder` + `test_communityfinder` create and coexist alongside the existing databases.
 
-## Phase 2 — Server skeleton (boots, auth works, admin CRUD works)
-
-Everything here is the minimal consumer checklist made real. Lower layers first.
+## Phase 2 — Server skeleton boots (your MVP item 1)
 
 ### 2.1 Build system
-- [ ] `server/conanfile.py` (D3 subset; imports honuware's shared requirements list) with the `init()`-generates-`ConanLibImports.cmake` pattern; `conan_provider.cmake` + `CMakeSettings.json` for VS; top-level `CMakeLists.txt` with FetchContent(honuware @ SHA), the target set from *Target Architecture*, and the knottyyoga per-OS flag blocks. Verify a clean configure+build on Windows (you) — this is the first true test of honuware's consumability; file anything broken back to the splitting plan.
+- [ ] `conanfile.py` (the 14-package set; `init()` generates `ConanLibImports.cmake`; class `CommunityFinderRecipe`), `conan_provider.cmake`, `CMakeSettings.json` (x64-Debug Ninja; `FETCHCONTENT_SOURCE_DIR_HONUWARE` cache var), `CMakeUserPresets.json`.
+- [ ] Top-level `CMakeLists.txt`: `project(communityfinder)`, C++20, per-OS flag blocks, `if(POLICY CMP0167)` guard, `CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON`, `include(ConanLibImports.cmake)` → `FetchContent_Declare(honuware … GIT_TAG <current SHA>)` → app-superset `honuware_layering.cmake` → the target set from *Target Architecture*. First clean configure+build: [Claude] docker client, [Mason] Windows/VS.
 
-### 2.2 App config seams (foundation of everything above)
-- [ ] `business_logic/app_database_config.h` (`App::kDatabaseName`), `app_secret_keys.h` (empty scaffold + NOTE), `app_secret_values.{h,cpp}` (`FillInAppSecretDefaults`: sender name/address, activation-mail subject, admin-alerts subject, website address/login URLs — debug vs prod per `_DEBUG`, brand values per Q1). Tests mirroring knottyyoga's `app_secret_values_test.cpp` (defaults present, no overlap with framework defaults).
+### 2.2 App config seams
+- [ ] `app_database_config.h` (`App::kDatabaseName = "communityfinder"`), `app_secret_keys.h` (empty scaffold + NOTE), `app_secret_values.{h,cpp}` (`FillInAppSecretDefaults(+String)`: sender name/address, activation + admin-alert subjects, `website_address` dev `http://localhost:18081/` / prod TBD (Q1/Q9), `website_address_login` dev `http://localhost:4201/`, `site_logo_url` ""), `app_service_account_config.h` (`@communityfinder.local`, `scheduler@communityfinder.local`), `app_ical_config.h` (`-//CommunityFinder//Events//EN`, UID domain). Tests mirroring knottyyoga's `app_secret_values_test.cpp`.
 
 ### 2.3 Schema & migration composition
-- [ ] `db_schema/make_app_tables.{h,cpp}` (empty body for now) + `make_database_info.{h,cpp}` (framework ++ app). `business_logic/migration/app_migrations.{h,cpp}` (empty stream) + the `all_migrations` composition. Composition test: composed `DatabaseInfo` = framework set exactly, framework precedes app.
+- [ ] `make_app_tables.{h,cpp}` (empty body), `make_database_info.{h,cpp}` (`MakeFrameworkTables` ++ app), `app_migrations.{h,cpp}` (empty stream) + `all_migrations.{h,cpp}` (framework ++ app, separate id namespaces). Composition test: composed `DatabaseInfo` == framework set exactly; framework precedes app.
 
-### 2.4 Endpoints anchor + server composition root
-- [ ] `endpoints/web_app.cpp`: `RegisterFrameworkEndpoints()` (hand-off item 1) + `Endpoints::RegisterAllEndpoints()`; no app endpoints yet; no `AppEndpointAuthHelper` (no app services — Square stays out per D3).
-- [ ] `src/main.cpp`: port from env (default 18081), production DB helper for `App::kDatabaseName`, secrets at-rest bootstrap sequence, `MailHelper`, `CookieManagerFactory`, column redactions, `WebApp`, registration, `ServerConfig::Initialize/ValidateProdEnvironment`. (Copy of knottyyoga's minus the Square block.)
+### 2.4 Endpoints anchor + composition root
+- [ ] `endpoints/web_app.cpp`: `RegisterAllEndpoints()` = `Endpoints::RegisterFrameworkEndpoints()` + an (empty for now) app anchor block **using the volatile-store pattern**; minimal `app_endpoint_auth_helper`.
+- [ ] `src/main.cpp`: `PORT` default 18081, production DB helper for `App::kDatabaseName`, secrets-at-rest bootstrap (+ `MigrateSecretsToEncrypted`), `MailHelper`, `CookieManagerFactory`, column redactions, `WebApp`, **fixed-mode tenancy wiring** (`FixedTenantResolver` + `TenantResourceRegistry` with a thin base-resources factory over `Tenancy::PopulateBaseTenantResources`), registration + `AddRoutes`, `ServerConfig::Initialize/ValidateProdEnvironment`. (knottyyoga's `main.cpp` minus Square and the server banner.)
 
-### 2.5 database_helper + seed
-- [ ] `database_helper/main.cpp` (`--recreate_database` gated by `HONUWARE_ALLOW_DESTRUCTIVE`, `--migrate`).
-- [ ] `create_database.cpp`: `CreateAndPopulateDatabases()` composing platform's framework halves (hand-off item 2) + app half (empty at this phase); seed first admin user(s) (Q1: which emails?), scheduler service account, framework + app secret defaults.
+### 2.5 database_helper + seed *(needs 0.1)*
+- [ ] `database_helper/main.cpp`: `--recreate_database` (`HONUWARE_ALLOW_DESTRUCTIVE`-gated), `--migrate` (leave `--create_tenant` wiring to Phase 14).
+- [ ] `create_database.cpp`: `CreateAndPopulateDatabases()` composing platform's `CreateFrameworkTables`/`PopulateFrameworkTables` + the app half (no app tables yet; seed first admin user(s) — Q1, scheduler service account, secrets defaults).
 
 ### 2.6 Test infrastructure + smoke tests
-- [ ] `test/src/main.cpp` (anchor endpoints, `Initialize(MakeDatabaseInfo(kTestDatabaseName))`), app-side `kTestDatabaseName = "test_communityfinder"` (hand-off item 3), secrets-defaults injection hook (hand-off item 5).
-- [ ] Smoke tests (all over HTTP per convention): `/api/health` 200; register→verify→login→`/api/me` round-trip; generic CRUD on a framework table via `add_item`/`get_row`/`delete_item`; photo upload/get; CSRF guard behavior.
+- [ ] `test/src/main.cpp`: app-side `kTestDatabaseName = "test_communityfinder"`, `RegisterAllEndpoints()`, `Secrets::Test::RegisterAppSecretDefaults(App::FillInAppSecretDefaultsString)`, `Initialize(MakeDatabaseInfo(kTestDatabaseName))` with `MakeTenantsTable` composed on top.
+- [ ] Smoke tests over HTTP (harness-fabricated sessions — no login endpoint needed yet): `/api/health` 200 with version; generic CRUD add/get/delete on a framework table under an admin session; non-admin 403; CSRF guard behavior; `/api/site_info` returns the seeded branding headerless.
+- **Phase gate:** server boots; full suite (**`honuware_tests` bag + smoke tests**) green in the docker client and on Windows.
 
-**Phase gate:** server boots; login as seeded admin works; `get_db_schema` returns the framework schema; test suite green. From here every phase adds app functionality on a working platform.
+## Phase 3 — Angular client skeleton with mock mode (your MVP item 2)
 
-## Phase 3 — Events domain (db_schema → table_helpers → business logic → endpoints)
+### 3.1 Workspace
+- [ ] `ng new` (Angular 21, standalone, scss, routing) in `ui/`; `npm install @honuware/ui@0.1.1 --save-exact`; Angular Material + `mat.theme` setup (library requirement); eslint + karma headless.
 
-### 3.1 db_schema
-- [ ] `venues.{h,cpp}`, `event_sources.{h,cpp}`, `events.{h,cpp}` (+ categories pair if Q4 says now) per the D4 schema, with `Create*Indexes` (events: `(status, starts_at)`, `(source_id, external_key)` unique). Wire into `make_app_tables.cpp` (FK order: venues → event_sources → events) and `create_database` DDL order.
-- [ ] Seed/admin wiring in `create_database.cpp`: allowed_tables entries, admin metadata (top-level tables, column data info, friendly names, display templates — an event displays as `{title} @ {starts_at}`), `manage_events` permission + role wiring, a few dev venues/sources/sample events.
-- [ ] Schema tests per house pattern.
+### 3.2 Access + config wiring
+- [ ] `app.config.ts`: `provideHttpClient(withInterceptorsFromDi())`, `CsrfInterceptor` + `ErrorInterceptor`, `tryTokenLoginInitializer`, `AUTH_ROUTES` + `CRUD_EDITOR_ROUTES` overrides (CF paths + returnUrl allowlist), library-default access providers (`HonuwareAccessProxy`; `HONUWARE_API_BASE` default `/api`).
+- [ ] `CommunityAccess` (interface + HTTP + mock): `getHealth()`, `getSiteInfo()`. `SiteConfigService` ported from knottyyoga's pattern (APP_INITIALIZER, merge non-empty `site_info` fields over `DEFAULT_SITE_CONFIG`, never rejects) + spec.
+- [ ] Environments dev/prod/local; **`local` configuration → `provideHonuwareAccessMock(...)` + `MockCommunityAccess`** (DI swap on an environment flag); **`ng serve` default = `local`** (zero backend); `serve:development` uses `proxy.conf.json` → `http://127.0.0.1:18081`; document `--port 4201` for side-by-side runs.
 
-### 3.2 table_helpers
-- [ ] `Venues`, `EventSources`, `Events` helpers (ctor takes `DatabaseHelper`, methods take `Transaction&`, `KeyValueTable` at boundaries). Events queries: `GetEventsInRange(from, to, status)`, `GetBySourceAndExternalKey`, `GetPendingEvents`. Tests for each.
+### 3.3 Shell + the dummy call
+- [ ] Minimal shell: header (site name from `SiteConfigService`; login/register placeholders), footer, home page showing the **live `/api/health` payload + the community display name** — the "simple dummy call that gets shown".
+- [ ] Unit tests: `SiteConfigService`, `CommunityAccess` mock, home component (mock providers).
+- **Phase gate:** `ng serve` (mock) fully works offline; `ng serve -c development` renders health + site name from the running server; ui tests green.
 
-### 3.3 business_logic/events
-- [ ] `EventHelper`: `IngestEvents(batch)` — per-item upsert keyed on `(source_id, external_key)` (insert as `pending`+`scanned`; update policy for re-scanned events that were already approved — recommend: update fields, keep status, flag if material change — refine at Q4); `Approve/Reject(eventId)`; visibility rule (public = approved ∧ not archived). Tests: idempotent re-ingestion, status transitions, visibility.
+## Phase 4 — Account creation & user info endpoints, server (your item 3; *needs 0.2 or the copy fallback*)
 
-### 3.4 endpoints
-- [ ] Public: `GET /api/events/upcoming?from&to` (approved only, range-clamped, venue joined) and `GET /api/event?id`. Admin: `POST /api/admin/ingest_events` (permission-gated batch, returns per-item created/updated/unchanged). Approval itself rides the generic CRUD/admin UI (status column edit) — dedicated approve endpoints only if a workflow needs them later. Each endpoint: `.h/.cpp` + anchor in `web_app.cpp` + HTTP-driven `_test.cpp`.
-- [ ] Verify event photos work end-to-end through the framework photo endpoints + `table_item_photos` (one test).
+- [ ] The account/user/photo endpoints live in CF's build (via platform after 0.2 — then this phase is wiring + seeding — or as tracked copies): register / verify / account activation / login / logout / me / remember / get_user_info / set_user_info / update_user_password (+ the photo endpoints ahead of Phase 5).
+- [ ] Mail path: dev uses the test/log mail path or real SMTP via `config_secrets`; activation links built from `website_address_login`.
+- [ ] HTTP tests: register → verify → login → me; **remember-token silent re-login** (`device_tokens` — your persistent-login item); `set_user_info` roundtrip; `update_user_password` incl. `must_change_password`; `LoginGate` lockout sanity; CSRF enforced on POSTs (bootstrap exemptions honored); **`get_user_info` returns roles + permissions** (your "fetch roles and permissions" item, server side).
+- **Phase gate:** the full auth loop green over HTTP in the suite.
 
-**Phase gate:** an event entered via generic CRUD (or curl) appears in `/api/events/upcoming`; ingestion is idempotent; suite green.
+## Phase 5 — Account creation & user profile UI (your item 4)
 
-## Phase 4 — Scheduled-jobs process
+- [ ] Routes `/login` `/register` `/verify` → `hw-login`/`hw-register`/`hw-verify`; guards wired (`NoAuthGuard` on auth pages; `AuthGuard` elsewhere).
+- [ ] **Header user state — name + photo in the upper right like knottyyoga:** user chip with avatar via `PhotoUrlBuilder.scaledPhotoUrl('people', personId, 300, 300)` + dropdown (My account, Admin — permission-gated, Logout); modeled on knottyyoga's `header` + `HeaderService`.
+- [ ] **User portal:** account page to view/edit first name, last name, email (`AuthService.setUserInfo`); change-password page (incl. the `mustChangePassword` redirect flow); **photo upload** via `hw-photo-upload` `userMode`.
+- [ ] Component specs with `provideHonuwareAccessMock` (`MockAuthAccess` covers silent-login + `expireSession`); full mock-mode parity (register/login/portal all work offline).
+- **Phase gate:** signup → verify → login → edit profile → photo → logout, in the browser against the dev server AND in mock mode.
 
-### 4.1 Catalog + main
-- [ ] `scheduler/communityfinder_job_catalog.{h,cpp}`: `JobTarget`/`JobIntervals`, `BuildCommunityFinderJobs(target, intervals)` with the initial set — `archive_past_events` (moves long-past events to `archived`), `notify_admin_alerts` (verify the digest endpoint is framework; it should be, per splitting-plan Q12), and a **disabled-by-default** `run_event_scan` placeholder for Phase 6. `Validate…` + password resolution mirroring knottyyoga's. Catalog tests.
-- [ ] `scheduler/main.cpp` with ABSL flags (server_url default `http://localhost:18081`, service-account creds, per-job intervals), linking the honuware scheduler engine (foundation-only).
-- [ ] The `archive_past_events` admin endpoint + business logic + tests (it's the first scheduled job with a body).
+## Phase 6 — Generic CRUD endpoints, server (your item 5)
 
-**Phase gate:** `communityfinder_helper` authenticates against the local server and runs the archive job on its interval.
+- [ ] Confirm `PopulateFrameworkTables` seeded `allowed_tables` + admin metadata + `admin_table_permissions` for the framework tables an admin should edit (`people`, `roles`, `permissions`, `role_assignments`, `role_permissions`, `permission_implications`, `admin_alerts`; `config_secrets` exposure is Q8c).
+- [ ] App-side HTTP tests: admin session can `add_item`/`get_row`/`update_item`/`delete_item` on a representative table; non-admin 403; column redactions hide `password_hash`; `get_db_schema` shape sanity.
+- **Phase gate:** the generic CRUD suite green under permission gating.
 
-## Phase 5 — Minimal Angular frontend
+## Phase 7 — Admin CRUD editor in the client (your item 6)
 
-### 5.1 Skeleton
-- [ ] `ui/` scaffold copied from knottyyoga: `main.ts`/`app.config.ts` (APP_INITIALIZER silent login, interceptor order), `angular.json` (dev/prod/local configs), tsconfig path aliases, `proxy.conf.json` → 18081, environments (no Square IDs). Trim `ServerAccess` interface + network/proxy/mock trio to auth + admin + events.
+- [ ] `/admin` dashboard page (root-tables list from `DatabaseSchemaService`, friendly names) + `CRUD_EDITOR_ROUTES` mounting `TableViewPage`/`TableEditPage`/`TableNewPage` under `/admin/tables`; `AdminGuard` (+ `admin_portal` permission from `authData`).
+- [ ] **The admin dropdown** in the header, shown only for admin/`admin_portal` — your "admin dropdown with all the CRUD support" item.
+- [ ] Specs with `MockCrudAccess` (schema-driven); mock mode ships a small fake schema so the editor works offline.
+- **Phase gate:** edit `people`/`roles` rows from the browser; FK pickers + display templates resolve.
 
-### 5.2 Auth + shell
-- [ ] Auth pages (login/register/verify), guards, `AuthService`, CSRF + error interceptors; header/footer/page-not-found with CommunityFinder branding (Q1): new logo asset, `_variables.scss` palette, package name.
+## Phase 8 — Roles & permissions management, server (your item 7)
 
-### 5.3 Admin CRUD (the reused prize)
-- [ ] `pages/admin/**`, `controls/**`, `DatabaseSchemaService`/`TableManagementService`, schema types — pointed at the same endpoint contract. Manual event/venue/source entry works here.
+- [ ] Verify-and-test: `roles`/`permissions`/`role_permissions`/`role_assignments`/`permission_implications` manageable via the generic CRUD under the right permission; assignment changes reflect in `get_user_info` (implications resolved); non-admin cannot self-assign (escalation guard tests).
+- [ ] Define + seed CF's permission catalog beyond the framework base: `manage_events` (Phase 10), `manage_site_meta` (Phase 14) — in the `create_database` app half.
+- **Phase gate:** assign/revoke a role via endpoints; permissions propagate to sessions.
 
-### 5.4 Public events UI
-- [ ] Home + upcoming-events list (grouped by day, venue + photo) + a simple month calendar view + event detail. Adapt knottyyoga's `calendar/` feature area if it fits; otherwise a minimal new one.
+## Phase 9 — Admin portal for roles & permissions (your item 8)
 
-**Phase gate:** enter an event in the admin UI, approve it, see it on the public page and calendar — full manual loop, no scanner needed.
+- [ ] The CRUD editor over `roles`/`permissions`/`role_assignments` **is** the admin portal mechanism (knottyyoga parity — no dedicated role endpoints exist anywhere); ensure display templates make `role_assignments` human-readable (person email + role name); document the assign-role flow.
+- [ ] Optional stretch: a bespoke "User roles" page (pick person → toggle roles) only if the raw editor feels clunky.
+- **Phase gate:** grant Administrator to a second user through the UI; their next login shows the admin dropdown.
 
-## Phase 6 — AI event scanner (future; seam already built)
+## Phase 10 — Events domain, server (the product starts)
 
-Not scoped in detail yet — decide architecture at Q5 when we get here. Sketch: per-source scan → fetch/interpret page(s) with Claude (`claude-opus-4-8`, web_fetch/web_search server tools where applicable, structured outputs producing `[{title, starts_at, ends_at?, description, url, external_key, …}]`) → `POST /api/admin/ingest_events` → events land `pending` → admin approves in the CRUD UI. Add `scan_runs` audit table + `run_event_scan` job enablement + per-source prompt hints (`event_sources.scan_hints`) at that point. Follow-ups: dedup across sources, image capture, geo.
+*(D4 schema. knottyyoga's CLAUDE.md "Adding a New Database Table" registration checklist — db_schema pair, make_database_info, CreateTables, admin_top_level/nested_tables, admin_table_permissions, column data info, friendly names, display templates, CMakeLists — applies to every table here; forgetting the allowed/nested-tables step is the classic CRUD-endpoint 403.)*
 
-## Phase 7 — CI & deployment (future)
+### 10.1 db_schema + seed
+- [ ] `venues`, `event_sources`, `events` (+ `event_categories` pair per Q4a) with `Create*Indexes` (events: `(status, starts_at)`, `UNIQUE(source_id, external_key)`); `make_app_tables` FK order venues → event_sources → events; `create_database` app half: DDL order, allowed_tables, admin metadata, `manage_events` permission + role wiring, dev seed data. Schema tests per house pattern.
 
-- [ ] GitHub Actions: Linux build + full test run with a Postgres service container (the honuware repo's CI from splitting-plan 4.3 is the template).
-- [ ] `package/` Dockerfile + `build_linux_release.sh` adapted (FetchContent needs git+network in the builder stage, per the splitting plan's deployment invariant).
-- [ ] AWS deploy (CloudFront + S3 + EC2 + RDS mirroring knottyyoga's setup) — timing relative to the tenancy work is Q9.
+### 10.2 table_helpers
+- [ ] `Venues`, `EventSources`, `Events` (ctor takes `DatabaseHelper`, methods take `Transaction&`, `KeyValueTable` at boundaries): `GetEventsInRange(from, to, status)`, `GetBySourceAndExternalKey`, `GetPendingEvents`. Tests each.
+
+### 10.3 business_logic/events
+- [ ] `EventHelper`: `IngestEvents(batch)` — per-item upsert on `(source_id, external_key)` (insert as `pending`+`scanned`; re-scan policy per Q4c); `Approve/Reject`; visibility rule (public = approved ∧ ¬archived). Tests: idempotent re-ingestion, transitions, visibility.
+
+### 10.4 endpoints
+- [ ] Public `GET /api/events/upcoming?from&to` (approved only, range-clamped, venue joined) + `GET /api/event?id`; admin `POST /api/admin/ingest_events` (`manage_events`-gated batch; per-item created/updated/unchanged). Anchors (volatile) + HTTP tests; one end-to-end event-photo test via `table_item_photos`.
+- **Phase gate:** a CRUD-entered event → approved (status edit) → appears in `/api/events/upcoming`; ingestion idempotent; suite green.
+
+## Phase 11 — Public events UI
+
+- [ ] `CommunityAccess` events methods (+ mocks with seeded fake events — the offline demo); home = upcoming list grouped by day (venue + photo); a simple month calendar view; event detail page; category filter if Q4a. Specs throughout.
+- **Phase gate:** the full manual loop in the browser: enter (admin CRUD) → approve → see it on the public page and calendar — no scanner needed.
+
+## Phase 12 — Scheduled-jobs process (*needs 0.3/H9*)
+
+- [ ] `scheduler/communityfinder_job_catalog.{h,cpp}`: `BuildCommunityFinderJobs(target, intervals)` — `archive_past_events`, `notify_admin_alerts`, + a **disabled-by-default** `run_event_scan` placeholder; validation + password resolution mirroring knottyyoga's catalog; catalog tests.
+- [ ] The admin endpoints behind them (`archive_past_events` logic + the admin-alerts digest — per the H8 note these may ride the extraction or be app-authored) + tests.
+- [ ] `scheduler/main.cpp` (ABSL flags; `server_url` default `http://localhost:18081`; `SCHEDULER_SERVICE_ACCOUNT_PASSWORD`), linking `honuware_scheduler`.
+- **Phase gate:** `communityfinder_helper` authenticates as the service account and runs the archive job on its interval.
+
+## Phase 13 — AI event scanner (design on arrival; Q5)
+
+Sketch unchanged: per-source scan → Claude (web fetch/search tools + structured outputs producing `[{title, starts_at, ends_at?, description, url, external_key, …}]`) → `POST /api/admin/ingest_events` → events land `pending` → admin approves in the CRUD UI. At this point add: `scan_runs` audit table, `event_sources.scan_hints` usage, `run_event_scan` job enablement. Follow-ups: cross-source dedup, image capture, geo. Architecture decision A/B/C (D5) made here.
+
+## Phase 14 — Multi-community enablement (D8)
+
+- [ ] Local proof: `--create_tenant` a second community (site_key, db_name, display_name) → run the server with `HONUWARE_TENANT_MODE=control` → requests with each `X-Honuware-Site`: isolated events/users, distinct `/api/site_info` branding. (honuware's tenancy tests gate the mechanics; this is CF-level verification.)
+- [ ] **Site meta as DB fields** (your ask, beyond site_info's three): app secret keys (`site_tagline`, `site_about_html`, `site_contact_email`, `site_social_links` JSON, `site_city_label`, … — final list Q8b) + defaults in `FillInAppSecretDefaults`; **`GET /api/site_meta`** app endpoint (public, cacheable, tenant-resolved) + tests; `SiteConfigService` merges site_info + site_meta; per-community editing story (Q8c).
+- [ ] `database_helper` `--create_tenant` wired (ProvisionTenant + the composed create/populate callable) + control-mode `--migrate` (all active communities).
+- [ ] Scheduler control mode: catalog × active communities with per-community `X-Honuware-Site` headers (knottyyoga's `BuildMultiTenant…` pattern; `--tenant_refresh_interval`).
+- **Phase gate:** two communities served by one local server process and one SPA bundle, with distinct branding and fully isolated data.
+
+## Phase 15 — CI & deployment
+
+- [ ] GitHub Actions: server job cloned from `server_components/.github/workflows/ci.yml` (gcc:14.2.0 container, postgres:13.1 service, Conan cache, test-count floor, `HONUWARE_DB_*`); ui job (npm ci, lint, headless tests, prod build). Branch protection when the first collaborator lands (Q11).
+- [ ] `package/`: Dockerfile + `build_linux_release.sh` adapted from knottyyoga (git present in the builder for the FetchContent clone; one image, all binaries, one `HONUWARE_VERSION`).
+- [ ] AWS per knottyyoga's `Deploying to AWS.md` conventions: EC2/ECS + RDS, S3 + CloudFront **per community** with `X-Honuware-Site` + shared `X-Origin-Secret` origin headers, ACM/Route 53; `server.env` with `HONUWARE_*` names; fixed mode while single-community, control mode when community #2 onboards (Q9).
 
 # Open Questions
 
 Please answer inline (house style). Recommendations included so you can just say "agreed".
 
-1. **Product/brand name.** Is **CommunityFinder** the actual name, or a working title? It drives: repo name, `App::kDatabaseName`, mail sender name ("… <what?>"), website address secrets, service-account domain, UI branding, and eventually the domain name. Also: which admin email(s) should `create_database` seed? (Recommendation: proceed with CommunityFinder as the working name everywhere; a rename before Phase 5 is ~an hour of mechanical work.)
+1. **Product/brand name + seed admins.** Is **CommunityFinder** the real name or a working title? It drives repo/DB/target names, mail sender, website secrets, service-account domain, UI branding, and the eventual domain. And which admin email(s) should `create_database` seed (knottyyoga seeds masonbendixen@gmail.com)? *(Rec: proceed with CommunityFinder as the working name; renaming before Phase 5 is ~an hour of mechanical work.)*
+2. **GitHub visibility + org.** Private personal repo (my rec — this is the product app, unlike the public honuware repos; friends can be invited as collaborators), or public / under the `honuware` org?
+3. **H8 — extract vs copy the account/user/photo endpoints.** My rec: extract into `honuware_platform` in Phase 0.2 — `@honuware/ui` already binds to those exact routes, every future consumer needs them, and the CSRF guard already knows their paths. Fallback: copy knottyyoga's files into CF to unblock Phase 4 and leave H8 open.
+4. **Events schema scope.** (a) `event_categories` now? *(rec: yes — trivial, and the UI filter wants it early)*; (b) `scan_runs` deferred to Phase 13? *(rec: yes)*; (c) re-ingestion policy when an approved event's source page changes *(rec: update minor fields silently; revert to `pending` only when date/venue changes)*.
+5. **Scanner architecture (D5).** No decision needed until Phase 13 — but a standing preference between in-process C++ (A), a separate Python/TS worker on the official SDK (B, my lean), or an Anthropic Managed-Agents scheduled deployment (C) shapes small things earlier (how much scan config lives in `event_sources`).
+6. **Dev environment.** Confirm: share the knottyyoga Postgres container (host port **5432** — compose is authoritative; the 5400 in knottyyoga's docs is stale), CF server on **18081**, `ng serve --port 4201` for side-by-side. *(Rec: yes to all.)*
+7. **Public self-registration at launch.** The endpoints exist regardless; do we show Register in the UI from day one, or hide it (effectively invitation-only) until user-submitted events arrive? *(Rec: hide the link initially; flip it on with the user-submission feature.)*
+8. **Multi-community details (D8).** (a) Confirm communities-as-tenants (Model C, one CloudFront distribution per community, one shared bundle). (b) Day-one site-meta field list *(rec: display name, logo, tagline, about, contact email, social links; add city/region when community #2 exists)*. (c) How per-community meta gets edited *(rec: a small "Site settings" admin page in Phase 14 — generic CRUD over `config_secrets` is awkward with at-rest encryption; until then, values are seeded/set via the helper)*.
+9. **Deploy timing + domain.** CF can deploy single-community fixed-mode any time after Phase 11; control mode only when community #2 onboards. When do you want the domain name bought (it feeds `website_address` prod values and SES setup)?
+10. **test_helper TUI.** Include a `communityfinder_test_helper` (ftxui/replxx REPL) from the start, or defer? *(Rec: defer — the admin CRUD editor covers manual data needs; keeps two Conan deps out.)*
+11. **Collaborators.** Will the friends work in the CF repo itself (affects Q2, branch protection at Phase 15, and a LICENSE/contribution note), or only on honuware?
+12. **First job catalog scope.** Beyond `archive_past_events` + `notify_admin_alerts`, should Phase 12 mirror any of knottyyoga's generic jobs (e.g. token cleanup via `TokenCleanupHelper`)? *(Rec: yes — adopt the generic hygiene jobs from knottyyoga's catalog wholesale.)*
 
-2. **GitHub visibility.** Public (matches the splitting-plan assumption for new sites, portfolio value for friends) or **private** (my recommendation — this is your product idea and its business logic; you can open it later, and friends can be invited as collaborators either way)?
+# Suggested Additions (things a public community site will want that weren't on your list)
 
-3. **Sequencing (D1/S3).** Confirm: drive the honuware extraction to its Phase 4.2 as the gate, CommunityFinder becomes the real second consumer, and the splitting plan's Phase 5 `hello_server` example is demoted to optional/na. Also confirm I should fold the **hand-off requirements** section above into the splitting-plan document (as its plan did with the tenancy hand-offs).
+- **Legal + trust:** privacy policy / terms pages; cookie note. Needed before open registration.
+- **Email deliverability:** SES (or provider) setup + SPF/DKIM on the domain before real verification mails; until then dev uses the test mail path.
+- **iCal export** for events — nearly free: foundation's `ICalGenerator` + `app_ical_config.h`; "Add to calendar" on the event page.
+- **SEO/social cards** for event pages: meta + `og:image` from the scaled-photo pipeline; sitemap + robots.txt. (No SSR needed at MVP.)
+- **Admin alerts wired early** (framework `admin_alerts` + the digest job) — your ops eye once anything runs unattended.
+- **Rate limiting posture:** `LoginGate` covers auth; consider per-IP limits on the public events endpoints + ingest before deploy.
+- **Content moderation plan** for user-submitted events (ties to the framework quick-accounts feature when that phase comes).
+- **Demo/seed dataset** for mock mode and dev (doubles as screenshots/marketing material).
+- **Ops:** RDS backup/restore runbook; favicon/logo asset (drives `site_logo_url`); privacy-friendly analytics.
 
-4. **MVP schema scope (D4).** (a) `event_categories` now or later? (My lean: now — trivial, and the UI filter will want it early.) (b) `scan_runs` deferred to Phase 6? (My lean: yes.) (c) Re-ingestion policy when a scanned event was already admin-approved and the source page changed: silently update fields, or flag for re-review? (My lean: update minor fields, revert to `pending` only when date/venue changes.)
+# Change Log
 
-5. **Scanner architecture (D5)** — no decision needed until Phase 6, but if you already have a preference between in-process C++ (A), a separate Python/TS worker (B, my lean), or an Anthropic Managed-Agents scheduled deployment (C), it shapes small things earlier (e.g., how much scan config lives in `event_sources`).
-
-6. **Frontend timing (D6).** Phase 5 as placed, or pull it earlier (right after Phase 3) so manual event entry gets a UI sooner? Server-only phases 2–4 are still curl/test-driven either way.
-
-7. **Dev environment (D7).** Share the knottyyoga Postgres container (port 5400, my recommendation) or clone `database_server/` onto its own port? And confirm dev port 18081 for the server.
-
-8. **Public registration at MVP.** The platform gives register/verify for free. Leave self-registration open from day one, or admin-only accounts until user-submitted events (with quick accounts) arrive? (My lean: endpoints stay registered — they're framework — but the UI hides registration until we want it; effectively invitation-only.)
-
-9. **Deploy timing.** knottyyoga's sequence puts tenancy before its first deploy. CommunityFinder could deploy earlier as a plain single-tenant server (pre-tenancy honuware) and adopt `FixedTenantResolver` in a later version bump — or wait for tenancy to land in honuware. Any preference? (No work depends on this until Phase 7.)
-
-10. **test_helper TUI.** Include a `communityfinder_test_helper` (ftxui/replxx REPL like knottyyoga's) from the start, or defer until the domain has enough commands to justify it? (My lean: defer; the generic admin CRUD covers most manual data needs early on.)
-
-11. **Collaborators.** Will the friends work on CommunityFinder itself (affects Q2, repo permissions, and whether a LICENSE/contribution note is needed), or only on honuware and their own sites?
+- **7/24/2026 (v0.2)** — Re-grounded to as-built reality per the (now-removed) Mason Update section: extraction complete (`server_components` live + CI green; knottyyoga on FetchContent @ `8df437d`), tenancy Phases 0–7 landed in honuware (`FixedTenantResolver`/control mode, `/api/site_info`, `HONUWARE_DB_*`), `@honuware/ui@0.1.1` published (Angular 21). Corrected v0.1 assumptions: account/user/photo HTTP endpoints are app-authored (new H8 proposes extraction), the scheduler engine was never extracted (new H9), the `create_database` split is owned here (H2, re-scoped out of tenancy 7/23), DB host port is 5432. Replaced the phase plan with the MVP ladder (Phases 0–15 with checkboxes), added D8 multi-community + D9 client access/mock strategy, rebuilt Open Questions, added Suggested Additions.
+- **7/11/2026 (v0.1)** — Initial plan against the pre-extraction componentization state.

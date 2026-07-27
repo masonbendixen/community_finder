@@ -240,7 +240,7 @@ Split during execution (2026-07-25): **14 endpoints are framework-clean and move
 
 Runbook (co-dev split: Claude writes the files, Mason does every git write):
 
-- [ ] **Step 1 — [Mason] create the empty GitHub repo.** New repository → owner `honuware`, name `communityfinder`, **Public**, and **leave "Add a README / .gitignore / license" UNCHECKED** (we push our own; an auto-created file makes the history diverge and the first push bounces). CLI equivalent:
+- [x] **Step 1 — [Mason] create the empty GitHub repo.** New repository → owner `honuware`, name `communityfinder`, **Public**, and **leave "Add a README / .gitignore / license" UNCHECKED** (we push our own; an auto-created file makes the history diverge and the first push bounces). CLI equivalent: ✅ 2026-07-26
   ```bash
   gh repo create honuware/communityfinder --public \
     --description "Gay community events site — second consumer of honuware."

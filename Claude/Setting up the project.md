@@ -255,14 +255,14 @@ Runbook (co-dev split: Claude writes the files, Mason does every git write):
   ```bash
   cd C:/Users/mason/source/repos/communityfinder
   git init
-  git branch -M main
+  git branch -M master
   git add .
   git status                     # sanity-check the staged skeleton
   git commit -m "Phase 1.1: repository skeleton" -m "gitignore, gitattributes (LF/CRLF pins), LICENSE (Apache-2.0), README stub, CLAUDE.md (conventions + planning-dir override)." -m "Co-Authored-By: Claude <noreply@anthropic.com>"
   git remote add origin https://github.com/honuware/communityfinder.git
-  git push -u origin main
+  git push -u origin master
   ```
-  (Personal account? swap the `origin` URL to `https://github.com/<you>/communityfinder.git`.)
+  (Personal account? swap the `origin` URL to `https://github.com/<you>/communityfinder.git`.) GitHub labels a new empty repo's default branch `main`; pushing `master` first creates `master` as the real branch — if the repo still shows `main` as default afterward, switch it to `master` under **Settings → Branches** (then delete the empty `main` if one was auto-made).
 - [ ] **Step 4 — [Mason] settings + collaborators.** Invite **Levi Kuhn** + **Caleb Ault** as collaborators (admin) (Q11). Leave branch protection off for now — it turns on in Phase 15 once a CI check exists (Q11; with three committers, consider pulling CI forward).
 
 ### 1.2 Dev database + docker client

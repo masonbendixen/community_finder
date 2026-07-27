@@ -317,12 +317,13 @@ Runbook (co-dev split: Claude writes the files, Mason does every git write):
 - [x] **DONE.** Unit tests: `SiteConfigService` (5), `Home` with `COMMUNITY_ACCESS` mock (2), `App` shell (2) — **9 total, green**.
 - **Phase gate — automated portion MET (Claude):** `ng build -c local` (mock, offline) + `ng build -c development` compile; 9 ui tests green. **Manual browser check for Mason:** `ng serve` (mock) offline, and `ng serve -c development` against the running server (18081) rendering the live health + site name.
 
-## Phase 4 — Account creation & user info endpoints, server (your item 3; *needs 0.2*)
+## Phase 4 — Account creation & user info endpoints, server (your item 3; *needs 0.2*) — **DONE + GREEN (2026-07-27)**
 
-- [ ] The account/user/photo endpoints live in CF's build (via platform after 0.2 — then this phase is wiring + seeding — or as tracked copies): register / verify / account activation / login / logout / me / remember / get_user_info / set_user_info / update_user_password (+ the photo endpoints ahead of Phase 5).
-- [ ] Mail path: dev uses the test/log mail path or real SMTP via `config_secrets`; activation links built from `website_address_login`.
-- [ ] HTTP tests: register → verify → login → me; **remember-token silent re-login** (`device_tokens` — your persistent-login item); `set_user_info` roundtrip; `update_user_password` incl. `must_change_password`; `LoginGate` lockout sanity; CSRF enforced on POSTs (bootstrap exemptions honored); **`get_user_info` returns roles + permissions** (your "fetch roles and permissions" item, server side); a fresh registration carries **no roles** — open registration (Q7) is non-admin by default.
-- **Phase gate:** the full auth loop green over HTTP in the suite.
+**The extraction paid off — no endpoint code needed.** 0.2 moved all the account/user/photo endpoints into honuware_platform, and CF's `web_app.cpp` calls `RegisterFrameworkEndpoints()` (Phase 2), so register/verify/login/logout/me/remember/get_user_info/set_user_info/update_user_password + the photo endpoints were live from Phase 2. Phase 4 = the app-side coverage honuware doesn't carry + CF's open-registration policy.
+
+- [x] **Endpoints live in CF's build** via platform (0.2) — verified: the framework routes are registered by `RegisterFrameworkEndpoints()`. Mail path: the app secret defaults set `website_address`/`website_address_login`; `main.cpp` wires `MakeMailHelper`; register sends the verification email (test confirms). CF registers **no** `PostRegisterHook` (no gift domain) — registration is the plain framework path.
+- [x] **HTTP tests.** CF-side `endpoints/register_test.cpp` (3 tests, into `communityfinder_test_cases`): register creates an **unverified** person + sends **one** verification email; **fresh registration has no roles** (open registration, Q7 — non-admin by default); missing-password → 400 with no person created. The rest of the loop is covered by the **honuware component suite composed against CF's schema** (in CF's suite): login / verify / me / logout / remember (silent re-login) / set_user_info / update_user_password (incl. must_change_password) / LoginGate lockout / CSRF, and **`get_user_info` returns roles + permissions** (honuware's `get_user_info_test` creates roles+perms, assigns them, asserts `body["roles"]`/`["permissions"]`). So no CF duplicate was needed for the roles/permissions item.
+- **Phase gate — MET:** the full auth loop is green over HTTP in the suite. **Suite 1510** (was 1507; +3 CF register tests) `[knottyyoga… ] PASSED`. Build against local honuware green.
 
 ## Phase 5 — Account creation & user profile UI (your item 4)
 

@@ -251,7 +251,7 @@ Runbook (co-dev split: Claude writes the files, Mason does every git write):
   - `README.md` — stub: what CommunityFinder is, the "second honuware consumer" note, build pointer.
   - `LICENSE` — **Apache-2.0** (matches honuware; clean for Levi/Caleb's contributions). Tell me if you'd rather a source-available/proprietary notice.
   - `CLAUDE.md` — adapted from knottyyoga's: runtime layering (endpoints → business_logic → services → table_helpers → db_schema) + component layer order; thin-endpoint / KeyValueTable-at-boundaries rules; testing conventions (no fixtures, pre-created tables, HTTP via `handle_full`, **`ThreadPool::Shutdown()` before the next DB read**, never assume collection order); **the volatile endpoint-anchor convention** (`-O2` dead-strip trap); Crow `HTTPMethod` PascalCase gotcha; `FormatString` + `NormalizeCrLf` mail rules; naming conventions; the env-var table; the FetchContent/co-dev section; **planning-directory override → `C:\Users\mason\Documents\Obsidian\CommunityFinder\Claude\`**; and the division-of-labor block (Claude: Linux docker builds/tests + read-only git; Mason: Windows spot-checks + all git writes).
-- [ ] **Step 3 — [Mason] first commit + push** (after step 2; shell-agnostic — git-bash or PowerShell):
+- [x] **Step 3 — [Mason] first commit + push** (after step 2; shell-agnostic — git-bash or PowerShell): ✅ 2026-07-26
   ```bash
   cd C:/Users/mason/source/repos/communityfinder
   git init
@@ -263,7 +263,7 @@ Runbook (co-dev split: Claude writes the files, Mason does every git write):
   git push -u origin master
   ```
   (Personal account? swap the `origin` URL to `https://github.com/<you>/communityfinder.git`.) GitHub labels a new empty repo's default branch `main`; pushing `master` first creates `master` as the real branch — if the repo still shows `main` as default afterward, switch it to `master` under **Settings → Branches** (then delete the empty `main` if one was auto-made).
-- [ ] **Step 4 — [Mason] settings + collaborators.** Invite **Levi Kuhn** + **Caleb Ault** as collaborators (admin) (Q11). Leave branch protection off for now — it turns on in Phase 15 once a CI check exists (Q11; with three committers, consider pulling CI forward).
+- [x] **Step 4 — [Mason] settings + collaborators.** Invite **Levi Kuhn** + **Caleb Ault** as collaborators (admin) (Q11). Leave branch protection off for now — it turns on in Phase 15 once a CI check exists (Q11; with three committers, consider pulling CI forward). ✅ 2026-07-26
 
 ### 1.2 Dev database + docker client
 - [ ] `database_server/README.md` documenting the shared container (knotty-net, host 5432, alias `postgresql`, user/pass docker) — no new compose project (Q6).

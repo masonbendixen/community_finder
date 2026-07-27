@@ -302,18 +302,20 @@ Runbook (co-dev split: Claude writes the files, Mason does every git write):
 
 ## Phase 3 — Angular client skeleton with mock mode (your MVP item 2)
 
+**DONE + GREEN (2026-07-27).** Scaffolded a fresh **Angular 21** workspace (`npx @angular/cli@21` — the global `ng` is a stale 17, so the pinned CLI was used), added `@honuware/ui@0.1.1` (exact) + Material + zone.js. Gates: **`ng build -c local` (mock) OK**, **`ng build -c development` OK**, **9 unit tests pass** (vitest — Angular 21's default `@angular/build:unit-test`, not karma). `ui/` is untracked — pending Mason's commit. Note: the new-project naming (`app.ts`/`app.html`, no `.component` suffix) + vitest are Angular 21 defaults; `mat.theme` (M3) applied in `styles.scss`.
+
 ### 3.1 Workspace
-- [ ] `ng new` (Angular 21, standalone, scss, routing) in `ui/`; `npm install @honuware/ui@0.1.1 --save-exact`; Angular Material + `mat.theme` setup (library requirement); eslint + karma headless.
+- [x] **DONE.** Angular 21 workspace in `ui/` (standalone, scss, `@angular/build` esbuild). `@honuware/ui@0.1.1` pinned exact + `@angular/material`/`cdk`/`animations` + `zone.js` (@honuware/ui compat). Test runner = **vitest** (Angular 21 default) rather than karma — the plan's "karma" was pre-scaffold. eslint deferred (build+test are the gate).
 
 ### 3.2 Access + config wiring
-- [ ] `app.config.ts`: `provideHttpClient(withInterceptorsFromDi())`, `CsrfInterceptor` + `ErrorInterceptor`, `tryTokenLoginInitializer`, `AUTH_ROUTES` + `CRUD_EDITOR_ROUTES` overrides (CF paths + returnUrl allowlist), library-default access providers (`HonuwareAccessProxy`; `HONUWARE_API_BASE` default `/api`).
-- [ ] `CommunityAccess` (interface + HTTP + mock): `getHealth()`, `getSiteInfo()`. `SiteConfigService` ported from knottyyoga's pattern (APP_INITIALIZER, merge non-empty `site_info` fields over `DEFAULT_SITE_CONFIG`, never rejects) + spec.
-- [ ] Environments dev/prod/local; **`local` configuration → `provideHonuwareAccessMock(...)` + `MockCommunityAccess`** (DI swap on an environment flag); **`ng serve` default = `local`** (zero backend); `serve:development` uses `proxy.conf.json` → `http://127.0.0.1:18081`; document `--port 4201` for side-by-side runs.
+- [x] **DONE.** `app.config.ts`: `provideHttpClient(withInterceptorsFromDi())`, `provideAnimations()`, `CsrfInterceptor` + `ErrorInterceptor` (HTTP_INTERCEPTORS), `HONUWARE_API_BASE` = `/api`, **`provideAppInitializer`** ×2 (silent login via `tryTokenLoginInitializer` + `SiteConfigService.load()`), `provideRouter`. Uses `provideAppInitializer` (modern) not the deprecated `APP_INITIALIZER`. AUTH_ROUTES/CRUD_EDITOR_ROUTES overrides deferred to Phases 5/7 (no auth/CRUD pages yet).
+- [x] **DONE.** `CommunityAccess` (interface + HTTP `CommunityHttpAccess` + `CommunityMockAccess`, token `COMMUNITY_ACCESS`, `provideCommunityAccess(useMock)`): `getHealth()`, `getSiteInfo()`. `SiteConfigService` ported from knottyyoga (merges non-empty `site_info` over `DEFAULT_SITE_CONFIG`, never rejects, optional token → fallback) + spec (5 tests).
+- [x] **DONE.** Environments `environment.ts` (prod) / `.development.ts` / `.local.ts` (`useMock` flag); **`local` config → `provideHonuwareAccessMock()` + `CommunityMockAccess`** via the `environment.useMock` DI swap; **`ng serve` default = `local`** (zero backend); `serve:development` → `proxy.conf.json` → `http://127.0.0.1:18081`, **port 4201**.
 
 ### 3.3 Shell + the dummy call
-- [ ] Minimal shell: header (site name from `SiteConfigService`; login/register placeholders), footer, home page showing the **live `/api/health` payload + the community display name** — the "simple dummy call that gets shown".
-- [ ] Unit tests: `SiteConfigService`, `CommunityAccess` mock, home component (mock providers).
-- **Phase gate:** `ng serve` (mock) fully works offline; `ng serve -c development` renders health + site name from the running server; ui tests green.
+- [x] **DONE.** Shell: `app` (header + `<router-outlet>` + footer), `Header` (community name from `SiteConfigService`; disabled Login/Register placeholders for Phase 5), `Footer`; `Home` page shows the **live `/api/health` status/version + the community display name** — the dummy call.
+- [x] **DONE.** Unit tests: `SiteConfigService` (5), `Home` with `COMMUNITY_ACCESS` mock (2), `App` shell (2) — **9 total, green**.
+- **Phase gate — automated portion MET (Claude):** `ng build -c local` (mock, offline) + `ng build -c development` compile; 9 ui tests green. **Manual browser check for Mason:** `ng serve` (mock) offline, and `ng serve -c development` against the running server (18081) rendering the live health + site name.
 
 ## Phase 4 — Account creation & user info endpoints, server (your item 3; *needs 0.2*)
 

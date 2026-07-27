@@ -235,8 +235,35 @@ Split during execution (2026-07-25): **14 endpoints are framework-clean and move
 ## Phase 1 — Repo & dev-environment bootstrap
 
 ### 1.1 Repository
-- [ ] Create the GitHub repo (**`communityfinder`, public** — Q1/Q2) with the monorepo skeleton, `.gitignore` (VS/CMake/Conan/node artifacts, `out/`, `build/`, `dist/`, `ConanLibImports.cmake`), **`.gitattributes` pinning LF for `*.sh`/`Dockerfile`/`*.yml` and CRLF for `*.cmd`** (the honuware clone lesson — CRLF shebangs break Linux), README stub, **LICENSE + short contribution note** (Q2/Q11 — public repo with outside contributors; Apache-2.0 default unless Mason wants source-available terms), and **invite Levi + Caleb as collaborators** (Q11).
-- [ ] Root `CLAUDE.md` adapted from knottyyoga's: runtime layering (endpoints → business_logic → services → table_helpers → db_schema) + component layer order; thin-endpoint / KeyValueTable-at-boundaries rules; testing conventions (no fixtures, pre-created tables, HTTP via `handle_full`, **`ThreadPool::Shutdown()` before the next DB read**, never assume collection order); **the volatile endpoint-anchor convention** (the `-O2` dead-strip trap); Crow `HTTPMethod` PascalCase gotcha; `FormatString` + `NormalizeCrLf` mail rules; naming conventions; the env-var table above; the FetchContent/co-dev section; **planning-directory override → `C:\Users\mason\Documents\Obsidian\CommunityFinder\Claude\`** and the division-of-labor block (Claude: Linux docker builds/tests + read-only git; Mason: Windows spot-checks + all git writes).
+
+**Repo home:** `honuware/communityfinder` (**public**, D2) — recommended, keeps the honuware family together (org-vs-personal is cosmetic; a personal `github.com/<you>/communityfinder` works identically, just swap the `origin` URL in step 3). **Local checkout:** `C:\Users\mason\source\repos\communityfinder`, beside `server_components` + `knottyyoga`. This is the **code** repo — distinct from this planning vault (`…\Obsidian\CommunityFinder`), which stays where it is.
+
+Runbook (co-dev split: Claude writes the files, Mason does every git write):
+
+- [ ] **Step 1 — [Mason] create the empty GitHub repo.** New repository → owner `honuware`, name `communityfinder`, **Public**, and **leave "Add a README / .gitignore / license" UNCHECKED** (we push our own; an auto-created file makes the history diverge and the first push bounces). CLI equivalent:
+  ```bash
+  gh repo create honuware/communityfinder --public \
+    --description "Gay community events site — second consumer of honuware."
+  ```
+- [ ] **Step 2 — [Claude] create the skeleton files** in `C:\Users\mason\source\repos\communityfinder` (on your go):
+  - `.gitignore` — VS/CMake/Conan/node artifacts (`out/`, `build/`, `dist/`, `node_modules/`, `ConanLibImports.cmake`, `CMakeUserPresets.json`, `.vs/`, …), modeled on knottyyoga's.
+  - `.gitattributes` — force **LF** on `*.sh` / `Dockerfile` / `*.yml` / `*.yaml` / `*.cmake`; **CRLF** on `*.cmd` (the honuware clone lesson — a CRLF shebang breaks the Linux docker scripts).
+  - `README.md` — stub: what CommunityFinder is, the "second honuware consumer" note, build pointer.
+  - `LICENSE` — **Apache-2.0** (matches honuware; clean for Levi/Caleb's contributions). Tell me if you'd rather a source-available/proprietary notice.
+  - `CLAUDE.md` — adapted from knottyyoga's: runtime layering (endpoints → business_logic → services → table_helpers → db_schema) + component layer order; thin-endpoint / KeyValueTable-at-boundaries rules; testing conventions (no fixtures, pre-created tables, HTTP via `handle_full`, **`ThreadPool::Shutdown()` before the next DB read**, never assume collection order); **the volatile endpoint-anchor convention** (`-O2` dead-strip trap); Crow `HTTPMethod` PascalCase gotcha; `FormatString` + `NormalizeCrLf` mail rules; naming conventions; the env-var table; the FetchContent/co-dev section; **planning-directory override → `C:\Users\mason\Documents\Obsidian\CommunityFinder\Claude\`**; and the division-of-labor block (Claude: Linux docker builds/tests + read-only git; Mason: Windows spot-checks + all git writes).
+- [ ] **Step 3 — [Mason] first commit + push** (after step 2; shell-agnostic — git-bash or PowerShell):
+  ```bash
+  cd C:/Users/mason/source/repos/communityfinder
+  git init
+  git branch -M main
+  git add .
+  git status                     # sanity-check the staged skeleton
+  git commit -m "Phase 1.1: repository skeleton" -m "gitignore, gitattributes (LF/CRLF pins), LICENSE (Apache-2.0), README stub, CLAUDE.md (conventions + planning-dir override)." -m "Co-Authored-By: Claude <noreply@anthropic.com>"
+  git remote add origin https://github.com/honuware/communityfinder.git
+  git push -u origin main
+  ```
+  (Personal account? swap the `origin` URL to `https://github.com/<you>/communityfinder.git`.)
+- [ ] **Step 4 — [Mason] settings + collaborators.** Invite **Levi Kuhn** + **Caleb Ault** as collaborators (admin) (Q11). Leave branch protection off for now — it turns on in Phase 15 once a CI check exists (Q11; with three committers, consider pulling CI forward).
 
 ### 1.2 Dev database + docker client
 - [ ] `database_server/README.md` documenting the shared container (knotty-net, host 5432, alias `postgresql`, user/pass docker) — no new compose project (Q6).

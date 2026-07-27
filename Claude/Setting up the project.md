@@ -245,7 +245,7 @@ Runbook (co-dev split: Claude writes the files, Mason does every git write):
   gh repo create honuware/communityfinder --public \
     --description "Gay community events site — second consumer of honuware."
   ```
-- [ ] **Step 2 — [Claude] create the skeleton files** in `C:\Users\mason\source\repos\communityfinder` (on your go):
+- [x] **Step 2 — [Claude] created the skeleton files (2026-07-26)** in `C:\Users\mason\source\repos\communityfinder` — `.gitignore`, `.gitattributes`, `README.md`, `LICENSE` (Apache-2.0), `NOTICE` (added as the Apache companion; copyright line "Knotty Yoga" — matches honuware, change if you'd rather your name / "The CommunityFinder Authors"), `CLAUDE.md`. Note: `package-lock.json` is deliberately NOT ignored (the CI `npm ci` needs a committed lock). Ready for your Step 3 commit+push.
   - `.gitignore` — VS/CMake/Conan/node artifacts (`out/`, `build/`, `dist/`, `node_modules/`, `ConanLibImports.cmake`, `CMakeUserPresets.json`, `.vs/`, …), modeled on knottyyoga's.
   - `.gitattributes` — force **LF** on `*.sh` / `Dockerfile` / `*.yml` / `*.yaml` / `*.cmake`; **CRLF** on `*.cmd` (the honuware clone lesson — a CRLF shebang breaks the Linux docker scripts).
   - `README.md` — stub: what CommunityFinder is, the "second honuware consumer" note, build pointer.

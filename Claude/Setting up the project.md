@@ -163,22 +163,23 @@ communityfinder/
 │       ├── shared/components/   header (user chip + admin dropdown), footer
 │       └── pages/               home, events/, account/, admin/, auth routes onto hw-* pages
 ├── server/
-│   ├── conanfile.py             honuware's 14-package set (init() → ConanLibImports.cmake)
-│   ├── conan_provider.cmake · CMakeSettings.json · CMakeUserPresets.json
-│   ├── CMakeLists.txt           project, C++20, per-OS flags, CMP0167 guard, FetchContent(honuware @ SHA)
-│   ├── cmake/honuware_layering.cmake   app-superset DAG
-│   ├── docker/                  Linux build/test client (build_and_test.sh w/ count floor, co-dev mount)
-│   ├── certs/cacert.pem
-│   ├── src/
-│   │   ├── main.cpp
-│   │   ├── business_logic/      app_*.h/cpp seams · events/ · migration/
-│   │   ├── db_schema/           venues, event_sources, events, … + make_app_tables, make_database_info
-│   │   ├── sql_util/table_helpers/   Venues, EventSources, Events
-│   │   ├── endpoints/           web_app.cpp anchors · app_endpoint_auth_helper · events endpoints
-│   │   ├── database_helper/     main.cpp + create_database.*
-│   │   ├── scheduler/           communityfinder_job_catalog.* + main.cpp        (Phase 12)
-│   │   └── test_helper/         REPL — command registry + commands (ftxui/replxx)  (Phase 2.7)
-│   └── test/                    CMakeLists.txt + src/main.cpp (tests live beside sources)
+│   ├── communityfinder_server/ **CMake source root** (nested, mirrors knottyyoga_server/)
+│   │   ├── conanfile.py         16-package set (honuware superset + ftxui/replxx; init() → ConanLibImports.cmake)
+│   │   ├── conan_provider.cmake · CMakeSettings.json · CMakeUserPresets.json   (Windows/VS)
+│   │   ├── CMakeLists.txt       project(communityfinder), C++20, per-OS flags, CMP0167 guard, FetchContent(honuware @ SHA)
+│   │   ├── cmake/honuware_layering.cmake   app-superset DAG
+│   │   ├── certs/cacert.pem
+│   │   ├── src/
+│   │   │   ├── main.cpp
+│   │   │   ├── business_logic/  app_*.h/cpp seams · migration/ · events/ (Phase 10)
+│   │   │   ├── db_schema/       make_app_tables, make_database_info + venues/event_sources/events (Phase 10)
+│   │   │   ├── sql_util/table_helpers/   Venues, EventSources, Events (Phase 10)
+│   │   │   ├── endpoints/       web_app.cpp anchors (→ RegisterFrameworkEndpoints) · events endpoints (Phase 10)
+│   │   │   ├── database_helper/ main.cpp + create_database.*   (2.5)
+│   │   │   ├── scheduler/       communityfinder_job_catalog.* + main.cpp   (Phase 12)
+│   │   │   └── test_helper/     REPL — command registry + commands (ftxui/replxx)  (2.7)
+│   │   └── test/               CMakeLists.txt + src/main.cpp (tests live beside sources)
+│   └── docker/                 Linux build/test client — **sibling** of the cmake root (build_and_test.sh w/ count floor, co-dev mount)
 └── database_server/README.md    pointer to the shared knotty-net container (host 5432)
 ```
 

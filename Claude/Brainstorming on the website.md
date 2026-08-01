@@ -4,7 +4,7 @@ Category: Claude
 Status: Active
 Authors: Mason Bendixen
 Last Updated: 8/1/2026
-Version: 0.2
+Version: 0.3
 tags:
 ---
 # Overview
@@ -84,16 +84,22 @@ Three deep research passes: (1) the event/organization landscape, (2) the guide/
 
 **Decided: the consumer brand is Antifreeze; CommunityFinder stays the platform/repo name.** Your expansion instinct is the whole architecture: a two-axis scheme — **`{audience}.{city}`** — gay first, other underserved communities later, other cities later. That maps 1:1 onto D8 communities-as-tenants: each audience+city pair is one tenant (own database, own CloudFront distribution, one shared server + SPA bundle). "CommunityFinder" as the engine behind an Antifreeze-branded network now reads exactly right.
 
-**Domain reality (checked via registry RDAP, 8/1/2026):**
+**Domain reality (checked via registry RDAP, 8/1/2026; Mason's constraint: .com only). A registry 404 = "appears unregistered" — that's not a reservation, so buy before socializing the name widely:**
 
 | Domain | Status |
 |---|---|
-| `antifreeze.com` | **Registered since 1996 via MarkMonitor** (the Fortune-500 brand-protection registrar) — corporate-held, effectively unbuyable. `gay.seattle.antifreeze.com` as literally spelled is off the table. |
+| **`antifreezeseattle.com`** | ✅ **Appears unregistered — Mason's exact proposal works** |
+| `theantifreeze.com` | ✅ Appears unregistered — the best future cross-city umbrella; worth ~$12/yr as insurance |
+| `antifreezehq.com` · `joinantifreeze.com` | ✅ Appear unregistered (backups) |
+| `defrostseattle.com` · `warmfrontseattle.com` | ✅ Appear unregistered (alternate brands "Defrost" / "Warm Front" for the friend review, same Freeze-cure idea) |
+| `thawseattle.com` | Registered (2022) |
+| `getantifreeze.com` | Registered 7/12/2026 — three weeks ago, unrelated party; no action |
+| `antifreeze.com` | **Registered since 1996 via MarkMonitor** (Fortune-500 brand-protection registrar) — corporate-held, effectively unbuyable |
 | `seattleantifreeze.com` | Registered (2007, Namecheap) |
-| `antifreeze.org` | Registered (1999; expires 9/2026 — conceivably drops, don't plan on it) |
-| `antifreeze.gay` | **Appears unregistered** (404 at the .gay registry RDAP) — verify + price at a registrar; dictionary-word .gay names are often registry-premium ($50–500/yr range) |
+| `antifreeze.org` | Registered (1999) |
+| `antifreeze.gay` | Appears unregistered, but **ruled out 8/1 — Mason wants .com** |
 
-**Recommendation:** register **`antifreeze.gay`** now as cheap insurance and run this site at **`seattle.antifreeze.gay`** (or bare `antifreeze.gay` until city #2). For this site the audience axis lives in the TLD itself — clean and memorable. When a sister audience materializes (e.g., the trans sister site with partners, Q2), add a neutral umbrella apex then — candidates to check when needed: `theantifreeze.com`, `antifreezehq.com`, `antifreeze.community`, `antifreeze.social` — and the per-community CloudFront model doesn't care which apex each community hangs off. Feeds SUTP Q9 (prod `website_address` secrets + SES/SPF/DKIM) once purchased.
+**Recommendation (updated 8/1 for the .com constraint): buy `antifreezeseattle.com` now.** The site lives at **`gay.antifreezeseattle.com`** (the apex redirects there until a second audience exists). The two-axis expansion survives intact: **audiences are subdomains** (`trans.antifreezeseattle.com`, with partners, someday), **cities are sibling apexes** (`antifreezeportland.com`, …), and one wildcard cert (`*.antifreezeseattle.com`) + the per-community CloudFront model covers it — nothing in D8 changes. Optionally also grab `theantifreeze.com` as the future umbrella. Trademark note: "Antifreeze" for a community website is a suggestive use of a dictionary word in a service class unrelated to the automotive-coolant brands — low risk, but fold a trademark sanity check into the Phase-B counsel review (and skip "Icebreaker"-style alternates outright; that one's a famous apparel brand). Feeds SUTP Q9 (prod `website_address` secrets + SES/SPF/DKIM) once purchased.
 
 **Site identity for friend review** — header: **ANTIFREEZE**; tagline candidates: "The cure for the Seattle Freeze" · "Gay Seattle, thawed" · "Where gay Seattle finds each other" · "Every event. Every crew. All of gay Seattle."
 
@@ -170,7 +176,7 @@ This is the product's core claim and the answer to "why won't this rot like ever
 - **Editorial voice**: warm, direct, factual, sex-positive, zero moralizing in either direction — the bathhouse page and the chorus page get the same respectful treatment. House style: state facts + etiquette + safety plainly; date every volatile claim; never euphemize, never leer.
 - **Audience rule (Q2, decided 8/1)**: the voice is **gay men writing for gay men** — that's who we are and who the marketing serves, and pretending otherwise would dilute both. Coverage rule: list the LGBT-wide anchors everyone attends (Pride weekend, festivals, mixed venues); **link out with credit, don't fake depth** on sapphic/trans/QTPOC-specific scenes; sister sites (`trans.seattle.…` etc.) happen only ever in partnership with people from those communities who can do them justice — recorded as a standing principle, and the brand architecture already supports it.
 - **Spectrum handling is structural, not tonal**: scene tags + an 18+-gated section for the adult layer (bathhouses, beaches/cruising, kink). WA has **no age-verification law as of mid-2026** (HB 2112 didn't pass; FSC v. Paxton greenlit state AV laws, so watch) — a simple interstitial suffices today and keeps the site far below any "1/3 sexually explicit" threshold. Everything stays guide-level factual, nothing explicit.
-- **Privacy by design is a legal requirement here, not a nicety**: Washington's **My Health My Data Act** (private right of action; first class action 2/2025) squarely covers sexual-orientation- and sexual-health-adjacent data + geolocation. Design consequence: no ad-tech pixels, no third-party trackers, privacy-friendly analytics only, no geofencing, minimal accounts data. This is cheap for us and a real trust differentiator ("we can't leak what we don't collect").
+- **Privacy by design is a legal requirement here, not a nicety**: Washington's **My Health My Data Act** (private right of action; first class action 2/2025) squarely covers sexual-orientation- and sexual-health-adjacent data + geolocation. Design consequence: no ad-tech pixels, no third-party trackers, privacy-friendly analytics only, no geofencing, minimal accounts data. This is cheap for us and a real trust differentiator ("we can't leak what we don't collect"). Note this bans *surveillance adtech*, not advertising — direct-sold sponsorships and contextual ads are fully compatible (see **Ads & money**).
 
 ## The Knotty Yoga relationship (trust model)
 
@@ -179,6 +185,18 @@ Research-backed pattern for a business-owner-run community site: **full transpar
 - Persistent site-wide footer: "Founded and funded by [Mason / Knotty Yoga]."
 - A public **listing policy / editorial independence page**: how listings get in (free, criteria-based), how sponsors are labeled ("Presented by"), and the bright line: **we never rank our own business in any 'best of' we publish** — Knotty Yoga appears in directories under the same rules as everyone else.
 - The marketing payoff is structural, not promotional: the studio is *venue + org + recurring-groups host* inside the most useful queer site in the city, plus "Presented by Knotty Yoga" on the newsletter/flagship guides. Low-key by design, durable because disclosed.
+
+## Ads & money (Q9 follow-up — yes, ads are allowed)
+
+MHMDA does **not** ban advertising — it effectively bans *surveillance* advertising: collecting/sharing health-adjacent data, third-party tracking pixels, geofencing near clinics. What works (and is the better business at local scale anyway):
+
+1. **Direct-sold sponsorships** — "Presented by" placements on the site, newsletter, or a section, sold straight to venues, orgs, and gay-friendly businesses. No user data touched. This is how every surviving peer monetizes (QSC's memberships + sponsorships, CHS's pay-what-you-can, city newsletters), and it's what SUTP's "eventually advertising" becomes.
+2. **Contextual ads** — matched to the *page* (a bar page carries a bar's ad), never to the person. MHMDA-compatible.
+3. **House ads** — Knotty Yoga placements under the same labeling rules the trust model already sets.
+4. **Reader support** — tip jar / memberships (the QSC model) as a second leg once there's an audience.
+5. **Out:** programmatic networks (AdSense-style) and Meta/retargeting pixels — that's the MHMDA blast radius *and* the trust-killer, and at niche-local traffic it pays peanuts anyway; direct local sponsors pay real money.
+
+**The bright line, codified:** money buys clearly-labeled *placement*, never *inclusion or ranking*. Listings stay free and editorial forever — our whole critique of GSBA ("a directory of who paid dues") depends on us never becoming one.
 
 ## What we deliberately do NOT build
 
@@ -199,7 +217,7 @@ The technical plan stays in [[Setting up the project]]; this doc feeds it produc
 | Newsletter | Scheduler job (Phase 12 catalog) + mail infra already proven; list provider TBD | New — Phase E |
 | Freshness stamps + closure graveyard | Columns + status enums + public rendering | New — Phase C schema |
 | Circles (Q7 model) | honuware auth/roles + ~4 new tables (circles/members/posts/comments) with server-side visibility checks; admin CRUD from day one | New — Phase H, gated |
-| Multi-city/audience future | D8 communities-as-tenants — each `{audience}.{city}` pair is a tenant; Tacoma or a partner-run trans sister site are `--create_tenant` away; the `seattle.antifreeze.gay` scheme maps 1:1 onto per-community CloudFront | Already architected |
+| Multi-city/audience future | D8 communities-as-tenants — each `{audience}.{city}` pair is a tenant; Tacoma or a partner-run trans sister site are `--create_tenant` away; the `gay.antifreezeseattle.com` scheme (audience subdomains, per-city apexes) maps 1:1 onto per-community CloudFront | Already architected |
 | SEO/AI surface | Event JSON-LD, sitemap, per-category ICS feeds, Bing indexing (ChatGPT cites Bing), robots.txt allowing OAI-SearchBot/PerplexityBot | Add to Phase 11/15 launch checklist |
 
 Implementation conventions inherit SUTP: lower layers first, tests for everything testable, Claude runs the Linux docker gates, Mason does git and Windows spot-checks.
@@ -229,7 +247,7 @@ Lettered phases (A–H) to avoid colliding with SUTP's numbered technical phases
 - [ ] A 5-question survey for ~10 gay/queer Seattle friends: where do you find out about things now? what can you never find? would you use X? (cheap demand validation)
 
 ### B.2 Decisions out of review
-- [~] Lock name/brand + domain — **brand decided: Antifreeze** (Q1, 8/1); remaining: verify + buy `antifreeze.gay` at a registrar (appears unregistered per RDAP 8/1 — may be premium-priced) and confirm display name/tagline with friends (feeds SUTP Q9)
+- [~] Lock name/brand + domain — **brand decided: Antifreeze**, .com constraint added, and **`antifreezeseattle.com` appears available** (RDAP 8/1); remaining: **[Mason] buy it** (+ optionally `theantifreeze.com` as future umbrella) and confirm display name/tagline with friends (feeds SUTP Q9)
 - [x] Lock audience framing — **gay men, link-out posture for sister scenes** (Q2, 8/1); voice one-pager itself still lands in C.3
 - [x] Lock adult-content stance — **Q3 option (b)** (8/1): documented places + etiquette/safety/law editorial; no location listings beyond the beaches
 - [x] Lock geographic scope — **King County incl. the Eastside** (Q5 + Mason follow-up, 8/1); Tacoma/Everett = future communities via tenancy
@@ -361,7 +379,7 @@ Reading the menu: **coverage + freshness are the identity claims** — if either
 9. **Legal counsel timing.** MHMDA (health-adjacent data + private right of action), ToS/privacy pages, the adult-section posture, and eventually UGC. *Rec: minimal-tracking design now (defuses most MHMDA exposure by construction); one counsel review before first public deploy; second review gate before any UGC feature.*
 	- Mason- What is MHMDA and UGC?
 	- Claude- Definitions first. **MHMDA** = Washington's *My Health My Data Act* (passed 2023, effective 2024) — a state privacy law covering "consumer health data" defined very broadly: sexual health, gender-affirming care, *inferences* about either, even precise location near health services. Its teeth: a **private right of action** — individuals can sue directly (first class action filed 2/2025), not just the Attorney General. A gay site that lists PrEP/testing resources *and* runs ad trackers would sit squarely in its blast radius; our answer is architectural — no third-party trackers, no ad pixels, no geolocation, aggregate-only analytics — so there's essentially nothing to sue over ("we can't leak what we don't collect"). **UGC** = user-generated content: anything visitors publish through us (submitted events, comments, future circle posts). It matters because hosting other people's words is where platform-liability law (§230 and the two live sunset bills) applies. With those defined, the actual Q9 decision is still open — my rec stands: minimal-tracking design now, one counsel review before the first public deploy, a second counsel gate before Circles. Say "agreed" and I'll mark it decided.
-	- Mason- How much would legal review for this cost? 
+	- Mason- How much would legal review for this cost? So I can't put ads on the site?
 10. **Success metrics for v1.** What makes this "working" by month 6? *Rec: (a) coverage: ≥90% of a hand-audited week's queer events listed; (b) freshness: 100% of listings verified within their tier cadence; (c) audience: newsletter subs (target 500 by month 6) + weekly returning visitors; (d) the marketing payoff: Knotty Yoga referral traffic/signups tracked honestly. Agree/adjust targets.*
 - Mason- Please suggest a variety of options for me.
 - Claude- A full menu is now in the **Success Metrics — Options Menu** section above: 11 dimensions (coverage, freshness, site audience, return habit, newsletter, calendar feeds, search/AI surface, community signal, the Freeze mission metric, the internal Knotty Yoga metric, and labor sustainability), each with Lean / Solid / Stretch month-6 targets, all measurable without user tracking. Mark a column per row that matters to you — my default: Solid everywhere, Mission as north star, and coverage+freshness as the identity claims where slipping below Lean is the real alarm.

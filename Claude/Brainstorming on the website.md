@@ -101,6 +101,13 @@ Three deep research passes: (1) the event/organization landscape, (2) the guide/
 
 **Recommendation (updated 8/1 for the .com constraint): buy `antifreezeseattle.com` now.** The site lives at **`gay.antifreezeseattle.com`** (the apex redirects there until a second audience exists). The two-axis expansion survives intact: **audiences are subdomains** (`trans.antifreezeseattle.com`, with partners, someday), **cities are sibling apexes** (`antifreezeportland.com`, …), and one wildcard cert (`*.antifreezeseattle.com`) + the per-community CloudFront model covers it — nothing in D8 changes. Optionally also grab `theantifreeze.com` as the future umbrella. Trademark note: "Antifreeze" for a community website is a suggestive use of a dictionary word in a service class unrelated to the automotive-coolant brands — low risk, but fold a trademark sanity check into the Phase-B counsel review (and skip "Icebreaker"-style alternates outright; that one's a famous apparel brand). Feeds SUTP Q9 (prod `website_address` secrets + SES/SPF/DKIM) once purchased.
 
+Mason- Claude can you check the domain availability of the following and think of related ideas:
+- communityfinder.com
+- thawthefreeze.com
+- warmthefreeze.com
+- unfreeze.com
+- 
+
 **Site identity for friend review** — header: **ANTIFREEZE**; tagline candidates: "The cure for the Seattle Freeze" · "Gay Seattle, thawed" · "Where gay Seattle finds each other" · "Every event. Every crew. All of gay Seattle."
 
 # Product Concept

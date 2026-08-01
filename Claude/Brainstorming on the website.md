@@ -293,10 +293,13 @@ Lettered phases (A–H) to avoid colliding with SUTP's numbered technical phases
 6. **The labor model (the existential one).** Who does the weekly moderation/verification hours in month 18? Options: (a) Mason+Levi+Caleb rotating editor-of-the-week; (b) scanner+review-queue only, accept thinner editorial; (c) budget a paid part-time curator once there's any revenue; (d) recruit 2–3 volunteer scene-editors (bear scene, sapphic scene, arts) with named credit. *Rec: (a)+(d) designed into the admin tooling from day one (review queues are multi-user already); decide the trigger for (c).*
 	- Mason- I'll go with your recommendation (a+c)
 7. **Forums: build, bridge, or skip.** Research is unambiguous that Discord kills compounding value and there's no dominant Seattle gay Discord to bridge to — but forums have real cold-start + moderation costs, and the §230 sunset bills add risk to all UGC. *Rec: skip at launch; revisit at a concrete traction gate (e.g., 1,000 newsletter subs) starting with narrow boards (housing / newcomers / looking-for-group), never general chat.*
-	- Mason- I want to get away from people arguing and disparaging each other publicly. I have no interest in being a bluesky or Facebook. I'm wondering if there is a way though to let people publish things and have a model where people who are part of certain groups / communities can see and possibly comment on those posts. We could also 
+	- Mason- I want to get away from people arguing and disparaging each other publicly. I have no interest in being a bluesky or Facebook. I'm wondering if there is a way though to let people publish things and have a model where people who are part of certain groups / communities can see and possibly comment on those posts. We could also link to bluesky or discord servers. 
 8. **Newsletter platform + cadence.** Weekly Monday digest (The Gay Agenda's cadence) vs Thursday (weekend-planning)? Provider (beehiiv/Buttondown/self-host)? *Rec: Thursday weekly; pick provider at Phase F; signup form from first deploy regardless.*
+	- Mason- I'll go with your recommendation.
 9. **Legal counsel timing.** MHMDA (health-adjacent data + private right of action), ToS/privacy pages, the adult-section posture, and eventually UGC. *Rec: minimal-tracking design now (defuses most MHMDA exposure by construction); one counsel review before first public deploy; second review gate before any UGC feature.*
+	- Mason- What is MHMDA and UGC?
 10. **Success metrics for v1.** What makes this "working" by month 6? *Rec: (a) coverage: ≥90% of a hand-audited week's queer events listed; (b) freshness: 100% of listings verified within their tier cadence; (c) audience: newsletter subs (target 500 by month 6) + weekly returning visitors; (d) the marketing payoff: Knotty Yoga referral traffic/signups tracked honestly. Agree/adjust targets.*
+- Mason- Please suggest a variety of options for me.
 
 # Appendix — Seed Inventories (research snapshot, 7/31/2026)
 

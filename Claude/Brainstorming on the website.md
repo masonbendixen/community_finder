@@ -124,6 +124,9 @@ Mason- Claude can you check the domain availability of the following and think o
 - skipsmalltalk.com
 - justsayhello.com
 - friendshipfound.com
+- jointhefun.com
+- beyondthefreeze.com
+- breakthefreeze.com
 
 **Site identity for friend review** — header: **ANTIFREEZE**; tagline candidates: "The cure for the Seattle Freeze" · "Gay Seattle, thawed" · "Where gay Seattle finds each other" · "Every event. Every crew. All of gay Seattle."
 

@@ -15,7 +15,7 @@ There is a website: https://seattlegayscene.com/ that used to be kind of the pla
 
 I am building out a spa, massage space, and fitness / acrobatics studio. I have a large gay clientele. I need to be able to market and gays are a key demographic. Very few gays are in Facebook these days. Google has diminished as an ad platform. Instagram has some relevance but is declining and hard to differentiate yourself on it.
 
-I'd like to have a stie that people are drawn to that I can build community but also use for low key doing my own marketing for free.
+I'd like to have a site that people are drawn to that I can build community but also use for low key doing my own marketing for free.
 
 I'd like to cover what seattlegayscene did, mostly bar events, but do a lot more. I'd love to list all LGBT relevant events and opportunities. The networking things on meetup. The monthly Gay People in Seattle gatherings. Theatre events, pride things, gay figure drawing, the sports leagues, and any other ideas.
 

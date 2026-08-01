@@ -4,7 +4,7 @@ Category: Claude
 Status: Active
 Authors: Mason Bendixen
 Last Updated: 8/1/2026
-Version: 0.3
+Version: 0.4
 tags:
 ---
 # Overview
@@ -101,32 +101,30 @@ Three deep research passes: (1) the event/organization landscape, (2) the guide/
 
 **Recommendation (updated 8/1 for the .com constraint): buy `antifreezeseattle.com` now.** The site lives at **`gay.antifreezeseattle.com`** (the apex redirects there until a second audience exists). The two-axis expansion survives intact: **audiences are subdomains** (`trans.antifreezeseattle.com`, with partners, someday), **cities are sibling apexes** (`antifreezeportland.com`, …), and one wildcard cert (`*.antifreezeseattle.com`) + the per-community CloudFront model covers it — nothing in D8 changes. Optionally also grab `theantifreeze.com` as the future umbrella. Trademark note: "Antifreeze" for a community website is a suggestive use of a dictionary word in a service class unrelated to the automotive-coolant brands — low risk, but fold a trademark sanity check into the Phase-B counsel review (and skip "Icebreaker"-style alternates outright; that one's a famous apparel brand). Feeds SUTP Q9 (prod `website_address` secrets + SES/SPF/DKIM) once purchased.
 
-Mason- Claude can you check the domain availability of the following and think of related ideas:
-- communityfinder.com
-- thawthefreeze.com
-- warmthefreeze.com
-- unfreeze.com
-- stopthefreeze.com
-- breakthefreeze.com
-- defrostfriends.com
-- icebreakerhq.com
-- icebreakerclub.com
-- endthefreeze.com
-- frozennomore.com
-- warmconnections.com
-- meetyourpeople.com
-- findyourcircle.com
-- localcircles.com
-- findyourcrew.com
-- buildyourcircle.com
-- hugitout.com
-- yournextfriend.com
-- skipsmalltalk.com
-- justsayhello.com
-- friendshipfound.com
-- jointhefun.com
-- beyondthefreeze.com
-- breakthefreeze.com
+**Candidate vetting — Mason's 24 + Claude's 8, all RDAP-checked 8/1/2026** *(incorporating and replacing Mason's inline list, per house rule)*:
+
+**✅ Available, with verdicts:**
+
+| Domain | Verdict |
+|---|---|
+| **`antifreezeseattle.com`** | **Still the pick.** The only name that covers the *whole* product: "antifreeze" is a product metaphor (what keeps you running in the cold), so it spans events + nightlife + guide + fitness without shrinking to a friendship app — and it scales to other cities and audiences |
+| **`warmupseattle.com`** | **Best new find (Claude).** "Warm Up Seattle" = the Freeze cure *and* "the warm-up" — what you do before going out, and before a workout. Nightlife + fitness double meaning, Knotty-Yoga-adjacent, citywide. Strong #2 for the friend review |
+| `beyondthefreeze.com` | Best of your freeze-phrase family — hopeful arc, if a bit abstract. #3 |
+| `defrostseattle.com` · `warmfrontseattle.com` | City-anchored alternate brands ("Defrost" / "Warm Front" — the weather pun); solid #4/#5 |
+| `stopthefreeze.com` · `endthefreeze.com` | Available, but campaign-slogan energy — reads activist rally, not a night out |
+| `thawthefreeze.com` · `warmthefreeze.com` | Available, but tongue-twisty/semantically doubled ("thaw the freeze") |
+| `defrostfriends.com` | Available, but toy-brand energy (microwaving your friends) |
+| `yournextfriend.com` · `friendshipfound.com` | Available, but the friendship-app trap (below) — plus a faint dating-site read |
+| `theantifreeze.com` · `antifreezehq.com` · `joinantifreeze.com` | Umbrella/backup insurance for the Antifreeze family |
+
+**❌ Taken** (year registered): `communityfinder.com` (2004 — fine: it's the *platform's* internal name; as a consumer brand it was generic anyway) · `unfreeze.com` (2001) · `breakthefreeze.com` (2018 — linguistically your best freeze-verb, gone) · `icebreakerhq.com` + `icebreakerclub.com` (both 2025 — and the Icebreaker apparel trademark/SEO swamp made them a dodge anyway) · `frozennomore.com` (2026; Disney-joke risk regardless) · `warmconnections.com` (2017 — **expires 9/14/2026**, drop-watchable, but reads senior-dating) · `meetyourpeople.com` (2007) · `findyourcircle.com` (2007 — a shame, given the Circles feature) · `localcircles.com` (2011, an actual company) · `findyourcrew.com` (2006) · `buildyourcircle.com` (2025) · `hugitout.com` (2003) · `skipsmalltalk.com` (2002) · `justsayhello.com` (2002) · `jointhefun.com` (2003) · `findyourpeople.com` (2006) · `meltthefreeze.com` (3/2024) · `freezebreakers.com` (2026) · `seattlethaw.com` (2/2025) · `outandaboutseattle.com` (2013) · `gayseattle.com` (1997) · `thawseattle.com` (2022) · `getantifreeze.com` (7/2026) · `seattleantifreeze.com` (2007). **Special case: `outinseattle.com` is in redemption period** (its 2025 registration is lapsing) — if "Out in Seattle" appeals as a classic-idiom fallback, a ~$10–25 backorder (DropCatch/GoDaddy) might catch it when it drops in the next month or two; it loses the Freeze story, so opportunistic-only.
+
+**Two vetting notes that matter more than any single name:**
+
+1. **The friendship-app trap.** The `meetyourpeople` / `findyourcircle` / `justsayhello` family names the *Freeze pillar*, not the product. This site is events + city guide + adult layer + community — a friendship-brand over the bathhouse guide and the drag calendar undersells the moat and reads strangely. The name needs to hold the whole spectrum; product-metaphor names (Antifreeze, Warm Up) do, feature names don't.
+2. **⚠️ There is a land rush on this exact naming space.** Eight freeze/social-adjacent names were registered 2024–2026: `meltthefreeze` (3/2024), `seattlethaw` (2/2025), `buildyourcircle`, `icebreakerhq`, `icebreakerclub` (2025), `frozennomore`, `freezebreakers`, `getantifreeze` (2026). That's consistent with the Timeleft/Mixingle/We3 "Seattle Freeze solution" wave the research found — someone else is circling. **Pick and register within days, not weeks.**
+
+**Ranked shortlist for the friend review:** 1. `antifreezeseattle.com` (the pick) · 2. `warmupseattle.com` · 3. `beyondthefreeze.com` · 4. `defrostseattle.com` · 5. `warmfrontseattle.com` — plus `theantifreeze.com` as umbrella insurance either way.
 
 **Site identity for friend review** — header: **ANTIFREEZE**; tagline candidates: "The cure for the Seattle Freeze" · "Gay Seattle, thawed" · "Where gay Seattle finds each other" · "Every event. Every crew. All of gay Seattle."
 
@@ -383,6 +381,7 @@ Reading the menu: **coverage + freshness are the identity claims** — if either
 	- Claude- Decided — **Antifreeze** is the brand; CommunityFinder stays the platform name. Your two-axis expansion (`{audience}.{city}`) is now the recorded architecture and maps 1:1 onto D8 communities-as-tenants. One practical snag (RDAP-checked 8/1): **antifreeze.com is corporate-held since 1996** via MarkMonitor — effectively unbuyable — and seattleantifreeze.com/antifreeze.org are taken too. **antifreeze.gay appears unregistered**: recommend verifying + registering it now (check the price — dictionary .gay names are often registry-premium) and running this site at `seattle.antifreeze.gay`, adding a neutral umbrella apex only when audience #2 materializes. Full analysis + tagline candidates in the new **Brand & Naming** section.
 	- Mason- I don't know that this is actually decided then. I think having a non-dotcom domain would be a bad idea. I really like the antifreeze idea but maybe help brainstorm some other ideas with an available domain? Is antifreezeseattle.com available? Then we could do gay.antifreezeseattle.com.
 	- Claude- Good news — **`antifreezeseattle.com` appears unregistered** (Verisign RDAP, 8/1), so your exact scheme works: **`gay.antifreezeseattle.com`**, audiences as subdomains, future cities as sibling apexes (`antifreezeportland.com`, …). Also apparently available if you want alternates for the friend review: `theantifreeze.com` (best cross-city umbrella — worth ~$12/yr as insurance), `antifreezehq.com`, `joinantifreeze.com`, and alternate-brand options `defrostseattle.com` / `warmfrontseattle.com`. Taken: `thawseattle.com` (2022) and `getantifreeze.com` (registered 7/12/2026 by an unrelated party). The Brand & Naming section is rewritten around the .com constraint with the full availability table. Two cautions folded in there: RDAP "available" is not a reservation — **buy it before the name gets socialized** — and we'll run a trademark sanity check inside the Phase-B counsel review (dictionary word, unrelated service class → low risk). B.2 now reads decided-pending-purchase.
+	- Claude- Second vetting round done (8/1): your 24 candidates + 8 of mine, all RDAP-checked with verdicts in the **Candidate vetting** table above (replacing the raw list, house rule). Short version: 8 of yours are available but the strongest (`breakthefreeze.com`, `unfreeze.com`, `findyourcircle.com`) are taken; `communityfinder.com` is taken (2004) and was generic as a consumer brand anyway; the friendship-family names undersell the full product (events + guide + adult layer, not just friend-finding). One real find: **`warmupseattle.com` is available** — Freeze cure + pre-going-out + fitness triple meaning — my #2 behind `antifreezeseattle.com`, which stays the pick. Also: `outinseattle.com` is lapsing (redemption period — backorderable if you want a fallback), and **eight freeze-adjacent names were registered by others in 2024–2026**, so whichever you choose, register it within days.
 2. **Audience framing.** "Gay Seattle" (gay-male-forward, your marketing demographic) vs "Queer Seattle" (full spectrum)? Research reality: the curation energy and unserved demand skew queer/trans/QTPOC (Sapphie Taffy's audience, the relocation wave), and lesbian/sapphic Seattle has exactly one bar but a huge events layer. *Rec: inclusive "queer Seattle" scope with honest gay-male editorial depth where that's what we know — scene tags make breadth structural rather than performative. Your call; it shapes name, voice, and how the site reads.*
 	- Mason- I like sticking to gay for now. I am not trans or a lesbian. Nor are the friends helping with this. This is already a big ask and I feel like trying to mix queer and trans in would unfortunately dilute things. I'm open to doing a sister site later (trans.seattle.antifreeze.com) but I would want to partner with people from that community(ies) who actually no that space and can do it justice.
 	- Claude- Decided — **gay men, done honestly.** Folded in as the Voice section's audience rule with ripples through the pitch, scene tags, scene pages, relocation lane, and newsletter name: we list the LGBT-wide anchors everyone attends, **link out with credit** (Sapphie Taffy, Dyke Alliance, Gender Justice League) instead of pretending depth on sister scenes, and sister sites happen only in partnership with people from those communities — recorded as a standing principle the brand architecture already supports.
@@ -495,6 +494,7 @@ Clothing-optional queer beach, decades-standing. Dec 2023 playground proposal de
 
 # Change Log
 
+- **8/1/2026 (v0.4)** — Domain vetting round: Mason's 24 candidates + 8 Claude additions all RDAP-checked; raw list replaced by the **Candidate vetting** table in Brand & Naming (available-with-verdicts / taken-with-years / the friendship-app-trap note / the ⚠️ freeze-name land-rush warning — 8 adjacent names registered 2024–2026, so register within days). Findings: `communityfinder.com`, `unfreeze.com`, `breakthefreeze.com`, `findyourcircle.com` taken; **`warmupseattle.com` available and the new #2**; `outinseattle.com` lapsing (backorderable). Ranked shortlist for friend review: antifreezeseattle > warmupseattle > beyondthefreeze > defrostseattle > warmfrontseattle (+ theantifreeze.com umbrella insurance). Recommendation unchanged: **`antifreezeseattle.com`**.
 - **8/1/2026 (v0.3)** — Second Q&A round: Q1 re-opened on the .com constraint and re-resolved — **`antifreezeseattle.com` appears available** (8-domain RDAP sweep in Brand & Naming; scheme = `gay.antifreezeseattle.com`, audiences as subdomains, cities as sibling apexes; trademark sanity check added to counsel scope; B.2 = decided-pending-purchase). Q9 follow-ups answered: legal-review cost ballparks ($1.5k–3.5k flat / QLaw + Communities Rise as cheap routes) and the ads clarification — MHMDA bans *surveillance* adtech, not advertising — captured in a new **Ads & money** section (direct sponsorships / contextual / house ads / memberships in; programmatic + pixels out; placement-never-inclusion bright line). Platform-mapping row and privacy bullet updated to match. Still pending Mason: buy the domain, Q7 Circles sub-questions, Q9 "agreed," Q10 metric picks, B.2 scope-cut + hrs/week.
 - **8/1/2026 (v0.2)** — Mason's Open Question answers folded in (Q1–6 + Q8 decided; Q9 defined + pending sign-off; Q7 and Q10 developed for discussion): brand = **Antifreeze** with domain reality checked via RDAP (antifreeze.com corporate-locked since 1996; **antifreeze.gay appears available** — new Brand & Naming section with the `{audience}.{city}` two-axis scheme); audience = **gay men** with the link-out coverage rule (pitch, scene tags, scene pages, relocation lane, onramps, voice, newsletter renamed accordingly); adult layer locked to **Q3(b)**; geography = **King County incl. six Eastside cities** added to Appendix F (per Mason's follow-up) with 8/2026 rents + 2-Line reality + an Eastside-reality note and onramp; labor = **(a)+(c)** with a proposed trigger in Q6's note; **"Circles, not forums"** model drafted for Q7 (bounded rooms, stewards, no global feed; link-out cards pulled forward to Phase D); **Success Metrics options menu** added for Q10; roadmap B.1/B.2/D.3/F/H and the platform-mapping table updated to match.
 - **7/31/2026 (v0.1)** — Initial brainstorm synthesis from Mason's Overview + three research passes (events landscape, guide/directory content with volatility ratings, peer models/legal/marketing). Premise corrected (SGS alive-but-hollow; contested space). Product concept organized into 5 pillars + freshness architecture + trust model; lettered roadmap A–H dovetailing with [[Setting up the project]]; 10 Open Questions with recommendations; seed inventories appended.

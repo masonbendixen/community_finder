@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Active
 Authors: Mason Bendixen
-Last Updated: 7/31/2026
-Version: 0.1
+Last Updated: 8/1/2026
+Version: 0.2
 tags:
 ---
 # Overview
@@ -31,9 +31,9 @@ This is a lot to be honest. Can you help me organize my thoughts here and give s
 
 Please create a plan with phases of implementation. Within each phase, please respect the layering of the system and start with the work in lower layers first. Please create checkboxes by work items and then check them off as you implement them. Within the subsections of each phase, please number each such subsection. Please stick to your internal tools to inspect the filesystem and avoid external tools like grep, sed, and awk that you need to prompt me to run. I will build the C++ server and run tests myself. I will also commit and push to GIT myself so please don't use GIT commands unless you really need to understand the history of the files. Please don't prompt me if you can and run prompt requests to completion. Please always add tests for anything you chance for which testing is possible. When building this plan, please create an open questions section for things you need to ask me instead of asking me questions at the prompt.
 
-# The Pitch (v0.1 — for friend review)
+# The Pitch (v0.2 — for friend review)
 
-**A maintained, structured home for queer Seattle: every event, every recurring group, every venue, every resource — from drag brunch to bathhouse — with a freshness guarantee nobody else can make.** Events are the heartbeat, the city guide is the moat, the "beat the Seattle Freeze" recurring-groups layer is the wedge, and community features grow on top once trust exists. It runs on the CommunityFinder platform we already built (auth, admin CRUD, photo pipeline, AI-scanner architecture), which is purpose-built to solve the exact thing that has killed or calcified every predecessor: **the maintenance labor of keeping a structured city guide true.**
+**Antifreeze: a maintained, structured home for gay Seattle — every event, every recurring group, every venue, every resource, from drag brunch to bathhouse, with a freshness guarantee nobody else can make.** Events are the heartbeat, the city guide is the moat, the "beat the Seattle Freeze" recurring-groups layer is the wedge (and the brand: *Antifreeze is the cure for the Seattle Freeze*), and gated community features grow on top once trust exists. Scope, decided 8/1: **gay men, King County (Eastside very much included)** — done deeply and honestly, with the big LGBT anchor events listed, sister scenes credited and linked out to their own curators, and the brand architecture ready for sister audiences and cities later (see Brand & Naming). It runs on the CommunityFinder platform we already built (auth, admin CRUD, photo pipeline, AI-scanner architecture), which is purpose-built to solve the exact thing that has killed or calcified every predecessor: **the maintenance labor of keeping a structured city guide true.**
 
 **One premise correction from research (7/31/2026):** seattlegayscene.com is *not* dead — it still publishes ~2–5 posts/week (20 posts in June 2026) as a one-man press-release/nightlife blog run by Michael Strangeways. What died is its *structure*: the calendar link 404s, the events page returns a 2007 article, the staff page hasn't been touched since 2015. That pattern repeats across the whole landscape: eight half-alive properties, none of which maintains the structured layer. The opportunity is real, but the pitch is not "replace a dead site" — it's **"be the first maintainable one."**
 
@@ -80,6 +80,23 @@ Three deep research passes: (1) the event/organization landscape, (2) the guide/
 - **Single-maintainer labor is the graveyard cause** — the whole design must answer "who keeps this true in month 18?" (the freshness architecture below is that answer, but it needs honest hours budgeting).
 - **Some supply is walled**: Facebook groups (housing, some events) and EverOut can't be scraped; Eventbrite killed its search API; Meetup's API is paywalled. The intake plan (below) routes around this legally and cheaply.
 
+# Brand & Naming (Q1 — decided direction, 8/1/2026)
+
+**Decided: the consumer brand is Antifreeze; CommunityFinder stays the platform/repo name.** Your expansion instinct is the whole architecture: a two-axis scheme — **`{audience}.{city}`** — gay first, other underserved communities later, other cities later. That maps 1:1 onto D8 communities-as-tenants: each audience+city pair is one tenant (own database, own CloudFront distribution, one shared server + SPA bundle). "CommunityFinder" as the engine behind an Antifreeze-branded network now reads exactly right.
+
+**Domain reality (checked via registry RDAP, 8/1/2026):**
+
+| Domain | Status |
+|---|---|
+| `antifreeze.com` | **Registered since 1996 via MarkMonitor** (the Fortune-500 brand-protection registrar) — corporate-held, effectively unbuyable. `gay.seattle.antifreeze.com` as literally spelled is off the table. |
+| `seattleantifreeze.com` | Registered (2007, Namecheap) |
+| `antifreeze.org` | Registered (1999; expires 9/2026 — conceivably drops, don't plan on it) |
+| `antifreeze.gay` | **Appears unregistered** (404 at the .gay registry RDAP) — verify + price at a registrar; dictionary-word .gay names are often registry-premium ($50–500/yr range) |
+
+**Recommendation:** register **`antifreeze.gay`** now as cheap insurance and run this site at **`seattle.antifreeze.gay`** (or bare `antifreeze.gay` until city #2). For this site the audience axis lives in the TLD itself — clean and memorable. When a sister audience materializes (e.g., the trans sister site with partners, Q2), add a neutral umbrella apex then — candidates to check when needed: `theantifreeze.com`, `antifreezehq.com`, `antifreeze.community`, `antifreeze.social` — and the per-community CloudFront model doesn't care which apex each community hangs off. Feeds SUTP Q9 (prod `website_address` secrets + SES/SPF/DKIM) once purchased.
+
+**Site identity for friend review** — header: **ANTIFREEZE**; tagline candidates: "The cure for the Seattle Freeze" · "Gay Seattle, thawed" · "Where gay Seattle finds each other" · "Every event. Every crew. All of gay Seattle."
+
 # Product Concept
 
 ## Pillar 1 — Events (the heartbeat)
@@ -90,40 +107,52 @@ The aggregated queer-Seattle calendar: bar/drag nights, parties, meetups, sports
 - **A big share of queer events happen at non-queer venues** (breweries, roller rinks, bookstores, climbing gyms) — venue list must not assume "gay bar."
 - **Views that match real usage**: *Tonight*, *This Weekend*, *By Scene* (bears/leather/sapphic/trans/QTPOC/sober/40+/geek), *By Neighborhood*, plus month calendar.
 - **Intake stack (decided by research, in priority order):** (1) **a mandatory structured submission form as the only human intake** — the NO STRAIGHT PLANS labor hack: "events submitted via email/DM will NOT be considered" converts curation from research into moderation; (2) **ICS/feed ingestion** where venues publish them (Kremwerk has a clean 4-month feed); (3) **Evvnt publisher partnership** (2,200-calendar syndication network The Seattle Times already uses) = free inbound supply; (4) **the AI scanner** (SUTP Phase 13) over venue sites/Eventbrite org pages; (5) **never scrape Facebook/Instagram or logged-in anything** (legal + technical wall; see Phase E notes).
-- Categories (D4's list) extend with: **scene tags** (bear, leather, sapphic, trans, QTPOC, sober, elders, geek, furry) orthogonal to activity categories.
+- Categories (D4's list) extend with: **scene tags** (bear, leather, jock, sober, elders, geek, furry — plus sapphic/trans/QTPOC as accurate labels on the shared anchors we list, per the Q2 coverage rule) orthogonal to activity categories.
 
 ## Pillar 2 — The Guide (the moat)
 
 Evergreen, structured directory + editorial. Sections, each with its volatility tier driving refresh cadence (Appendix has full seed data):
 
 1. **Nightlife venue profiles** — the "which bar is for which crowd" layer (crowd/vibe is LOW-volatility, durable content; ownership/status is HIGH — 2025–26 alone: Cuff sold, Queer/Bar sold + remodeling, Neighbours building for sale). Include the **closure graveyard** (R Place, Re-bar, Comeback, Purr…) — history + trust signal + SEO nobody else has.
-2. **Scenes** — landing pages per subculture (bears, leather/kink, sapphic, trans, QTPOC, sober, elders, geeks) linking venues + recurring events + orgs. This is how "wholesome to rampantly slutty" coexists without moralizing: every scene gets the same respectful, factual treatment.
+2. **Scenes** — landing pages per subculture we can cover honestly (bears, leather/kink, jocks/sports, sober, elders, geeks, the BIPOC gay scene) linking venues + recurring events + orgs. This is how "wholesome to rampantly slutty" coexists without moralizing: every scene gets the same respectful, factual treatment. Per Q2, sapphic/trans/QTPOC-wide scenes get **link-out cards to their own curators** (Sapphie Taffy, Dyke Alliance, Gender Justice League) with credit rather than pretended depth — while the big shared anchors (Pride weekend, festivals, mixed venues like Kremwerk) are listed like everything else.
 3. **Sexual health** — STI testing (Harborview Sexual Health Clinic, the LGBTQ+ Center's free 6-day testing), one-stop PrEP (Kelley-Ross One-Step, 2 locations), DoxyPEP, mpox, HIV care (Madison Clinic), and the **two corrections every competitor gets wrong**: Lifelong's housing programs moved to Bailey-Boushay (2024–25), and Seattle Counseling Service closed in 2022 (successors: Optimism, Integrative Counseling, the Center's 12-session program).
 4. **Everyday services** — LGBTQ-affirming primary care, mental health, gender-affirming entry points (Ingersoll's provider directory is the incumbent to link, not fight), dentists, and the GSBA-gap layer: *editorial* "who's actually good" for realtors, barbers, contractors, massage, tattoo, photographers (GSBA answers "who paid dues," we answer "who to hire").
 5. **Fitness & rec** — queer climb nights (5+ gyms on a monthly rotation), queer yoga/fitness, SANCA/Emerald City Trapeze (one org since 2023), the gay-gym-scene question (anecdote-tier, present it as dated "what people say" — an un-Googleable content gap).
-6. **The adult layer (18+ section)** — bathhouses (Steamworks; Club Z — 50 years old in 2026, building listed for sale 2/2026, watch), sex-positive orgs (Pan Eros, Seattle Erotic Art Festival), naturist groups (SLUGS, Lake Bronson, Tiger Mountain), **Denny Blaine & Howell Park with the actual current rules** — the July 2026 court ruling (park stays nude; code of conduct, ranger staffing, screening vegetation, signage) plus etiquette, each stamped "as of {date}." Cruising beyond the beaches: see Open Question 3 — the one genuinely contested content call.
+6. **The adult layer (18+ section)** — bathhouses (Steamworks; Club Z — 50 years old in 2026, building listed for sale 2/2026, watch), sex-positive orgs (Pan Eros, Seattle Erotic Art Festival), naturist groups (SLUGS, Lake Bronson, Tiger Mountain), **Denny Blaine & Howell Park with the actual current rules** — the July 2026 court ruling (park stays nude; code of conduct, ranger staffing, screening vegetation, signage) plus etiquette, each stamped "as of {date}." Cruising beyond the beaches: **decided (Q3, option b)** — cover the *documented* places (Denny Blaine, Howell, Volunteer Park as history) plus etiquette/safety/current-law editorial, with "the apps own real-time" honesty; no location listings beyond that until the site has standing, and maybe never.
 
 ## Pillar 3 — New to Seattle (the moment)
 
 A relocation guide, not a tourist guide — currently served by *no one* while demand spikes:
 
-- **Neighborhood rundowns** with queer character, 2026 1BR rent ranges (always ranged + dated; cross-source spread is ±$300), and light-rail access. Capitol Hill is still the infrastructure gayborhood (14+ queer venues walkable); White Center is the clearest "second gayborhood"; Tacoma is a real second scene, not spillover. Appendix F has the table.
+- **Neighborhood rundowns** with queer character, 2026 1BR rent ranges (always ranged + dated; cross-source spread is ±$300), and light-rail access. Capitol Hill is still the infrastructure gayborhood (14+ queer venues walkable); White Center is the clearest "second gayborhood"; **the Eastside (Bellevue, Kirkland, Redmond, Bothell, Issaquah, Sammamish) is where a large share of gay King County actually lives** — venue-free but meetup-rich, ignored by every incumbent guide, and since 3/2026 the 2 Line puts Bellevue/Redmond one direct train from Capitol Hill; Tacoma is a real second scene but out of v1 scope (Q5). Appendix F has the table.
 - **Transit as of mid-2026**: 1 Line Lynnwood↔Federal Way; **2 Line fully connected across the lake 3/28/2026** (Judkins Park station is a big deal for queer renters); West Seattle/Ballard lines still future.
 - **Traffic honesty**: Revive I-5 cuts capacity through 2027 (Lynnwood→Mercer ~50–65 min); 520 is tolled; West Seattle is bridge-dependent. "If you're moving here in 2026–27, don't plan a car commute across the Ship Canal."
 - **First-90-days checklist**: get on PrEP/testing rails, pick your scenes, join one recurring thing (→ Pillar 4), the paperwork stuff (license, voter reg), where queer housing leads actually surface (the 13k-member Seattle Queer Housing FB group — link out; we don't need to own it yet).
-- **A "moving here because of your state" lane** — resources specific to the 2026 influx (legal name-change/document navigation via Ingersoll/Lavender Rights, the 2026 King County Trans Resource & Referral Guide) — highest-need audience, zero competition, deeply on-mission.
+- **A "moving here because of your state" lane** — the 2026 influx spans the whole LGBT spectrum; we build the gay-men's version deeply (this guide) and **link out with credit** to the trans-specific rails (Ingersoll, Lavender Rights, the 2026 King County Trans Resource & Referral Guide) rather than curating them ourselves (Q2) — still high-need, still uncontested.
 
 ## Pillar 4 — Beating the Freeze (the wedge)
 
 The Seattle Freeze is real (UW Psychiatry publishes tips; Axios/Seattle Times cover it as loneliness infrastructure). The known cure is *recurring shared-activity groups, not one-off events* ("it's tough to make real friends through Meetup events alone" is the consistent finding — and summer is the joining season). Nobody aggregates the queer version of this. We make it a first-class product surface:
 
 - **The recurring-groups directory**: 34+ LGBTQ+ sports leagues (softball since 1979, ORCA swim since 1984, Frontrunners since 1985, Quake rugby, 3 competing kickball operators…), choruses (SMC/SWC, Rainbow City Performing Arts), climb nights, book clubs (Charlie's Queer Books runs 4), gaymers, figure drawing, faith communities, **recovery meetings (gay AA exists and appears on no queer calendar anywhere — a genuinely unserved wholesome layer)**, professional groups (Out in Tech's 2nd-Wed happy hour), volunteer orgs (VolunQueers, Lambert House, GenPride).
-- **"Pick your onramp"** — a guided path by personality/interest (sporty / arty / nerdy / sober / outdoorsy / 40+ / BIPOC / trans / new-in-town) → 2–3 matched recurring groups + this month's low-barrier entry events (e.g., Frontrunners' Monday 3-mile Cal Anderson mini-run). Structured "join something" advice beats the generic listicle every outlet writes.
+- **"Pick your onramp"** — a guided path by personality/interest (sporty / arty / nerdy / sober / outdoorsy / 40+ / BIPOC / new-in-town / **Eastside-based**) → 2–3 matched recurring groups + this month's low-barrier entry events (e.g., Frontrunners' Monday 3-mile Cal Anderson mini-run). Structured "join something" advice beats the generic listicle every outlet writes.
 - This pillar is also the honest bridge to Knotty Yoga: a wellness/fitness/acro studio *belongs* in a directory of recurring queer movement spaces — listed by the same rules as everyone else.
 
 ## Pillar 5 — Community (the growth path, gated)
 
-Strict order, each gated on traction + capacity: (1) event submissions with review queue (the form IS the community feature); (2) "report stale / is this still open?" flags — community-powered freshness; (3) newsletter replies → reader tips lane; (4) org/venue self-service claiming of their listings; (5) forums *if ever* — build searchable/indexed (Discourse-style) not Discord (research: Discord = "whiteboard erased daily," zero Google/AI visibility; there's also no dominant Seattle gay Discord to compete with — but see Open Question 7); (6) activity-partner matching (chess/tennis/D&D "looking-for-group") — a natural extension of Pillar 4 with real differentiation; (7) **personals/dating: probably never** — FOSTA/SESTA killed Craigslist personals; two live §230-sunset bills in Congress (12/2025–2026); Sniffies owns the space with $100M behind it. If ever revisited: verified identity + bright-line no-commerce rules + real moderation staffing + counsel first.
+Strict order, each gated on traction + capacity: (1) event submissions with review queue (the form IS the community feature); (2) "report stale / is this still open?" flags — community-powered freshness; (3) newsletter replies → reader tips lane; (4) org/venue self-service claiming of their listings; (5) **"where this scene talks" link-out cards** (Discord servers, Bluesky, FB groups, Meetup) on scene/org pages — community value with zero UGC risk, shippable with the Phase D content; (6) **Circles** — the Q7 answer: bounded rooms instead of forums (next subsection); (7) activity-partner / looking-for-group — as posts *inside* the relevant circles, not a public classifieds board; (8) **personals/dating: probably never** — FOSTA/SESTA killed Craigslist personals; two live §230-sunset bills in Congress (12/2025–2026); Sniffies owns the space with $100M behind it. If ever revisited: verified identity + bright-line no-commerce rules + real moderation staffing + counsel first.
+
+### Circles, not forums (the Q7 model — for Mason's read)
+
+What you asked for isn't a forum with better rules — it's a different shape. Facebook/Bluesky-style acrimony runs on three mechanics: a **global feed** (an audience to perform for), **strangers** (no relationship cost to cruelty), and **engagement scoring** (conflict is the growth loop). Remove all three and the failure mode has nothing to feed on. What remains is the **bounded room** — front porch, not town square:
+
+- **A Circle** = a named room attached to a real-world thing: a league's players, a recurring event's regulars, a "New in Town — Fall 2026" cohort, the board-gayme crowd. **Never created empty** — each launches with its existing group and a recruited **steward** (1–2 members with moderation powers). Cold-start solved by construction.
+- **Visibility per circle**: member-only (default) · public-read/member-post (announcement-style circles — a league posting season info) · unlisted/invite. **No global timeline anywhere** — a member's home is just "your circles."
+- **Posting**: chronological posts + comments within the room. No reshares, no quote-posts, no follower counts, no algorithmic ranking, no trending. At most one low-heat reaction (or none at v1).
+- **Membership & accountability**: open-join / steward-approval / invite-only per circle; real accounts (existing auth); code-of-conduct acceptance at join; per-circle boot + site-wide ban tooling; report button → admin queue. Stewards moderate their room; site admins backstop. Circle creation is admin-approved at first — no open room-creation free-for-all.
+- **Platform fit**: honuware's roles/permissions machinery already models "members of X can see Y"; concretely ~4 new tables (`circles`, `circle_members`, `circle_posts`, `circle_comments` + reports) with server-side visibility checks, all admin-CRUD-manageable day one. And Pillar 4's "pick your onramp" gets its natural ending: *join the circle*.
+- **Still gated**: this is user-generated content — it stays in Phase H behind the traction gate and the Q9 counsel gate, launching with 3–5 seeded circles tied to real groups.
+- **Open sub-questions for you (Q7 continued)**: the name (Circles / Crews / Rooms?); default visibility (rec: member-only); any public-read circles at launch (rec: announcement circles only); reactions (rec: none at v1).
 
 ## The freshness architecture (the differentiator, cross-cutting)
 
@@ -139,6 +168,7 @@ This is the product's core claim and the answer to "why won't this rot like ever
 ## Voice, spectrum, and the adult section
 
 - **Editorial voice**: warm, direct, factual, sex-positive, zero moralizing in either direction — the bathhouse page and the chorus page get the same respectful treatment. House style: state facts + etiquette + safety plainly; date every volatile claim; never euphemize, never leer.
+- **Audience rule (Q2, decided 8/1)**: the voice is **gay men writing for gay men** — that's who we are and who the marketing serves, and pretending otherwise would dilute both. Coverage rule: list the LGBT-wide anchors everyone attends (Pride weekend, festivals, mixed venues); **link out with credit, don't fake depth** on sapphic/trans/QTPOC-specific scenes; sister sites (`trans.seattle.…` etc.) happen only ever in partnership with people from those communities who can do them justice — recorded as a standing principle, and the brand architecture already supports it.
 - **Spectrum handling is structural, not tonal**: scene tags + an 18+-gated section for the adult layer (bathhouses, beaches/cruising, kink). WA has **no age-verification law as of mid-2026** (HB 2112 didn't pass; FSC v. Paxton greenlit state AV laws, so watch) — a simple interstitial suffices today and keeps the site far below any "1/3 sexually explicit" threshold. Everything stays guide-level factual, nothing explicit.
 - **Privacy by design is a legal requirement here, not a nicety**: Washington's **My Health My Data Act** (private right of action; first class action 2/2025) squarely covers sexual-orientation- and sexual-health-adjacent data + geolocation. Design consequence: no ad-tech pixels, no third-party trackers, privacy-friendly analytics only, no geofencing, minimal accounts data. This is cheap for us and a real trust differentiator ("we can't leak what we don't collect").
 
@@ -168,7 +198,8 @@ The technical plan stays in [[Setting up the project]]; this doc feeds it produc
 | Scene/category tags | D4's event_categories + a parallel tag vocabulary shared by events and listings | Extend Phase 10.1 |
 | Newsletter | Scheduler job (Phase 12 catalog) + mail infra already proven; list provider TBD | New — Phase E |
 | Freshness stamps + closure graveyard | Columns + status enums + public rendering | New — Phase C schema |
-| Multi-city future | D8 communities-as-tenants — Seattle is community #1; Tacoma/Portland are `--create_tenant` away; the `city.antifreeze.com` domain lean maps 1:1 onto per-community CloudFront | Already architected |
+| Circles (Q7 model) | honuware auth/roles + ~4 new tables (circles/members/posts/comments) with server-side visibility checks; admin CRUD from day one | New — Phase H, gated |
+| Multi-city/audience future | D8 communities-as-tenants — each `{audience}.{city}` pair is a tenant; Tacoma or a partner-run trans sister site are `--create_tenant` away; the `seattle.antifreeze.gay` scheme maps 1:1 onto per-community CloudFront | Already architected |
 | SEO/AI surface | Event JSON-LD, sitemap, per-category ICS feeds, Bing indexing (ChatGPT cites Bing), robots.txt allowing OAI-SearchBot/PerplexityBot | Add to Phase 11/15 launch checklist |
 
 Implementation conventions inherit SUTP: lower layers first, tests for everything testable, Claude runs the Linux docker gates, Mason does git and Windows spot-checks.
@@ -193,16 +224,17 @@ Lettered phases (A–H) to avoid colliding with SUTP's numbered technical phases
 ## Phase B — Validate & decide (friend review round)
 
 ### B.1 Review
-- [ ] Mason reads + marks up this doc; answer Open Questions inline (esp. Q1 name, Q2 audience, Q3 adult stance, Q6 labor)
+- [x] Mason reads + marks up this doc; Open Questions answered inline (8/1/2026 — Q1/2/3/4/5/6/8 decided; Q7 model, Q9 definitions, Q10 menu delivered for his read)
 - [ ] Friend review (Levi, Caleb + 2–3 target-audience friends incl. at least one recent transplant and one scene-connected person)
 - [ ] A 5-question survey for ~10 gay/queer Seattle friends: where do you find out about things now? what can you never find? would you use X? (cheap demand validation)
 
 ### B.2 Decisions out of review
-- [ ] Lock name/brand + domain (feeds SUTP Q9; unblocks nothing until Phase 15, so no rush — but brand affects everything editorial)
-- [ ] Lock audience framing + editorial voice one-pager
-- [ ] Lock adult-content stance (Q3) — determines whether Phase D includes the cruising layer
-- [ ] Lock the v1 scope cut: recommendation = Events MVP + Nightlife/Scenes/Health guide sections + Freeze directory; defer services-directory editorial and full relocation guide to fast-follow
-- [ ] Set the labor budget honestly (hrs/week per person) + the month-18 sustainability answer (Q6)
+- [~] Lock name/brand + domain — **brand decided: Antifreeze** (Q1, 8/1); remaining: verify + buy `antifreeze.gay` at a registrar (appears unregistered per RDAP 8/1 — may be premium-priced) and confirm display name/tagline with friends (feeds SUTP Q9)
+- [x] Lock audience framing — **gay men, link-out posture for sister scenes** (Q2, 8/1); voice one-pager itself still lands in C.3
+- [x] Lock adult-content stance — **Q3 option (b)** (8/1): documented places + etiquette/safety/law editorial; no location listings beyond the beaches
+- [x] Lock geographic scope — **King County incl. the Eastside** (Q5 + Mason follow-up, 8/1); Tacoma/Everett = future communities via tenancy
+- [ ] Lock the v1 scope cut: recommendation = Events MVP + Nightlife/Scenes/Health guide sections + Freeze directory; defer services-directory editorial and full relocation guide to fast-follow (friend-review input wanted)
+- [~] Labor model **decided: (a) rotating editor-of-the-week + (c) paid part-time curator at a trigger** (Q6, 8/1); still to set: the honest hrs/week budget + confirming the (c) trigger proposed in Q6's note
 
 ## Phase C — Content & data foundations (before more code)
 
@@ -239,7 +271,8 @@ Lettered phases (A–H) to avoid colliding with SUTP's numbered technical phases
 - [ ] Scene landings (bears/leather/sapphic/trans/QTPOC/sober/elders/geek)
 - [ ] Sexual health section (the corrected 2026 facts)
 - [ ] Freeze directory: leagues/choruses/clubs/recovery/faith/professional + "pick your onramp"
-- [ ] Adult section per Q3 decision (bathhouses, Denny Blaine current-rules page with dated stamps)
+- [ ] "Where this scene talks" link-out cards on scene/org pages (Discord/Bluesky/FB groups/Meetup) — the zero-UGC community layer (Q7)
+- [ ] Adult section per Q3(b): bathhouses + Denny Blaine/Howell current-rules pages with dated stamps + etiquette/safety/law editorial (no location listings beyond the beaches)
 - [ ] New to Seattle: neighborhoods + transit + first-90-days (can trail as fast-follow)
 
 ## Phase E — Events MVP live (rides SUTP Phases 10–13)
@@ -256,7 +289,7 @@ Lettered phases (A–H) to avoid colliding with SUTP's numbered technical phases
 
 ## Phase F — Distribution & newsletter
 
-- [ ] Newsletter signup live from the first public deploy; weekly "This Week in Queer Seattle" digest starts when events data is 2 weeks solid (the retention spine — beehiiv-class provider, owned list)
+- [ ] Newsletter signup live from the first public deploy; weekly **Thursday** "This Week in Gay Seattle" digest starts when events data is 2 weeks solid (Q8 decided; the retention spine — beehiiv-class provider, owned list)
 - [ ] Bing Webmaster + Google Search Console + rich-results validation (ChatGPT cites Bing; Perplexity rewards fresh structured niche sites)
 - [ ] Bluesky + Instagram presence (IG = discovery only, never infrastructure); venue/org cross-promo ("we listed you, here's your badge/link")
 - [ ] Coopetition outreach: Sapphie Taffy (credit/ingest/collaborate — their single-point-of-failure is our pitch), QSC Seattle, SGN/SGS (they need a working calendar; we need editorial reach), Evvnt publisher signup
@@ -271,10 +304,30 @@ Lettered phases (A–H) to avoid colliding with SUTP's numbered technical phases
 
 ## Phase H — Community v2 (traction-gated, each item its own go/no-go)
 
-- [ ] Activity-partner / looking-for-group matching (chess, tennis, D&D, climbing partners) — Pillar 4's natural extension
-- [ ] Forums decision per Q7 (if yes: indexed/searchable, tight scope — e.g., housing + newcomers + LFG boards first, not general chat)
+- [ ] **Circles** per the Q7 model (bounded member-visible rooms, stewards, no global feed — see "Circles, not forums"): launch with 3–5 seeded circles attached to real groups, admin-approved creation, counsel gate first (UGC)
+- [ ] Activity-partner / looking-for-group — as posts inside the relevant circles rather than a public classifieds board (Pillar 4's natural extension)
 - [ ] Services marketplace (massage therapists, trainers offering services) — needs listing-policy + liability review
 - [ ] Personals: default **no** (see Pillar 5); revisit only with counsel + §230 clarity
+
+# Success Metrics — Options Menu (Q10)
+
+Pick ~5 — one per row that matters to you; my default is the **Solid** column with the Mission row as north star. Everything here is measurable **without user tracking** (aggregate server-side counts, newsletter-provider stats, quarterly one-click polls, promo codes) — consistent with the MHMDA privacy posture. The Business row stays internal, never published.
+
+| Dimension | Metric (how measured) | Lean @ mo. 6 | Solid @ mo. 6 | Stretch @ mo. 6 |
+|---|---|---|---|---|
+| Coverage | % of a hand-audited sample week's gay-King-County events that are on the site (1 volunteer-hour audit per quarter) | 70% | 90% | 98% |
+| Freshness | % of listings inside their volatility tier's verification window (admin dashboard count) | 90% | 100% | 100% + public per-page stamps |
+| Site audience | Weekly unique visitors (aggregate, cookieless) | 300 | 1,000 | 3,000 |
+| Return habit | Share of visitors returning within 14 days (aggregate) | 15% | 25% | 40% |
+| Newsletter | Subscribers / open rate (provider stats) | 200 / 35% | 500 / 45% | 1,500 / 50% |
+| Calendar feeds | Unique ICS-feed subscribers per week | 25 | 100 | 400 |
+| Search & AI surface | Top-3 Google for target queries ("gay bars seattle" family) + cited by Perplexity/ChatGPT on a monthly test-prompt set | 1 query | 2 queries + 1 AI citation | 5 queries + repeat citations |
+| Community signal | Outside event submissions/week arriving through the form | 2 | 5 | 15 |
+| **Mission (Freeze)** | "I joined something because of the site" reports (quarterly 1-click newsletter poll) | 5 | 25 | 100 |
+| Business (KY, internal) | Knotty Yoga referral visits + "found via Antifreeze" intro-code redemptions per month | measurable at all | 20 visits + 5 codes | 75 visits + 20 codes |
+| Sustainability | Curation hrs/week team-wide, sustained 4 straight weeks (self-report) | ≤6 | ≤4 | ≤3 (scanner carrying the rest) |
+
+Reading the menu: **coverage + freshness are the identity claims** — if either drops below Lean, that's the alarm, regardless of audience numbers. The Mission row is the one worth quoting ("we can count people who joined something because of us"). The Sustainability row is Q6's month-18 answer made visible. Mark a column per row (or write in your own targets) and I'll fold the picks into Phase B.2.
 
 # Open Questions
 
@@ -359,9 +412,17 @@ Lettered phases (A–H) to avoid colliding with SUTP's numbered technical phases
 | Wallingford | Changes; quiet | (verify) | near U District Sta |
 | U District | Student, cheap-ish; PP clinic | (verify) | 1 Line |
 | Shoreline | Suburban, newly rail-rich | (verify) | 1 Line ×2 |
+| Bellevue | Eastside hub — downtown high-rises, international, tech-family; no gay venues but a real community layer (Crossroads events); cross-lake nightlife now one direct train | ~$2,890 avg (8/2026) | **2 Line ×4 stations** |
+| Kirkland | Waterfront + Google campus, restaurant-y; quiet meetup-based queer presence | (verify — likely $2.2–2.5k) | no rail; I-405 Stride BRT planned |
+| Redmond | Microsoft-land + Marymoor; Eastside QTPOC Collective (Together Center), VALA queer figure drawing 3rd Sun | ~$2,630 avg (8/2026) | **2 Line ×3 stations (Downtown Redmond, new 3/2026)** |
+| Bothell | UW-Bothell college town + breweries (Beardslee Latin Night 2nd Sat); cheapest Eastside | ~$2,095 avg (8/2026) | no rail; SR-522 Stride BRT planned |
+| Issaquah | Trailhead town, outdoorsy, car-first | ~$2,455 avg (8/2026) | no rail (Issaquah Link is a 2040s project) |
+| Sammamish | Plateau families, thin rental stock | (thin data) | car-only |
 | Burien | 10th Pride 2026, first parade; growing | ~$1,750–1,960 | bus |
 | Renton | Affordable; Cedar River Clinics | ~$1,530–1,900 | bus |
-| Tacoma | **Real second scene**: The Mix + Silverstone on St. Helens, Hilltop/6th Ave, own Pride | well below Seattle | T Line, Sounder |
+| Tacoma *(out of v1 scope — future community, Q5)* | **Real second scene**: The Mix + Silverstone on St. Helens, Hilltop/6th Ave, own Pride | well below Seattle | T Line, Sounder |
+
+**Eastside reality (added 8/1 per Mason — his home turf and Knotty Yoga's):** no gay venues, but a real recurring layer — Monthly Eastside LGBTQ+ Happy Hour · East King County LGBTQ+ All Ages Meetup · Rainbow Elder Play & Connect (Crossroads, 3rd Sat) · Rainbow on the Eastside (annual, Aug) · Eastside QTPOC Collective (Together Center, Redmond) · Beardslee Bothell Latin Night — and since 3/28/2026 the 2 Line makes Capitol Hill a direct train from Bellevue/Redmond (check last-train times for club nights). A large share of gay King County lives here and every incumbent guide is Seattle-proper-centric: an underserved audience the site should treat as first-class, not spillover. Eastside rents from rent.com/zumper-family aggregators, 8/2026.
 
 **Transit as of 7/2026:** 1 Line Lynnwood↔Federal Way (41 mi); 2 Line fully connected 3/28/2026 (Redmond↔Lynnwood via downtown; first light rail on a floating bridge); Pinehurst/NE 130th expected 2026. **Traffic:** Revive I-5 through 2027 (Lynnwood→Mercer 50–65 min); 520 tolled; West Seattle Bridge fine but single-point-of-failure. World Cup summer 2026 compounds everything.
 
@@ -375,4 +436,5 @@ Clothing-optional queer beach, decades-standing. Dec 2023 playground proposal de
 
 # Change Log
 
+- **8/1/2026 (v0.2)** — Mason's Open Question answers folded in (Q1–6 + Q8 decided; Q9 defined + pending sign-off; Q7 and Q10 developed for discussion): brand = **Antifreeze** with domain reality checked via RDAP (antifreeze.com corporate-locked since 1996; **antifreeze.gay appears available** — new Brand & Naming section with the `{audience}.{city}` two-axis scheme); audience = **gay men** with the link-out coverage rule (pitch, scene tags, scene pages, relocation lane, onramps, voice, newsletter renamed accordingly); adult layer locked to **Q3(b)**; geography = **King County incl. six Eastside cities** added to Appendix F (per Mason's follow-up) with 8/2026 rents + 2-Line reality + an Eastside-reality note and onramp; labor = **(a)+(c)** with a proposed trigger in Q6's note; **"Circles, not forums"** model drafted for Q7 (bounded rooms, stewards, no global feed; link-out cards pulled forward to Phase D); **Success Metrics options menu** added for Q10; roadmap B.1/B.2/D.3/F/H and the platform-mapping table updated to match.
 - **7/31/2026 (v0.1)** — Initial brainstorm synthesis from Mason's Overview + three research passes (events landscape, guide/directory content with volatility ratings, peer models/legal/marketing). Premise corrected (SGS alive-but-hollow; contested space). Product concept organized into 5 pillars + freshness architecture + trust model; lettered roadmap A–H dovetailing with [[Setting up the project]]; 10 Open Questions with recommendations; seed inventories appended.

@@ -218,8 +218,21 @@ Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can revie
 	- Mason- I'll go with your recommendation.
 5. **First bucket docs to spin out.** *Rec: GD1 (joint, Phase 0) + PL1 (Phase 0) + each claimed stream's opener (EV1 for A, GD2 for B, RT1 for C).* Say the word and I'll draft GD1 + PL1 + EV1 immediately; the rest as streams get claimed.
 6. **GD9 coming-out scope.** Proposed: later-in-life lane, workplace, family/faith navigation, org rails (PFLAG, affirming congregations, the Center), youth = pointer to Lambert House only; all gay-men-voiced per Q2; link-out-heavy rather than us writing therapy-adjacent advice. *Confirm or reshape.*
+	- Mason - I think that there are many aspects to this:
+		- Newly out young (kid, teen, early 20s)
+		- Newly out older (differences to expect versus a straight life)
+		- New to a larger gay community
+		- Newly single after a very long term relationship
+		- New to non-monogamy
+		- New to being a sober gay
+		- Newly non-religious
+		- New to sexual exploration
+		- New to kink
+		- New to gay parenting
 7. **CM2 crowd recommendations (your idea).** Proposed shape: suggest-a-business + one-click "recommend" with public counts, optional short moderated tips; **no free-text reviews at first** (defamation/moderation surface + §230 uncertainty — separate go/no-go with counsel at M5); health-category recommendations displayed as unattributed aggregates only (MHMDA). Slot: early Stream D. *Confirm shape — or promote it if you consider it core to the guide's credibility at launch.*
+	- Mason- I definitely want to have a referral area but we need to be very careful to how we do this.
 8. **RT1 branding path.** Logo/theme via: (a) a designer friend, (b) commissioned, (c) Claude-drafted (SVG wordmark + Material theme + favicon) and iterated, upgraded later if it ever matters. *Rec: (c) to unblock launch; it's replaceable.*
+	1. 
 9. **Content authorship model.** *Rec:* Claude drafts all Pool editorial from the research appendices; humans claim sections for the feet-on-the-ground verification pass (venue vibes, gym anecdotes) before publish; every page carries its verified-date stamp.
 10. **Status checks that gate M3:** (a) is `antifreezeseattle.com` (± `warmupseattle.com`, `theantifreeze.com`) purchased yet? (b) has the friend review of the brainstorm happened / is it scheduled? (c) the brainstorm's still-open items (Circles sub-questions, Q9 "agreed," Q10 metric picks, hrs/week) — answer there when ready; hrs/week-per-person now matters mostly for how many streams run truly concurrently.
 

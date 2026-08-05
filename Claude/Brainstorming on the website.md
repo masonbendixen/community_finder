@@ -86,18 +86,18 @@ Three deep research passes: (1) the event/organization landscape, (2) the guide/
 
 **Domain reality (checked via registry RDAP, 8/1/2026; Mason's constraint: .com only). A registry 404 = "appears unregistered" — that's not a reservation, so buy before socializing the name widely:**
 
-| Domain | Status |
-|---|---|
-| **`antifreezeseattle.com`** | ✅ **Appears unregistered — Mason's exact proposal works** |
-| `theantifreeze.com` | ✅ Appears unregistered — the best future cross-city umbrella; worth ~$12/yr as insurance |
-| `antifreezehq.com` · `joinantifreeze.com` | ✅ Appear unregistered (backups) |
-| `defrostseattle.com` · `warmfrontseattle.com` | ✅ Appear unregistered (alternate brands "Defrost" / "Warm Front" for the friend review, same Freeze-cure idea) |
-| `thawseattle.com` | Registered (2022) |
-| `getantifreeze.com` | Registered 7/12/2026 — three weeks ago, unrelated party; no action |
-| `antifreeze.com` | **Registered since 1996 via MarkMonitor** (Fortune-500 brand-protection registrar) — corporate-held, effectively unbuyable |
-| `seattleantifreeze.com` | Registered (2007, Namecheap) |
-| `antifreeze.org` | Registered (1999) |
-| `antifreeze.gay` | Appears unregistered, but **ruled out 8/1 — Mason wants .com** |
+| Domain                                        | Status                                                                                                                     |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **`antifreezeseattle.com`**                   | ✅ **Appears unregistered — Mason's exact proposal works**                                                                  |
+| `theantifreeze.com`                           | ✅ Appears unregistered — the best future cross-city umbrella; worth ~$12/yr as insurance                                   |
+| `antifreezehq.com` · `joinantifreeze.com`     | ✅ Appear unregistered (backups)                                                                                            |
+| `defrostseattle.com` · `warmfrontseattle.com` | ✅ Appear unregistered (alternate brands "Defrost" / "Warm Front" for the friend review, same Freeze-cure idea)             |
+| `thawseattle.com`                             | Registered (2022)                                                                                                          |
+| `getantifreeze.com`                           | Registered 7/12/2026 — three weeks ago, unrelated party; no action                                                         |
+| `antifreeze.com`                              | **Registered since 1996 via MarkMonitor** (Fortune-500 brand-protection registrar) — corporate-held, effectively unbuyable |
+| `seattleantifreeze.com`                       | Registered (2007, Namecheap)                                                                                               |
+| `antifreeze.org`                              | Registered (1999)                                                                                                          |
+| `antifreeze.gay`                              | Appears unregistered, but **ruled out 8/1 — Mason wants .com**                                                             |
 
 **Recommendation (updated 8/1 for the .com constraint): buy `antifreezeseattle.com` now.** The site lives at **`gay.antifreezeseattle.com`** (the apex redirects there until a second audience exists). The two-axis expansion survives intact: **audiences are subdomains** (`trans.antifreezeseattle.com`, with partners, someday), **cities are sibling apexes** (`antifreezeportland.com`, …), and one wildcard cert (`*.antifreezeseattle.com`) + the per-community CloudFront model covers it — nothing in D8 changes. Optionally also grab `theantifreeze.com` as the future umbrella. Trademark note: "Antifreeze" for a community website is a suggestive use of a dictionary word in a service class unrelated to the automotive-coolant brands — low risk, but fold a trademark sanity check into the Phase-B counsel review (and skip "Icebreaker"-style alternates outright; that one's a famous apparel brand). Feeds SUTP Q9 (prod `website_address` secrets + SES/SPF/DKIM) once purchased.
 

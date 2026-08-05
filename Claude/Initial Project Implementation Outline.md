@@ -237,7 +237,9 @@ Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can revie
 		- C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Tenant Theming and Branding.md
 		- C:\Users\mason\Documents\Obsidian\Knotty Yoga\Claude\Website Makeover.md
 9. **Content authorship model.** *Rec:* Claude drafts all Pool editorial from the research appendices; humans claim sections for the feet-on-the-ground verification pass (venue vibes, gym anecdotes) before publish; every page carries its verified-date stamp.
+	- Mason- This sounds great to me.
 10. **Status checks that gate M3:** (a) is `antifreezeseattle.com` (± `warmupseattle.com`, `theantifreeze.com`) purchased yet? (b) has the friend review of the brainstorm happened / is it scheduled? (c) the brainstorm's still-open items (Circles sub-questions, Q9 "agreed," Q10 metric picks, hrs/week) — answer there when ready; hrs/week-per-person now matters mostly for how many streams run truly concurrently.
+	- Mason- We are leaning towards beyondthefreeze.com
 
 # Change Log
 

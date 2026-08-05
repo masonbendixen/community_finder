@@ -210,9 +210,12 @@ Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can revie
 *(Numbered for inline answers; recommendations included so "agreed" suffices.)*
 
 1. **The bucket cut, round 2.** Now optimized for self-containment (EV2 absorbed ICS/JSON-LD; PL split into CI/deploy/ops/multi; venues handled via satellite table; content split into a farmable pool). Anything to merge, split, add, or kill? (Candidates either way: EV3 could fold into EV2; GD5/GD6 could merge; GD4 could stay checklist-only forever.)
+	- Mason- This looks pretty good to me so far.
 2. **Stream claims.** Who owns Stream A (events), B (guide structure), C (launch infra), D (community)? Is there a confirmed 4th person, or do three people cover A/B/C with D + the Pool distributed? Note Stream D starts blocked on B, so its owner should plan to open in the Content Pool or pair on B. Fill the owner blanks in the stream sections.
 3. **The venues contract.** Stream A owns `venues` as-designed; Stream B adds a satellite `venue_profiles` table FK'd to it (no shared file edits). *Rec: yes — it's the cleanest parallel-safe cut; the alternative (one merged directory_entries table) couples the two schemas and both owners.*
+	- Mason- I'll go with your recommendation.
 4. **CI first.** Pull GitHub Actions + branch protection into Phase 0 (PL1) before the streams fan out — with 3–4 committers this is the merge arbiter, and it's ~a day from the `server_components` CI template. *Rec: yes, non-negotiable-grade.*
+	- Mason- I'll go with your recommendation.
 5. **First bucket docs to spin out.** *Rec: GD1 (joint, Phase 0) + PL1 (Phase 0) + each claimed stream's opener (EV1 for A, GD2 for B, RT1 for C).* Say the word and I'll draft GD1 + PL1 + EV1 immediately; the rest as streams get claimed.
 6. **GD9 coming-out scope.** Proposed: later-in-life lane, workplace, family/faith navigation, org rails (PFLAG, affirming congregations, the Center), youth = pointer to Lambert House only; all gay-men-voiced per Q2; link-out-heavy rather than us writing therapy-adjacent advice. *Confirm or reshape.*
 7. **CM2 crowd recommendations (your idea).** Proposed shape: suggest-a-business + one-click "recommend" with public counts, optional short moderated tips; **no free-text reviews at first** (defamation/moderation surface + §230 uncertainty — separate go/no-go with counsel at M5); health-category recommendations displayed as unattributed aggregates only (MHMDA). Slot: early Stream D. *Confirm shape — or promote it if you consider it core to the guide's credibility at launch.*

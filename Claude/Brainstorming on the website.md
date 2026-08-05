@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Active
 Authors: Mason Bendixen
-Last Updated: 8/1/2026
-Version: 0.4
+Last Updated: 8/5/2026
+Version: 0.5
 tags:
 ---
 # Overview
@@ -33,7 +33,7 @@ Please create a plan with phases of implementation. Within each phase, please re
 
 # The Pitch (v0.2 — for friend review)
 
-**Antifreeze: a maintained, structured home for gay Seattle — every event, every recurring group, every venue, every resource, from drag brunch to bathhouse, with a freshness guarantee nobody else can make.** Events are the heartbeat, the city guide is the moat, the "beat the Seattle Freeze" recurring-groups layer is the wedge (and the brand: *Antifreeze is the cure for the Seattle Freeze*), and gated community features grow on top once trust exists. Scope, decided 8/1: **gay men, King County (Eastside very much included)** — done deeply and honestly, with the big LGBT anchor events listed, sister scenes credited and linked out to their own curators, and the brand architecture ready for sister audiences and cities later (see Brand & Naming). It runs on the CommunityFinder platform we already built (auth, admin CRUD, photo pipeline, AI-scanner architecture), which is purpose-built to solve the exact thing that has killed or calcified every predecessor: **the maintenance labor of keeping a structured city guide true.**
+**Beyond the Freeze: a maintained, structured home for gay Seattle — every event, every recurring group, every venue, every resource, from drag brunch to bathhouse, with a freshness guarantee nobody else can make.** Events are the heartbeat, the city guide is the moat, the "beat the Seattle Freeze" recurring-groups layer is the wedge (and the brand names the arc: *past the Freeze, into community*), and gated community features grow on top once trust exists. Scope, decided 8/1: **gay men, King County (Eastside very much included)** — done deeply and honestly, with the big LGBT anchor events listed, sister scenes credited and linked out to their own curators, and the brand architecture ready for sister audiences and cities later (see Brand & Naming). It runs on the CommunityFinder platform we already built (auth, admin CRUD, photo pipeline, AI-scanner architecture), which is purpose-built to solve the exact thing that has killed or calcified every predecessor: **the maintenance labor of keeping a structured city guide true.**
 
 **One premise correction from research (7/31/2026):** seattlegayscene.com is *not* dead — it still publishes ~2–5 posts/week (20 posts in June 2026) as a one-man press-release/nightlife blog run by Michael Strangeways. What died is its *structure*: the calendar link 404s, the events page returns a 2007 article, the staff page hasn't been touched since 2015. That pattern repeats across the whole landscape: eight half-alive properties, none of which maintains the structured layer. The opportunity is real, but the pitch is not "replace a dead site" — it's **"be the first maintainable one."**
 
@@ -125,6 +125,8 @@ Three deep research passes: (1) the event/organization landscape, (2) the guide/
 2. **⚠️ There is a land rush on this exact naming space.** Eight freeze/social-adjacent names were registered 2024–2026: `meltthefreeze` (3/2024), `seattlethaw` (2/2025), `buildyourcircle`, `icebreakerhq`, `icebreakerclub` (2025), `frozennomore`, `freezebreakers`, `getantifreeze` (2026). That's consistent with the Timeleft/Mixingle/We3 "Seattle Freeze solution" wave the research found — someone else is circling. **Pick and register within days, not weeks.**
 
 **Ranked shortlist for the friend review:** 1. `antifreezeseattle.com` (the pick) · 2. `warmupseattle.com` · 3. `beyondthefreeze.com` · 4. `defrostseattle.com` · 5. `warmfrontseattle.com` — plus `theantifreeze.com` as umbrella insurance either way.
+
+**8/5 update — the front-runner is now `beyondthefreeze.com` (the crew's lean, Claude-endorsed; see [[Initial Project Implementation Outline]] OQ10 for the full comparison).** It restores the original two-axis scheme on a **single apex** — `gay.seattle.beyondthefreeze.com`, later `gay.portland.…` / `trans.seattle.…` with partners — no per-city apex purchases ever, and the KY [[Tenant Theming and Branding]] doc (8/4) already resolved its tenant-granularity architecture around exactly this shape (tenant per subdomain, own database each, zero new honuware work). Brand trade accepted: warmer and mission-forward over Antifreeze's punchy noun; "antifreeze" survives as tagline vocabulary. Still unregistered as of the 8/1 sweep — **buy this week** (the land rush is real); optionally also `antifreezeseattle.com` as a $12 defensive since it's been discussed in writing. **The purchase finalizes Q1.**
 
 **Site identity for friend review** — header: **ANTIFREEZE**; tagline candidates: "The cure for the Seattle Freeze" · "Gay Seattle, thawed" · "Where gay Seattle finds each other" · "Every event. Every crew. All of gay Seattle."
 
@@ -244,7 +246,7 @@ The technical plan stays in [[Setting up the project]]; this doc feeds it produc
 | Newsletter | Scheduler job (Phase 12 catalog) + mail infra already proven; list provider TBD | New — Phase E |
 | Freshness stamps + closure graveyard | Columns + status enums + public rendering | New — Phase C schema |
 | Circles (Q7 model) | honuware auth/roles + ~4 new tables (circles/members/posts/comments) with server-side visibility checks; admin CRUD from day one | New — Phase H, gated |
-| Multi-city/audience future | D8 communities-as-tenants — each `{audience}.{city}` pair is a tenant; Tacoma or a partner-run trans sister site are `--create_tenant` away; the `gay.antifreezeseattle.com` scheme (audience subdomains, per-city apexes) maps 1:1 onto per-community CloudFront | Already architected |
+| Multi-city/audience future | D8 communities-as-tenants — each `{audience}.{city}` pair is a tenant; Tacoma or a partner-run trans sister site are `--create_tenant` away; the `{audience}.{city}.beyondthefreeze.com` scheme (one apex, both axes as subdomains) maps 1:1 onto per-community CloudFront | Already architected |
 | SEO/AI surface | Event JSON-LD, sitemap, per-category ICS feeds, Bing indexing (ChatGPT cites Bing), robots.txt allowing OAI-SearchBot/PerplexityBot | Add to Phase 11/15 launch checklist |
 
 Implementation conventions inherit SUTP: lower layers first, tests for everything testable, Claude runs the Linux docker gates, Mason does git and Windows spot-checks.
@@ -496,6 +498,7 @@ Clothing-optional queer beach, decades-standing. Dec 2023 playground proposal de
 
 # Change Log
 
+- **8/5/2026 (v0.5)** — **Brand front-runner flipped to Beyond the Freeze @ `beyondthefreeze.com`** (crew's lean, Claude-endorsed in the outline's OQ10; final when purchased): single apex restores the `{audience}.{city}` two-axis scheme, and the KY [[Tenant Theming and Branding]] doc already planned CF as `gay.seattle.beyondthefreeze.com`. Pitch, Brand & Naming, and the platform-mapping row updated; buy-this-week reminder stands.
 - **8/5/2026 (v0.4.1)** — Mason's crowdsourced-recommendations idea (services layer, Pillar 2.4) answered in-thread and tracked as bucket **CM2** in [[Initial Project Implementation Outline]] (votes + suggestions early; free-text reviews counsel-gated; health categories unattributed).
 - **8/1/2026 (v0.4)** — Domain vetting round: Mason's 24 candidates + 8 Claude additions all RDAP-checked; raw list replaced by the **Candidate vetting** table in Brand & Naming (available-with-verdicts / taken-with-years / the friendship-app-trap note / the ⚠️ freeze-name land-rush warning — 8 adjacent names registered 2024–2026, so register within days). Findings: `communityfinder.com`, `unfreeze.com`, `breakthefreeze.com`, `findyourcircle.com` taken; **`warmupseattle.com` available and the new #2**; `outinseattle.com` lapsing (backorderable). Ranked shortlist for friend review: antifreezeseattle > warmupseattle > beyondthefreeze > defrostseattle > warmfrontseattle (+ theantifreeze.com umbrella insurance). Recommendation unchanged: **`antifreezeseattle.com`**.
 - **8/1/2026 (v0.3)** — Second Q&A round: Q1 re-opened on the .com constraint and re-resolved — **`antifreezeseattle.com` appears available** (8-domain RDAP sweep in Brand & Naming; scheme = `gay.antifreezeseattle.com`, audiences as subdomains, cities as sibling apexes; trademark sanity check added to counsel scope; B.2 = decided-pending-purchase). Q9 follow-ups answered: legal-review cost ballparks ($1.5k–3.5k flat / QLaw + Communities Rise as cheap routes) and the ads clarification — MHMDA bans *surveillance* adtech, not advertising — captured in a new **Ads & money** section (direct sponsorships / contextual / house ads / memberships in; programmatic + pixels out; placement-never-inclusion bright line). Platform-mapping row and privacy bullet updated to match. Still pending Mason: buy the domain, Q7 Circles sub-questions, Q9 "agreed," Q10 metric picks, B.2 scope-cut + hrs/week.

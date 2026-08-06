@@ -57,7 +57,7 @@ Five tracks. Sizes: **S** ≈ 1–2 working sessions · **M** ≈ a focused week
 - **RT2 — Trust & legal pages.** About ("founded and funded by"), listing policy / editorial independence (from GD1's draft), privacy policy, ToS, the counsel review (scoped: MHMDA posture + policies + trademark sanity check). *S + counsel turnaround · needs GD1, RT1-ish.*
 - **RT3 — Newsletter.** Provider pick, signup from first deploy, Thursday "This Week in Gay Seattle" digest (hand-assembled first, scheduler-assisted later), archive page. The retention spine. *M · needs EV2 live data.*
 - **RT4 — SEO & AI surface (site-wide).** Sitemap, robots.txt allowing OAI-SearchBot/PerplexityBot, Bing Webmaster + Google Search Console registration, OG-image infrastructure via the photo pipeline, structured-data conventions. (Event JSON-LD + ICS feeds moved into EV2 so Stream A is self-contained.) *S · needs a deployable site.*
-- **RT5 — Launch & outreach.** Soft launch to friends → venue/org cross-promo kits ("you're listed — here's your badge/link"), coopetition outreach (Sapphie Taffy credit/collab, QSC, SGN/SGS, Evvnt publisher signup), Reddit presence policy. Human work, ongoing. *Ongoing · needs a live site.*
+- **RT5 — Launch & outreach.** Soft launch to friends → venue/org cross-promo kits ("you're listed — here's your badge/link"), competition outreach (Sapphie Taffy credit/collab, QSC, SGN/SGS, Evvnt publisher signup), Reddit presence policy. Human work, ongoing. *Ongoing · needs a live site.*
 
 ## Track CM — Community (each gated on traction + capacity)
 

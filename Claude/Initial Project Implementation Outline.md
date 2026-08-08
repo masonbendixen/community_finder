@@ -183,7 +183,7 @@ Everything between "works locally" and "live, legal, findable."
 - [ ] CM3 doc · [ ] CM3 done — event photos
 - [ ] CM4 go/no-go · [ ] CM4 doc · [ ] CM4 done — Circles (+LFG), counsel + traction gates
 
-## The Content Pool *(farmable to anyone, page-by-page)*
+## The Content Pool *(farmable to anyone, page-by-page- This will be a group effort)*
 
 Each item is a standalone mini-doc with no code dependencies on the others; **drafting can start day one** from the research appendices — only *publishing* waits on GD3. Claim by adding a name.
 
@@ -202,6 +202,10 @@ Each item is a standalone mini-doc with no code dependencies on the others; **dr
 - [ ] **M4 — Maintenance engine on.** EV5 verifying on cadence; CM1 flags live; a week where the humans only review diffs.
 - [ ] **M5 — Gated-growth reviews.** CM4 Circles go/no-go (counsel + traction) · CM2b free-text-reviews go/no-go · PL4 when community #2 is real.
 
+# 8/8 Meeting next steps
+- We have assigned work items. 
+- Mason will use Claude to create implementation documents for streams A/B/C by EOD Monday 8/10
+- 
 # How a Bucket Becomes a Doc
 
 Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can review them uniformly): **Context** (links here + to the brainstorm sections it implements) → **Scope: in / out** (explicit non-goals) → **Layered work items** (db_schema → table_helpers → business logic → endpoints → client → content, checkboxes, tests named per item) → **Gates** (docker suite + count floor, `ng build` both configs, vitest, manual browser loop where relevant) → **Open Questions** (numbered, in-doc). Build conventions inherit from SUTP (layering, tests, docker gates, anchors). Bucket docs are written to be **farmed out**: each is executable standalone by one owner (plus their own Claude session) without reading the other bucket docs — anything cross-cutting an owner needs is in this outline's Interface Contracts. With multiple owners, SUTP's single-person division of labor generalizes: each owner runs their stream's local gates, git flows through PRs under PL1's branch protection, and destructive DB ops (`--recreate_database`) stay human-run.

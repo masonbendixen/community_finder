@@ -144,7 +144,7 @@ Everything after this fans out to independent owners.
 
 Checkboxes track bucket lifecycle only (**doc** = bucket doc drafted + approved; **done** = implemented/published, gates green). Buckets inside a stream run top-to-bottom — that's where the lower-layers-first rule lives; the streams themselves run concurrently.
 
-## Stream A — Events engine *(owner: ________)*
+## Stream A — Events engine *(owner: Levi)*
 
 The heartbeat end-to-end: schema → endpoints → UI → intake → automation. Self-contained after Phase 0.
 
@@ -155,7 +155,7 @@ The heartbeat end-to-end: schema → endpoints → UI → intake → automation.
 - [ ] EV4 doc · [ ] EV4 done — scheduled jobs
 - [ ] EV5 doc · [ ] EV5 done — scanner & verifier *(fine to start after M3; it's the post-launch labor relief)*
 
-## Stream B — Guide & directory structure *(owner: ________)*
+## Stream B — Guide & directory structure *(owner: Mason)*
 
 The moat's skeleton: directory schema → guide UI → data load. The editorial content itself lives in the Pool.
 
@@ -164,7 +164,7 @@ The moat's skeleton: directory schema → guide UI → data load. The editorial 
 - [ ] GD4b done — seed venues/orgs/health registries
 - [ ] GD8-flow done — the "pick your onramp" interactive bit (light code assist for the Pool's Freeze content)
 
-## Stream C — Launch & trust infra *(owner: ________)*
+## Stream C — Launch & trust infra *(owner: John-Michael)*
 
 Everything between "works locally" and "live, legal, findable."
 
@@ -176,7 +176,7 @@ Everything between "works locally" and "live, legal, findable."
 - [ ] PL3 doc · [ ] PL3 done — ops hardening
 - [ ] RT5 ongoing — outreach rounds (post-M3)
 
-## Stream D — Community features *(owner: ________ — starts once Stream B lands GD2/GD3; its owner opens in the Content Pool or pairs on Stream B)*
+## Stream D — Community features *(owner: Mason / John-Michael w/ delegation — starts once Stream B lands GD2/GD3; its owner opens in the Content Pool or pairs on Stream B)*
 
 - [ ] CM1 doc · [ ] CM1 done — feedback loops (flags / claims / tips)
 - [ ] CM2 doc · [ ] CM2 done — crowd recommendations (votes + suggestions; free-text reviews stay a separate go/no-go)

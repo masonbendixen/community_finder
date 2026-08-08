@@ -204,8 +204,11 @@ Each item is a standalone mini-doc with no code dependencies on the others; **dr
 
 # 8/8 Meeting next steps
 - We have assigned work items. 
-- Mason will use Claude to create implementation documents for streams A/B/C by EOD Monday 8/10
-- 
+- Mason will use Claude to create implementation documents for Phase 0 and streams A/B by EOD Monday 8/10
+- Goals for 8/18
+	- Levi completes EV1/EV2
+	- Mason completes GD1-3
+	- John-Michael completes PL1 (start thinking about design document for infra + CI stuff)
 # How a Bucket Becomes a Doc
 
 Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can review them uniformly): **Context** (links here + to the brainstorm sections it implements) → **Scope: in / out** (explicit non-goals) → **Layered work items** (db_schema → table_helpers → business logic → endpoints → client → content, checkboxes, tests named per item) → **Gates** (docker suite + count floor, `ng build` both configs, vitest, manual browser loop where relevant) → **Open Questions** (numbered, in-doc). Build conventions inherit from SUTP (layering, tests, docker gates, anchors). Bucket docs are written to be **farmed out**: each is executable standalone by one owner (plus their own Claude session) without reading the other bucket docs — anything cross-cutting an owner needs is in this outline's Interface Contracts. With multiple owners, SUTP's single-person division of labor generalizes: each owner runs their stream's local gates, git flows through PRs under PL1's branch protection, and destructive DB ops (`--recreate_database`) stay human-run.

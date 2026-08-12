@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Active
 Authors: Mason Bendixen
-Last Updated: 8/5/2026
-Version: 0.3
+Last Updated: 8/12/2026
+Version: 0.4
 tags:
 ---
 # Overview
@@ -148,8 +148,8 @@ Checkboxes track bucket lifecycle only (**doc** = bucket doc drafted + approved;
 
 The heartbeat end-to-end: schema → endpoints → UI → intake → automation. Self-contained after Phase 0.
 
-- [ ] EV1 doc · [ ] EV1 done — events domain, server
-- [ ] EV2 doc · [ ] EV2 done — events public UI + ICS/JSON-LD
+- [ ] EV1 doc *(drafted 8/12 → [[Bucket EV1 — Events domain, server]]; approval pending)* · [ ] EV1 done — events domain, server
+- [ ] EV2 doc *(drafted 8/12 → [[Bucket EV2 — Events public UI]]; approval pending)* · [ ] EV2 done — events public UI + ICS/JSON-LD
 - [ ] GD4a done — seed ~40 event sources (rides EV1's admin CRUD; no separate doc)
 - [ ] EV3 doc · [ ] EV3 done — submission pipeline
 - [ ] EV4 doc · [ ] EV4 done — scheduled jobs
@@ -159,8 +159,8 @@ The heartbeat end-to-end: schema → endpoints → UI → intake → automation.
 
 The moat's skeleton: directory schema → guide UI → data load. The editorial content itself lives in the Pool.
 
-- [ ] GD2 doc · [ ] GD2 done — directory data layer (+ `venue_profiles` satellite)
-- [ ] GD3 doc · [ ] GD3 done — guide public UI (scenes, profiles, neighborhoods, 18+ gate, link-out cards)
+- [ ] GD2 doc *(drafted 8/12 → [[Bucket GD2 — Directory data layer, server]]; approval pending)* · [ ] GD2 done — directory data layer (+ `venue_profiles` satellite)
+- [ ] GD3 doc *(drafted 8/12 → [[Bucket GD3 — Guide public UI]]; approval pending)* · [ ] GD3 done — guide public UI (scenes, profiles, neighborhoods, 18+ gate, link-out cards)
 - [ ] GD4b done — seed venues/orgs/health registries
 - [ ] GD8-flow done — the "pick your onramp" interactive bit (light code assist for the Pool's Freeze content)
 
@@ -259,6 +259,6 @@ Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can revie
 
 # Change Log
 
-- **8/5/2026 (v0.3)** — Mason's OQ round folded in: OQ1 cut locked · OQ3 venues satellite ✓ (Phase 0.3 checked) · OQ4 CI-first ✓ · OQ6 **GD9 reframed into the "New to…" life-transition guides family** (ten lanes; young lane = pointers-only, kink/exploration lanes = 18+ placement; S→M) · OQ7 CM2 confirmed-with-care (design-review gate, counsel touch, anti-gaming basics added) · OQ8 **RT1 rescoped onto the honuware tenant-theming machinery** (token values + content slots in Ryan's Figma-variable shape; CF = the theming doc's real "second studio"; `@honuware/ui` lift rides CF's clock per its Phase 8; static-branding fallback documented) · OQ9 authorship model ✓ · OQ10 **domain front-runner flipped to `beyondthefreeze.com` (endorsed)** — single apex restores the `{audience}.{city}` two-axis scheme and matches the KY theming doc's as-planned architecture; final when purchased. Still open: OQ2 stream claims, OQ5 go-signal.
+- **8/12/2026 (v0.4)** — **Six bucket docs drafted** (the 8/8-meeting deliverable; all awaiting Mason's review): [[Bucket GD1 — Taxonomy & editorial foundations]] · [[Bucket PL1 — CI + branch protection]] · [[Bucket EV1 — Events domain, server]] · [[Bucket EV2 — Events public UI]] · [[Bucket GD2 — Directory data layer, server]] · [[Bucket GD3 — Guide public UI]]. Phase 0.2/0.4 "drafted" boxes checked; stream rows annotated. **Draft-time resolutions to review** (made under OQ1's merges-at-draft-time license, flagged in each doc's Open Questions): (1) *Contract 1 mechanics* — GD1 stays no-code and pins the vocabulary **values**; the shared `categories`/`scene_tags`/`neighborhoods` tables (neighborhoods is a draft-time addition) are created + seeded by **EV1 Slice 1** from GD1's lists, and GD2 FKs into them — so Stream B's first schema PR waits on that one small Stream A merge; (2) *time convention* — the D4 sketch's `timestamptz` is superseded by the house `_us` BIGINT microseconds convention throughout; (3) *venue guide identity* — guide URLs ride a new `venue_profiles.slug` (the `venues` table stays slug-free per Contract 2); (4) *events review* — approve/reject adopts knottyyoga's reviewer quartet (`status`/`reviewed_by`/`reviewed_us`/`review_notes`), and rejected events stay rejected on re-ingest; (5) *EV2 carries a thin server slice* (the ICS endpoints) so Stream A's distribution surface stays self-contained. — Mason's OQ round folded in: OQ1 cut locked · OQ3 venues satellite ✓ (Phase 0.3 checked) · OQ4 CI-first ✓ · OQ6 **GD9 reframed into the "New to…" life-transition guides family** (ten lanes; young lane = pointers-only, kink/exploration lanes = 18+ placement; S→M) · OQ7 CM2 confirmed-with-care (design-review gate, counsel touch, anti-gaming basics added) · OQ8 **RT1 rescoped onto the honuware tenant-theming machinery** (token values + content slots in Ryan's Figma-variable shape; CF = the theming doc's real "second studio"; `@honuware/ui` lift rides CF's clock per its Phase 8; static-branding fallback documented) · OQ9 authorship model ✓ · OQ10 **domain front-runner flipped to `beyondthefreeze.com` (endorsed)** — single apex restores the `{audience}.{city}` two-axis scheme and matches the KY theming doc's as-planned architecture; final when purchased. Still open: OQ2 stream claims, OQ5 go-signal.
 - **8/5/2026 (v0.2)** — **Waves dropped for parallel ownership**, per Mason (3–4 people working concurrently): buckets re-cut for self-containment (EV2 absorbs event ICS/JSON-LD; RT4 shrinks to site-wide; PL split into PL1 CI [pulled into Phase 0 as the merge arbiter] / PL2 deploy / PL3 ops / PL4 multi-community; GD2 takes the `venue_profiles` satellite so Streams A/B never touch each other's files); new **Interface Contracts** section (shared vocabulary, venues contract, freshness convention, shared-file etiquette, namespaces, CI-as-arbiter); roadmap restructured into **Phase 0 shared foundations → four owned Streams (A events / B guide structure / C launch infra / D community) + a farmable Content Pool → Integration Milestones M1–M5** with owner/claim blanks; bucket-doc template gains the farm-out rule (standalone-executable, contracts referenced); Open Questions rebuilt (10) around stream claims, the venues contract, and CI-first.
 - **8/5/2026 (v0.1)** — Initial distillation of [[Brainstorming on the website]] (v0.4) + [[Setting up the project]] (Phases 10–15 + suggested additions) into 26 buckets across 5 tracks (EV events / GD guide / RT reach-trust / CM community / PL platform) with sizes, dependencies, and a 5-wave priority plan; bucket-doc template + supersession rule defined; two new product ideas folded in as buckets (GD9 coming-out resources from the Overview; CM2 crowd recommendations from Mason's 8/5 comment in the brainstorm, with the votes-not-reviews risk shaping); 8 open questions posed for iteration round 1.

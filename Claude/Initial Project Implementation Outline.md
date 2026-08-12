@@ -125,7 +125,7 @@ Everything after this fans out to independent owners.
 - [ ] Stream claims (OQ2) + the go-signal for first bucket docs (OQ5)
 
 ### 0.2 GD1 — Taxonomy & editorial foundations *(the shared vocabulary every stream consumes)*
-- [ ] Bucket doc drafted
+- [x] Bucket doc drafted — [[Bucket GD1 — Taxonomy & editorial foundations]] (8/12/2026; Mason review pending — the vocab lists + conventions are in the doc itself, lock by checking its work items)
 - [ ] Done
 
 ### 0.3 Interface contracts locked
@@ -133,7 +133,7 @@ Everything after this fans out to independent owners.
 - [ ] Namespaces + shared-file etiquette acknowledged by all owners
 
 ### 0.4 PL1 — CI + branch protection *(the merge arbiter, pulled forward)*
-- [ ] Bucket doc drafted
+- [x] Bucket doc drafted — [[Bucket PL1 — CI + branch protection]] (8/12/2026; includes the drop-in workflow YAML adapted from the server_components template)
 - [ ] Done
 
 ### 0.5 Stream claims

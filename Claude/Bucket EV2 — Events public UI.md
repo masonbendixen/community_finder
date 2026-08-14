@@ -84,7 +84,10 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 *(Numbered; recommendations included so "agreed" suffices.)*
 
 1. **Google-Calendar quick-add link** next to the ICS download (a templated `calendar.google.com/calendar/render?action=TEMPLATE&…` URL — no API, pure link)? *Rec: yes, it's ~20 lines and most non-technical users click that before an .ics; keep ICS as the canonical path.*
+	- Mason- Sure, if it is a better user experience, let's do it.
 2. **Per-series ICS subscribe** requires a `series` filter on the feed endpoint (EV1's upcoming query already filters by `series_id` — the feed endpoint just passes it through). *Rec: include `series_id` on the feed endpoint in §1.2 while you're in the file.*
+	- Mason- I'll go with your recommendation.
 3. **Venue links on event pages:** detail pages show venue name/address **unlinked** until GD3 exists (venue guide URLs live on Stream B's `venue_profiles.slug`, which Stream A payloads don't know). When GD3 lands, linking is a small coordinated follow-up (Stream B pings; one-line-ish edit here). *Rec: as pinned — don't invent a cross-stream payload dependency for a link.*
+	- Mason- Please add notes here and in GD3 to that whichever is done first and second 
 4. **Home-page "coming up" strip:** the home page is site chrome (Stream C's file). *Rec: defer; after M1, propose a small `<app-upcoming-events-strip>` component that Stream C mounts with a one-line edit — EV2 exposes the component, C owns the placement.*
 5. **`document.title`-only meta at MVP** (no `Meta` tags / OG images here — RT4 owns site-wide meta + the OG pipeline). *Rec: as pinned; titles are cheap and self-contained, everything else would collide with RT4.*

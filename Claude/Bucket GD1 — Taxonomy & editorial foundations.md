@@ -56,7 +56,7 @@ Categories answer "what would I be doing?" and are orthogonal to scene tags ("wh
 
 # §2 Scene-tag vocabulary (subculture — whose crowd it is)
 
-Scene tags implement the brainstorm's spectrum rule structurally: every scene gets the same respectful, factual treatment. Tags apply to **events, venues (profiles), organizations, places, and guide pages** alike — this is the shared axis that makes "By Scene" views and scene landing pages work across both streams.
+Scene tags implement the brainstorm's spectrum rule structurally: every scene gets the same respectful, factual treatment. Tags apply to **events, event series, venues (profiles), organizations, places, and guide pages** alike — this is the shared axis that makes "By Scene" views and scene landing pages work across both streams.
 
 Each tag carries a **coverage posture** (Q2, decided 8/1): `full` = we curate this scene ourselves; `link_out` = we list the shared anchors and link out with credit to that community's own curators rather than pretending depth. Posture is a column so GD3 can render link-out cards automatically on `link_out` scene landings.
 
@@ -106,7 +106,7 @@ The guide's entity model, pinned so GD2's DDL and GD3's templates agree. **Bold*
 | **Place** | `places` (GD2) | `place_kind` (`park-beach` · `landmark` · `historical`), address-ish, `neighborhood_id`, `adult` flag, scene tags, **status, last_verified_at** — the structured row behind Denny Blaine/Howell pages; the editorial itself is a guide page |
 | **Service listing** | `service_listings` (GD2) | `service_kind` (`sti-testing` · `prep` · `hiv-care` · `primary-care` · `mental-health` · `gender-affirming` · `dental` · `everyday-service`), url/phone/address, `neighborhood_id`, `is_health` flag (drives the MHMDA rendering rule: no user attribution ever attaches to health listings — matters when CM2 arrives), **status, last_verified_at** |
 | **Guide page** | `guide_pages` (GD2) | slug, `section` (`scenes` · `health` · `services` · `new-to-seattle` · `freeze` · `new-to` · `adult`), body (editorial), `adult` flag, publish state, scene tags, **status, last_verified_at** — the CMS-lite layer the Content Pool publishes through |
-| **Event series** | `series` (EV1, Stream A) | cadence text ("2nd Saturdays"), venue FK, url, **status, last_verified_at** — "T4T, 2nd Saturdays" as a durable page while instances come and go |
+| **Event series** | `series` (EV1, Stream A) | cadence text ("2nd Saturdays"), venue FK, url, category + scene-tag assignments (instances inherit them and can override per axis — decided in EV1 OQ5, 8/14), **status, last_verified_at** — "T4T, 2nd Saturdays" as a durable page while instances come and go |
 | **Event** | `events` (EV1) | *workflow* status (`pending/approved/rejected/archived`) — events are pipeline items, not verified listings; the freshness convention does **not** apply to event rows (their truth is their source + approval) |
 
 **"Where this scene talks" links** (Pillar 5 item 5, zero-UGC community layer): a link = `label`, `url`, `platform` (`discord` · `bluesky` · `instagram` · `facebook-group` · `meetup` · `website` · `other`), attached to a venue profile, organization, place, or scene tag. GD2 picks the storage shape (one table with exactly-one-parent vs. per-parent tables — GD2's call); GD1 pins the field set and the rendering rule: always outbound, always labeled with the platform, never embedded feeds.

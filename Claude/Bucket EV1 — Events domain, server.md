@@ -145,7 +145,9 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 *(Numbered; recommendations included so "agreed" suffices.)*
 
 1. **Vocabulary reads ride `allowed_tables` + generic `get_table_rows`** (no bespoke `/api/categories` endpoints). Cheapest thing that works; EV2/GD3 sort by `sort_order` client-side. *Rec: yes; a bespoke endpoint can wrap it later without breaking clients if payload shaping is ever needed.*
+	- Mason- This sentence makes no sense. What does "vocabulary reads ride" mean? Please rephrase this with a better description.
 2. **Datetime entry in the generic admin editor:** `admin_column_data_info`'s input types are text/number/bool/date only — if the date control is date-only (no time-of-day) for `starts_at_us`, hand-entering event times via generic CRUD is clunky. *Rec: verify during §2.6; if clunky, don't extend honuware now — the `ingest-demo`/`create-event` test_helper commands cover dev, EV3's submit form becomes the real human intake, and EV2 may add a small `manage_events`-gated "quick add" form if the manual loop needs it before EV3.*
+	- Mason- We should have a bespoke UI for editing thes
 3. **"Minor vs major" ingest fields:** title is classed **minor** (silent update) — only date/venue changes revert approval, per SUTP Q4c's wording. *Rec: as pinned; a retitle that survives review isn't worth re-review friction.*
 4. **Series URL namespace `/api/event_series`** (not `/api/events/series`) to avoid colliding with `/api/events/<int>`. Client-facing page URLs (EV2) stay `/events/series/:slug` — only the API path differs. *Rec: as pinned.*
 5. **`categories` on series:** series carry no direct category/scene assignments at MVP — their instances carry them, and the series page derives chips from its instances. *Rec: as pinned; add `series_scene_tag_assignments` later only if a series page needs tags with zero upcoming instances.*

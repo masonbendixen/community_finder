@@ -153,5 +153,6 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 4. **Series URL namespace `/api/event_series`** (not `/api/events/series`) to avoid colliding with `/api/events/<int>`. Client-facing page URLs (EV2) stay `/events/series/:slug` — only the API path differs. *Rec: as pinned.*
 	- Mason- Sure, that sounds fine.
 5. **`categories` on series:** series carry no direct category/scene assignments at MVP — their instances carry them, and the series page derives chips from its instances. *Rec: as pinned; add `series_scene_tag_assignments` later only if a series page needs tags with zero upcoming instances.*
-	 - Mason- Since we are creating this 
+	 - Mason- Since we are creating this from scratch, let's put this on both the series and allow instances to override.
 6. **GET-with-query-params for the public list endpoints** follows the knottyyoga app precedent (`/api/calendar?from_us=…`); the honuware *framework* endpoints use POST-JSON-bodies instead. GETs keep the feeds linkable/cacheable. *Rec: as pinned.*
+	- Mason- I'm fine with GET but we might need to switch to post eventually if this grows too much.

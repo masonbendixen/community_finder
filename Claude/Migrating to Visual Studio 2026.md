@@ -142,7 +142,10 @@ If 1.2's CI does come back red, it is telling you about something *other* than t
 
 ### 1.4 Confirm the Linux gate is unaffected
 
-- [ ] Run `server/docker/build_and_test.sh`. Expected to be a no-op for the CMP0167 work: the image installs bookworm's CMake 3.25, so the guard is false and the block is skipped. Worth running anyway as the per-change gate for everything that follows.
+- [x] **Satisfied for `server_components` by CI, which passed on the 1.2 commit.** A separate local `build_and_test.sh` run would be redundant here: `docker/Dockerfile` describes itself as the local twin of `.github/workflows/ci.yml` — same `gcc:14.2.0` base, same apt packages, same Conan — and CI carries the same test-count floor (`MIN_EXPECTED_TESTS: 1000`). Green therefore means the Linux build and the full component suite are intact, and that no tests silently vanished. ✅ 2026-09-04
+- [ ] Re-run the Linux gate for the two apps once their Phase 1.3 builds are confirmed; CI covers honuware only.
+
+**What the green CI does and does not tell you.** It confirms nothing else in the 1.2 commit broke Linux, and that the suite still links and runs at full count. It does **not** validate the CMP0167 flip itself — at CMake 3.25 the guard is false and the block never executes, exactly as predicted in 1.2. The flip remains verified only by the Windows build plus the config-mode probes in 1.2 and 1.3.
 
 **Consequence worth tracking (see Open Question 6).** After 1.2 and 1.3, the Windows dev boxes resolve Boost through config mode while Linux — the docker gate *and* CI, both on CMake 3.25 — stays on module-mode FindBoost indefinitely. Two different lookup paths across platforms, and the one we just adopted is the one CI can never cover.
 

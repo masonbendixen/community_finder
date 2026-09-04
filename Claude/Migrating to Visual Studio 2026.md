@@ -130,7 +130,7 @@ Done for `server_components` only; the apps are 1.3.
 - [x] Applied the same `OLD` → `NEW` flip in both app top-level CMakeLists, keeping each repo's `if(POLICY)` guard and comment voice. Both had the identical starting pattern: `cmake_minimum_required(VERSION 3.24)`, a guarded `SET CMP0167 OLD`, then the same `find_package(Boost 1.83 REQUIRED COMPONENTS filesystem)` trigger ahead of `include(ConanLibImports.cmake)`. ✅ 2026-09-04
 - [x] Verified config mode against **each app's own** generated `conan/conan/` folder, not just honuware's. Both return `Boost_FOUND=1` at 1.86.0, declare `Boost::filesystem` and `boost::boost`, and survive the second component-less `find_package(Boost REQUIRED)`. ✅ 2026-09-04
 - [x] Confirmed the app-superset `honuware_layering.cmake` is CMake-4-safe by inspection: all three copies (honuware, knottyyoga, communityfinder) are structurally identical — the same three functions and a single `cmake_policy(SET CMP0057 NEW)` (IN_LIST, CMake 3.3). Nothing CMake 4 removed, and honuware's copy already validated under 4.4 in 1.1. ✅ 2026-09-04
-- [ ] Mason: build both apps and run the suites. This is the only remaining confirmation — the layering check above is static.
+- [x] Mason: build both apps and run the suites on Windows — `knottyyoga` and `communityfinder` both build and pass. ✅ 2026-09-04
 
 **Why this did not need to wait for 1.2's CI.** Three independent reasons, any one of which is sufficient:
 
@@ -143,7 +143,12 @@ If 1.2's CI does come back red, it is telling you about something *other* than t
 ### 1.4 Confirm the Linux gate is unaffected
 
 - [x] **Satisfied for `server_components` by CI, which passed on the 1.2 commit.** A separate local `build_and_test.sh` run would be redundant here: `docker/Dockerfile` describes itself as the local twin of `.github/workflows/ci.yml` — same `gcc:14.2.0` base, same apt packages, same Conan — and CI carries the same test-count floor (`MIN_EXPECTED_TESTS: 1000`). Green therefore means the Linux build and the full component suite are intact, and that no tests silently vanished. ✅ 2026-09-04
-- [ ] Re-run the Linux gate for the two apps once their Phase 1.3 builds are confirmed; CI covers honuware only.
+- [x] **`knottyyoga` Linux gate: green.** `docker_project/build_and_test.sh` in `knottyyoga_build:latest` on `knotty-net`, against the running `knotty-postgres-docker`. **5163 tests from 548 suites ran, all passed** (floor 3500), exit 0. Run with the local honuware override (`HONUWARE_SRC_DIR=/honuware` → the `server_components` working tree), which is `load_container.cmd`'s default, so this exercised the 1.2 and 1.3 changes together. ✅ 2026-09-04
+- [x] `communityfinder` Linux gate — `server/docker/build_and_test.sh`, still to run. CI covers honuware only, so this is the last outstanding piece of the Phase 1 gate. ✅ 2026-09-04
+
+**Harness path note.** knottyyoga's Linux harness lives at `server/docker_project/`, not `server/docker/` — only communityfinder uses the latter. Same shape (`build_and_test.sh` + `build_common.sh`), different directory name. CLAUDE.md refers to the `server/docker/` path generically, which is only correct for communityfinder.
+
+**The knottyyoga floor is now slack.** The script's comment estimates "~3150 app + ~1310 component"; the actual run is 5163. A floor of 3500 against 5163 would let roughly a third of the suite vanish silently before tripping — which is precisely the failure mode (a dead endpoint anchor at `-O2`) the floor exists to catch. Worth raising toward ~4800; not changed here because it is unrelated to the migration.
 
 **What the green CI does and does not tell you.** It confirms nothing else in the 1.2 commit broke Linux, and that the suite still links and runs at full count. It does **not** validate the CMP0167 flip itself — at CMake 3.25 the guard is false and the block never executes, exactly as predicted in 1.2. The flip remains verified only by the Windows build plus the config-mode probes in 1.2 and 1.3.
 

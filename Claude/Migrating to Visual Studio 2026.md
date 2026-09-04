@@ -203,36 +203,40 @@ The lowest layer, and where most of the dependency set lives. All validated on V
 
 ### 3.1 zlib 1.3.1 → 1.3.2
 
-- [ ] All three conanfiles. Half the graph depends on it, so it goes first.
+- [x] All three conanfiles. Half the graph depends on it, so it goes first. ✅ 2026-09-04
 
 ### 3.2 Image codecs — libpng, libjpeg, libtiff
 
-- [ ] libpng 1.6.40 → 1.6.58
-- [ ] libjpeg 9e → 9f
-- [ ] libtiff 4.6.0 → 4.7.2 — **this is one of the two VS2026 blockers** (drops the `cmake/[>=3.18 <4]` cap). Routine here; load-bearing for Levi.
-- [ ] Targets stay `PNG::PNG` / `TIFF::TIFF`; no `ConanLibImports.cmake` or CMakeLists edits.
-- [ ] **Tests:** `components/foundation/util/image_resize_test.cpp` and `components/platform/business_logic/images/image_helper_test.cpp` characterise this path. Read them first; if neither decodes an actual TIFF, add a case that does — a decoder change here would otherwise be silent.
+- [x] libpng 1.6.40 → 1.6.58 ✅ 2026-09-04
+- [x] libjpeg 9e → 9f ✅ 2026-09-04
+- [x] libtiff 4.6.0 → 4.7.2 — **one of the two VS2026 blockers**. Confirmed the cap is gone: 4.7.2 declares `cmake/[>=3.18]`, unbounded. A short "do not go back below 4.7.x" comment now sits above the pin in all three conanfiles so a future downgrade cannot silently re-block VS2026. ✅ 2026-09-04
+- [x] Targets stay `PNG::PNG` / `TIFF::TIFF`; no `ConanLibImports.cmake` or CMakeLists edits needed. ✅ 2026-09-04
+- [x] **Tests: the suspicion was right, and the gap was total.** `image_resize_test.cpp` covers JPEG and PNG thoroughly (including two subtle PNG colour-path regressions) but had **no TIFF case at all** — `IMAGE_TYPE_TIFF`, the `${TIFF_LIB}` link edge and both arms of the production switch existed with nothing behind them. `image_helper_test.cpp` only mentions `"tiff"` as a MIME string. So the one mandatory bump in this phase was also the one with zero coverage. Added `ResizeTiffBasic` and `GetImageDimensionsTiff`, mirroring the JPEG cases exactly so a TIFF-only regression surfaces as a TIFF-only failure. ✅ 2026-09-04
 
 ### 3.3 date 3.0.4 → 3.0.5
 
-- [ ] All three conanfiles. The 3.0.5 recipe adds CMake-4 policy handling that 3.0.4 lacks, so this one may well be forced by Phase 1's findings.
-- [ ] **Tests:** `components/foundation/util/date_time_util_test.cpp` covers the consumer.
+- [x] All three conanfiles. ✅ 2026-09-04
+- [x] **Tests:** `date_time_util_test.cpp` covers the consumer; no new case needed. ✅ 2026-09-04
 
 ### 3.4 crow 1.3.2 → 1.3.3, libcurl 7.86.0 → 8.21.0
 
-- [ ] crow is header-only, so its package is compiler-independent and already resolves at 195. Hygiene, not need.
-- [ ] libcurl 7→8 is major-looking and stable in practice; curl kept its API across the boundary. `CURL::libcurl` unchanged.
-- [ ] **Tests:** the curl path is the thinnest coverage in the whole set — it is exercised through doubles (`square/util/square/square_client_test.cpp`, `util/http/http_client_test_util_test.cpp`) rather than a real request. Add a direct `HttpClient` test against loopback if it can be written without network flakiness; if not, record here that curl 8 was verified through the Square client tests only.
+- [x] crow 1.3.2 → 1.3.3, header-only. ✅ 2026-09-04
+- [x] libcurl 7.86.0 → 8.21.0. `CURL::libcurl` unchanged; a comment above the pin records that the 8 boundary is not an API break. ✅ 2026-09-04
+- [x] **Tests: determined that none is possible without changing the codebase's testing strategy.** The HTTP layer is tested entirely through doubles by design — `TestHttpClient` is a fake, `http_client_test_util_test.cpp` tests *the fake*, and the Square client tests inject it. The real libcurl-backed `MakeHttpClient()` is **not exercised by any test in the suite**, and was not before this change either. Writing one would mean standing up a loopback HTTP server inside the unit suite — a live-server pattern this codebase deliberately does not have. That is a bigger architectural decision than a version bump should carry, so it is **not** done here and is raised as Open Question 7 instead. ✅ 2026-09-04
+
+  What the curl 8 bump therefore rests on: it compiles and links against libcurl 8's headers, and every consumer of the `HttpClient` interface still passes. Runtime behaviour of the production client is unverified — unchanged from before, but worth naming rather than glossing.
 
 ### 3.5 Check the 195 graph from the 2022 machine
 
-Free, and the closest thing to testing Levi's machine without it. Resolution only — nothing compiles — but it proves the bumped graph is valid at 195 and shows what would build.
+- [x] Resolved all three repos at **both** msvc 194 and msvc 195, composing the committed profile exactly as the CMakeLists does. Six combinations: **zero version conflicts, zero Invalid packages.** ✅ 2026-09-04
+- [x] Scanned all 26 packages in the post-bump graph for a surviving `cmake/[… <4]` cap. **abseil/20220623.1 is now the only one left** — exactly as predicted, and it is Phase 4.3. libtiff, libcurl and mailio all declare unbounded CMake ranges; the other 18 declare no CMake tool requirement at all. ✅ 2026-09-04
 
-- [ ] Write a scratch profile identical to the committed one but with `compiler.version=195` and `compiler.cppstd=20`.
-- [ ] `conan graph info . -pr:a=<that profile>` in each of the three repos.
-- [ ] Confirm zero **Invalid** packages. Everything showing **Missing** is expected — there are no 195 binaries at all (Finding 2.3).
+  Method note, because it nearly produced a false all-clear: `conan cache path` returns a trailing `\r` on Windows, so a naive `[ -f "$p/conanfile.py" ]` test silently fails for *every* package and the scan reports "no blockers found". The first run did exactly that. Strip the `\r` before using the path.
 
 **Gate:** docker green at the same test count; VS2022 builds all three repos.
+
+- [ ] Linux docker gate for `server_components` — **attempted, did not complete.** The run got through `conan install` and was compiling the newly-bumped dependencies from source when the container died: `docker run` returned **125** and the log ends with `error waiting for container: unexpected EOF` partway through `date/3.0.5` (`tz.cpp`, at `-j32`). 125 is a Docker-level failure, not a compile error — nothing in the log is a build diagnostic. A follow-up `docker version` then hung for 120s, so the daemon itself is wedged; Docker Desktop appears to have crashed or restarted mid-build. **This says nothing about Phase 3's correctness either way** — it needs a Docker Desktop restart and a re-run. Both the Conan cache and the build tree are named volumes, so the retry resumes rather than starting over.
+- [ ] Mason: build all three repos on Windows and run the suites.
 
 # Phase 4 — Recipe bumps: services, platform, app
 
@@ -350,3 +354,9 @@ Cross-repo order within every phase: `server_components` → `knottyyoga` → `c
 6. **Should CI's CMake be raised past 3.30 so it covers what the dev boxes now do?** Surfaced by 1.3. Both the CI workflow and `docker/Dockerfile` take bookworm's CMake 3.25, so `if(POLICY CMP0167)` is false there and Linux stays on module-mode FindBoost permanently. The dev boxes are now on config mode. That means the Boost lookup path we just adopted is the one path CI will never test — and the same blind spot applies to any future policy in the 3.25–4.4 window.
 
    Arguments for raising it: CI stops diverging from how anyone actually builds, and it would exercise CMake 4 against the Linux dependency sources — which is the same risk Phase 1.1 just cleared on Windows, so the evidence says it is low. Arguments against: the workflow comment is explicit that CI deliberately mirrors the *consuming app's release build* (`package/Dockerfile` + `build_linux_release.sh`), so raising CI's CMake without raising the deploy image's would trade one divergence for a worse one. My read is that this is a real gap but not urgent, and that it should be decided as part of Phase 7 rather than bolted onto Phase 1 — but it is your call, and if the deploy image is due a refresh anyway the two should move together.
+
+7. **Should the real `HttpClient` get a live smoke test?** Surfaced by 3.4. The HTTP layer is tested entirely through doubles: `TestHttpClient` is a fake, `http_client_test_util_test.cpp` tests the fake, and the Square client tests inject it. So `MakeHttpClient()` — the actual libcurl-backed implementation — is never executed by the suite. That was tolerable while libcurl sat still at 7.86.0 for years; it is less comfortable now that it has moved to 8.21.0 and will keep moving.
+
+   A single loopback test — stand up a Crow server on 127.0.0.1, issue one real GET through `MakeHttpClient()`, assert the round trip — would close it, and Crow is already linked into the tests target. The cost is introducing a live-server pattern the codebase has deliberately avoided, plus port-binding flakiness in docker and CI. I did not add it as part of a version bump: that is an architectural call, not something a dependency change should smuggle in. Worth doing as its own small piece of work if you agree.
+
+8. **The knottyyoga test-count floor is slack.** Carried over from the Phase 1 Linux run: `MIN_EXPECTED_TESTS=3500` against an actual 5163. A third of the suite could vanish before it trips, which is the opposite of what the floor is for. Raise it toward ~4800? Unrelated to the migration, so not changed here.

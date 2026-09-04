@@ -125,13 +125,26 @@ Done for `server_components` only; the apps are 1.3.
 
 ### 1.3 App scaffolding
 
-- [ ] Apply the same CMP0167 decision in `knottyyoga` and `communityfinder` top-level CMakeLists.
-- [ ] Confirm the app-superset `honuware_layering.cmake` still validates under 4.4 in both apps.
-- [ ] Build both apps and run the suites.
+**Started without waiting on 1.2's CI, deliberately — see the note below.**
+
+- [x] Applied the same `OLD` → `NEW` flip in both app top-level CMakeLists, keeping each repo's `if(POLICY)` guard and comment voice. Both had the identical starting pattern: `cmake_minimum_required(VERSION 3.24)`, a guarded `SET CMP0167 OLD`, then the same `find_package(Boost 1.83 REQUIRED COMPONENTS filesystem)` trigger ahead of `include(ConanLibImports.cmake)`. ✅ 2026-09-04
+- [x] Verified config mode against **each app's own** generated `conan/conan/` folder, not just honuware's. Both return `Boost_FOUND=1` at 1.86.0, declare `Boost::filesystem` and `boost::boost`, and survive the second component-less `find_package(Boost REQUIRED)`. ✅ 2026-09-04
+- [x] Confirmed the app-superset `honuware_layering.cmake` is CMake-4-safe by inspection: all three copies (honuware, knottyyoga, communityfinder) are structurally identical — the same three functions and a single `cmake_policy(SET CMP0057 NEW)` (IN_LIST, CMake 3.3). Nothing CMake 4 removed, and honuware's copy already validated under 4.4 in 1.1. ✅ 2026-09-04
+- [ ] Mason: build both apps and run the suites. This is the only remaining confirmation — the layering check above is static.
+
+**Why this did not need to wait for 1.2's CI.** Three independent reasons, any one of which is sufficient:
+
+1. **CI cannot exercise the 1.2 change at all.** `.github/workflows/ci.yml` is Linux-only by design (its own comment says so — "Windows/MSVC is verified manually"), runs in `gcc:14.2.0`, and installs `cmake` from bookworm apt, i.e. 3.25. At 3.25 `if(POLICY CMP0167)` is false and the block never executes. A green CI would not have validated the flip, and a red CI could not have been caused by it.
+2. **Consumed mode never runs honuware's block.** It sits inside `if(PROJECT_IS_TOP_LEVEL)`, so the apps skip it entirely — the app changes stand on their own code, not honuware's.
+3. **The apps are pinned to a SHA anyway.** They fetch honuware at `cad2942…`, so a pushed 1.2 commit does not reach them until the pin moves.
+
+If 1.2's CI does come back red, it is telling you about something *other* than the policy flip, and it would not require reworking anything in 1.3.
 
 ### 1.4 Confirm the Linux gate is unaffected
 
-- [ ] Run `server/docker/build_and_test.sh`. The docker image carries its own CMake, so this should be untouched — confirm rather than assume, since it is the per-change gate for everything that follows.
+- [ ] Run `server/docker/build_and_test.sh`. Expected to be a no-op for the CMP0167 work: the image installs bookworm's CMake 3.25, so the guard is false and the block is skipped. Worth running anyway as the per-change gate for everything that follows.
+
+**Consequence worth tracking (see Open Question 6).** After 1.2 and 1.3, the Windows dev boxes resolve Boost through config mode while Linux — the docker gate *and* CI, both on CMake 3.25 — stays on module-mode FindBoost indefinitely. Two different lookup paths across platforms, and the one we just adopted is the one CI can never cover.
 
 **Gate:** VS2022 + CMake 4.4 builds all three repos and the suite is green at the same test count, with pins unchanged.
 
@@ -326,3 +339,7 @@ Cross-repo order within every phase: `server_components` → `knottyyoga` → `c
 4. **Is `ftxui` worth holding at 5.0.0?** 6.x and 7.x exist and are breaking. Holding is safe for this migration, but if the test-helper REPL is due for work anyway it may be cheaper to move it once, here, than separately later.
 
 5. **Timing against the CommunityFinder bucket work.** This migration touches all three repos and wants a quiet window. Should it land before EV1 Slice 1 (which creates the shared vocab tables and unblocks Stream B), or after?
+
+6. **Should CI's CMake be raised past 3.30 so it covers what the dev boxes now do?** Surfaced by 1.3. Both the CI workflow and `docker/Dockerfile` take bookworm's CMake 3.25, so `if(POLICY CMP0167)` is false there and Linux stays on module-mode FindBoost permanently. The dev boxes are now on config mode. That means the Boost lookup path we just adopted is the one path CI will never test — and the same blind spot applies to any future policy in the 3.25–4.4 window.
+
+   Arguments for raising it: CI stops diverging from how anyone actually builds, and it would exercise CMake 4 against the Linux dependency sources — which is the same risk Phase 1.1 just cleared on Windows, so the evidence says it is low. Arguments against: the workflow comment is explicit that CI deliberately mirrors the *consuming app's release build* (`package/Dockerfile` + `build_linux_release.sh`), so raising CI's CMake without raising the deploy image's would trade one divergence for a worse one. My read is that this is a real gap but not urgent, and that it should be decided as part of Phase 7 rather than bolted onto Phase 1 — but it is your call, and if the deploy image is due a refresh anyway the two should move together.

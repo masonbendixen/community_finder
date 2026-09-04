@@ -101,7 +101,7 @@ The failure to expect: CMake 4 removed compatibility with `cmake_minimum_require
 
 ### 1.1 Raise CMake and rebuild the framework (foundation of everything)
 
-- [ ] Install CMake 4.4.x on the VS2022 machine to match Levi.
+- [x] Install CMake 4.4.x on the VS2022 machine to match Levi. ✅ 2026-09-04
 - [ ] Clean-configure and build `server_components` standalone with pins untouched.
 - [ ] Record every dependency that now fails to build, with its error. This list feeds Phase 3.
 

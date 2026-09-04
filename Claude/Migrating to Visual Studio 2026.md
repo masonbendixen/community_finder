@@ -102,14 +102,26 @@ The failure to expect: CMake 4 removed compatibility with `cmake_minimum_require
 ### 1.1 Raise CMake and rebuild the framework (foundation of everything)
 
 - [x] Install CMake 4.4.x on the VS2022 machine to match Levi. ✅ 2026-09-04
-- [ ] Clean-configure and build `server_components` standalone with pins untouched.
-- [ ] Record every dependency that now fails to build, with its error. This list feeds Phase 3.
+- [x] Clean-configure and build `server_components` standalone with pins untouched. ✅ 2026-09-04
+- [x] Record every dependency that now fails to build, with its error. This list feeds Phase 3. ✅ 2026-09-04
+
+**Result: nothing failed.** The whole graph built under CMake 4.4 with pins untouched, so the `cmake_minimum_required` < 3.5 removal did not bite any of the 2022-era sources after all. That is a real reduction in scope — it means **every Phase 3 and Phase 4 bump is hygiene or VS2026-unblocking, not repair**. The two that still matter are libtiff (3.2) and abseil (4.3), and they matter only for Levi.
 
 ### 1.2 foundation scaffolding — CMP0167 and FindBoost
 
-- [ ] `server_components/CMakeLists.txt` sets `cmake_policy(SET CMP0167 OLD)` to keep module-mode Boost. Under 4.4 that path is deprecated and noisy.
-- [ ] Since Conan already generates `BoostConfig.cmake`, the clean landing is to drop the OLD setting and let config mode win. **Verify, do not assume** — `find_package(Boost 1.83 REQUIRED COMPONENTS filesystem)` in the standalone branch is the call to watch.
-- [ ] Keep this as its own commit; it is independent of every version bump.
+Done for `server_components` only; the apps are 1.3.
+
+**Correction to the original plan text:** "drop the OLD setting and let config mode win" was wrong. The repo declares `cmake_minimum_required(VERSION 3.24)`, and a policy introduced after that floor (CMP0167 arrived in 3.30) defaults to **OLD** when unset. Deleting the block would therefore have kept module-mode Boost *and* added an unset-policy warning. The correct change is `OLD` → `NEW` inside the same guard.
+
+- [x] Flip `cmake_policy(SET CMP0167 OLD)` to `NEW` in `server_components/CMakeLists.txt`, keeping the `if(POLICY)` guard. ✅ 2026-09-04
+- [x] **Verified, not assumed.** Configured a throwaway project against the real Conan-generated `conan/conan/` folder from the 1.1 build, with CMP0167 NEW and the exact `find_package(Boost 1.83 REQUIRED COMPONENTS filesystem)` call: `Boost_FOUND=1`, version 1.86.0 satisfies the 1.83 floor via `BoostConfigVersion.cmake`, and both `Boost::filesystem` and the `boost::boost` target behind `${BOOST_LIB}` are declared. The second, component-less `find_package(Boost REQUIRED)` from `ConanLibImports.cmake` also survives. ✅ 2026-09-04
+- [x] Confirmed the Conan dependency provider still intercepts the call. `conan_provider.cmake` registers `SET_DEPENDENCY_PROVIDER … SUPPORTED_METHODS FIND_PACKAGE`, so it sees every `find_package` regardless of mode, and it picks its config-mode branch on the literal `MODULE` argument (absent here) rather than on the policy. The trigger call therefore still forces `ConanLibImports.cmake` to be generated. ✅ 2026-09-04
+- [x] Confirmed no impact on the Linux gate. `docker/Dockerfile` installs bookworm's CMake 3.25, where `if(POLICY CMP0167)` is false and the block is skipped entirely — the guard stays for exactly this reason. ✅ 2026-09-04
+- [ ] Mason: build `server_components` standalone and run the suite, then commit on its own.
+
+**Two things worth knowing about the new behaviour.** Config mode does *not* enforce the `COMPONENTS` list the way FindBoost did — the generated config never sets `Boost_filesystem_FOUND`, and the call still succeeds — so that clause is now documentation rather than a check. And because this block sits inside `if(PROJECT_IS_TOP_LEVEL)`, it is standalone-only: the two apps are untouched until 1.3, and nothing about their consumed-mode build changes in the meantime.
+
+**No test is possible for this change.** It is a CMake policy selection with no runtime surface; the configure step is the test, which is why the verification above was done against the real generated files rather than left to the build.
 
 ### 1.3 App scaffolding
 

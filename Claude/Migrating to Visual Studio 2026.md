@@ -213,7 +213,21 @@ The lowest layer, and where most of the dependency set lives. All validated on V
 - [x] libjpeg 9e → 9f ✅ 2026-09-04
 - [x] libtiff 4.6.0 → 4.7.2 — **one of the two VS2026 blockers**. Confirmed the cap is gone: 4.7.2 declares `cmake/[>=3.18]`, unbounded. A short "do not go back below 4.7.x" comment now sits above the pin in all three conanfiles so a future downgrade cannot silently re-block VS2026. ✅ 2026-09-04
 - [x] Targets stay `PNG::PNG` / `TIFF::TIFF`; no `ConanLibImports.cmake` or CMakeLists edits needed. ✅ 2026-09-04
-- [x] **Tests: the suspicion was right, and the gap was total.** `image_resize_test.cpp` covers JPEG and PNG thoroughly (including two subtle PNG colour-path regressions) but had **no TIFF case at all** — `IMAGE_TYPE_TIFF`, the `${TIFF_LIB}` link edge and both arms of the production switch existed with nothing behind them. `image_helper_test.cpp` only mentions `"tiff"` as a MIME string. So the one mandatory bump in this phase was also the one with zero coverage. Added `ResizeTiffBasic` and `GetImageDimensionsTiff`, mirroring the JPEG cases exactly so a TIFF-only regression surfaces as a TIFF-only failure. ✅ 2026-09-04
+- [x] **Tests: the suspicion was right, the gap was total, and closing it found a live bug.** `image_resize_test.cpp` covered JPEG and PNG thoroughly (including two subtle PNG colour-path regressions) but had **no TIFF case at all** — `IMAGE_TYPE_TIFF`, the `${TIFF_LIB}` link edge and both arms of the production switch existed with nothing behind them. `image_helper_test.cpp` only mentions `"tiff"` as a MIME string. So the one mandatory bump in this phase was also the one with zero coverage. ✅ 2026-09-04
+
+  Two tests now cover it, and they are not the two originally planned — see the defect below for why:
+  - `GetImageDimensionsTiff` — the **read** path, which is the half libtiff actually affects. Passes.
+  - `ResizeTiffThrowsBecauseTheOutputSinkCannotSeek` — a characterization test pinning the defect. Passes, which is what *proves* the defect.
+
+**DEFECT FOUND: resizing a TIFF has never worked.** Not a regression from the bump — a latent bug the new coverage exposed on its first run.
+
+`ResizeImage` writes its output through `VectorSink` (`back_insert_device`), which is append-only. JPEG and PNG stream strictly forwards and do not care. A TIFF writer must seek back to patch the IFD offset into the header once it knows it, so the `IMAGE_TYPE_TIFF` arm of `WriteView` throws `"no random access: iostream error"` for **every** input, on every platform, in every build. Confirmed empirically: the `EXPECT_THROW` assertion passes.
+
+The read path is fine — `ArraySource` is seekable, and `GetImageDimensionsTiff` decodes a real TIFF through the production entry point without complaint.
+
+Deliberately **not fixed here.** It changes production image behaviour and deserves its own commit and review rather than a ride inside a dependency-version phase. The characterization test is written so that **when the fix lands it will fail**, which is the signal to replace it with the JPEG-style round-trip assertion. Raised as Open Question 9.
+
+Aside worth keeping: the first version of the TIFF *fixture helper* hit the same wall, because it copied the JPEG/PNG `back_insert_device` idiom. TIFF fixtures have to be built through a seekable sink — `std::ostringstream` — and the helper now carries a comment saying so.
 
 ### 3.3 date 3.0.4 → 3.0.5
 
@@ -237,7 +251,9 @@ The lowest layer, and where most of the dependency set lives. All validated on V
 
 **Gate:** docker green at the same test count; VS2022 builds all three repos.
 
-- [ ] Linux docker gate for `server_components` — **attempted, did not complete.** The run got through `conan install` and was compiling the newly-bumped dependencies from source when the container died: `docker run` returned **125** and the log ends with `error waiting for container: unexpected EOF` partway through `date/3.0.5` (`tz.cpp`, at `-j32`). 125 is a Docker-level failure, not a compile error — nothing in the log is a build diagnostic. A follow-up `docker version` then hung for 120s, so the daemon itself is wedged; Docker Desktop appears to have crashed or restarted mid-build. **This says nothing about Phase 3's correctness either way** — it needs a Docker Desktop restart and a re-run. Both the Conan cache and the build tree are named volumes, so the retry resumes rather than starting over.
+- [x] **Linux docker gate for `server_components`: GREEN.** `1764 tests from 177 suites ran, all passed`, `[honuware] OK`, exit 0. Every bumped dependency compiled from source on gcc 14 without incident. ✅ 2026-09-04
+
+  Took three attempts, and the first two are worth recording. **Attempt 1** died with `docker run` returning **125** and `error waiting for container: unexpected EOF` partway through building `date/3.0.5` — a Docker-level failure with no build diagnostic anywhere in the log; a follow-up `docker version` then hung for 120s, so Docker Desktop had crashed. Restarting it also silently took down `knotty-postgres-docker`, which the suite needs — worth checking first if a future gate run fails at startup rather than mid-build. **Attempt 2** built and ran clean except for the two new TIFF tests, which is how the defect below was found.
 - [ ] Mason: build all three repos on Windows and run the suites.
 
 # Phase 4 — Recipe bumps: services, platform, app
@@ -360,5 +376,11 @@ Cross-repo order within every phase: `server_components` → `knottyyoga` → `c
 7. **Should the real `HttpClient` get a live smoke test?** Surfaced by 3.4. The HTTP layer is tested entirely through doubles: `TestHttpClient` is a fake, `http_client_test_util_test.cpp` tests the fake, and the Square client tests inject it. So `MakeHttpClient()` — the actual libcurl-backed implementation — is never executed by the suite. That was tolerable while libcurl sat still at 7.86.0 for years; it is less comfortable now that it has moved to 8.21.0 and will keep moving.
 
    A single loopback test — stand up a Crow server on 127.0.0.1, issue one real GET through `MakeHttpClient()`, assert the round trip — would close it, and Crow is already linked into the tests target. The cost is introducing a live-server pattern the codebase has deliberately avoided, plus port-binding flakiness in docker and CI. I did not add it as part of a version bump: that is an architectural call, not something a dependency change should smuggle in. Worth doing as its own small piece of work if you agree.
+
+9. **Is `IMAGE_TYPE_TIFF` reachable from a real upload — and do we fix it or delete it?** Found in 3.2: `ResizeImage` throws for every TIFF because the output sink cannot seek. It has never worked.
+
+   The decision depends on something only you know. If users can upload TIFFs — `image_helper_test.cpp` lists `"tiff"` among accepted types, which suggests they can — this is a live crash path and the fix is small and worth doing soon: write the TIFF branch through a seekable sink (a `std::ostringstream`, then copy into the result vector) instead of `back_insert_device`. If TIFF support is vestigial and nothing real ever sends one, the more honest fix is deleting `IMAGE_TYPE_TIFF` and the libtiff dependency along with it — which would also drop a package from all three graphs.
+
+   Either way it wants its own commit. The characterization test currently pins the broken behaviour and will fail once it is fixed, deliberately.
 
 8. **The knottyyoga test-count floor is slack.** Carried over from the Phase 1 Linux run: `MIN_EXPECTED_TESTS=3500` against an actual 5163. A third of the suite could vanish before it trips, which is the opposite of what the floor is for. Raise it toward ~4800? Unrelated to the migration, so not changed here.

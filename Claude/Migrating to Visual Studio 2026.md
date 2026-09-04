@@ -195,7 +195,7 @@ Optional, explicitly removed in Phase 7, and a **Levi-machine action** — it do
 
 **Gate:** VS2022 build unchanged and green across all three repos. Nothing here is unit-testable — it is Conan configuration with no runtime surface — so the build is the test.
 
-- [ ] Mason: reconfigure and build all three repos on Windows. Watch the configure log for `CMake-Conan: Installing single configuration` and confirm no unexpected rebuild storm; the package-id check above says there should be none.
+- [x] Mason: reconfigure and build all three repos on Windows. Watch the configure log for `CMake-Conan: Installing single configuration` and confirm no unexpected rebuild storm; the package-id check above says there should be none. ✅ 2026-09-04
 
 # Phase 3 — Recipe bumps: foundation layer
 

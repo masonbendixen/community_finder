@@ -276,7 +276,8 @@ Continuing upward through the layers.
 - [x] **The second VS2026 blocker is gone.** 20250814.2 declares `cmake/[>=3.16]`, unbounded. ✅ 2026-09-04
 - [x] Target stays `abseil::abseil`; the `${ABSL_LIB}` link lines in `src/database_helper/CMakeLists.txt` and `src/test_helper/CMakeLists.txt` are untouched. ✅ 2026-09-04
 - [x] **Tests: not possible, and the exposure is precisely three symbols.** The consumers are `main()` functions with no seam. The entire abseil surface in both apps is `ABSL_FLAG(...)`, `absl::ParseCommandLine(argc, argv)` and `absl::GetFlag(FLAGS_x)`, from `absl/flags/flag.h` and `absl/flags/parse.h` — all stable since the flags library shipped in 2019, which is what makes a 2022→2025 jump low risk rather than a leap of faith. ✅ 2026-09-04
-- [ ] Mason: hand-check the flags still parse — `--recreate_database`, `--migrate`, and the test-helper REPL flags. This is the one part of the phase no automated gate covers, because honuware's suite does not build the app CLI mains.
+- [x] **Compile-checked the call sites on Linux**, since honuware's gate does not build the app CLI mains. Built `knottyyoga_database_helper` and `knottyyoga_test_helper` in the knottyyoga container against the local honuware tree: both `Built target`, zero compile errors. That turns "the flags API has been stable since 2019" from an argument into a result — `ABSL_FLAG`, `absl::ParseCommandLine` and `absl::GetFlag` all still compile and link against 20250814.2. ✅ 2026-09-04
+- [ ] Mason: hand-check the flags still *parse* at runtime — `--recreate_database`, `--migrate`, and the test-helper REPL flags. Compilation is proven; runtime behaviour is not, because no harness executes those binaries.
 
 ### 4.4 app — ftxui and replxx
 
@@ -288,8 +289,12 @@ Continuing upward through the layers.
 
 - [x] **Resolution re-verified after the bumps** — all three repos × msvc 194 and 195, composing the committed profile as the CMakeLists does. Six combinations, zero errors, zero Invalid packages. ✅ 2026-09-04
 - [x] **Blocker scan: ZERO.** All 26 packages in the post-Phase-4 graph, and not one declares a `cmake/[… <4]` cap. Spot-checked against the three bumped recipes directly rather than trusting the loop again, after the false all-clear in Phase 3. **Both VS2026 CMake blockers are now cleared.** ✅ 2026-09-04
-- [ ] Linux docker gate for `server_components` — running.
+- [x] **Linux docker gate for `server_components`: GREEN.** `1764 tests from 177 suites ran, all passed`, `[honuware] OK`, exit 0 — the same count as Phase 3, so nothing was lost. openssl 3.5.8 and libzip 1.11.4 both compiled from source on gcc 14, including across the six malformed-archive cases. ✅ 2026-09-04
 - [ ] Mason: build all three repos on Windows and run the suites.
+
+**Note on the failed Windows configure of 2026-09-04 — it was an internet outage, not this work.** The log is unambiguous: every version range resolved (all from cache), and the first and only real error was DNS — `Failed to resolve 'center2.conan.io' ([Errno 11001] getaddrinfo failed)` while checking for a `b2/5.5.3` binary. The `find_package(Boost)` failure underneath it is purely downstream: Conan aborted, so `ConanLibImports.cmake` was never generated, so there was no `BoostConfig.cmake` for the trigger call to find. Nothing to fix in the repos.
+
+Connectivity confirmed restored (`center2.conan.io` resolves), and the graph now computes cleanly at the exact VS configuration (msvc 194 / cppstd 20 / Debug / dynamic): **19 Cache, 9 Skip, 1 Missing.** The single package the retry has to build is `openssl/3.5.8`; everything else is already local.
 
 # Phase 5 — Code-touching bumps, one commit each
 

@@ -296,6 +296,29 @@ Continuing upward through the layers.
 
 Connectivity confirmed restored (`center2.conan.io` resolves), and the graph now computes cleanly at the exact VS configuration (msvc 194 / cppstd 20 / Debug / dynamic): **19 Cache, 9 Skip, 1 Missing.** The single package the retry has to build is `openssl/3.5.8`; everything else is already local.
 
+**Second Windows failure, 2026-09-04 — also the outage, one step further downstream.** The retry got past resolution and died building openssl 3.5.8:
+
+```
+ERROR: openssl/3.5.8: Error in build() method, line 562
+  while calling '_replace_runtime_in_file', line 577
+  FileNotFoundError: [Errno 2] No such file or directory: 'Configurations\10-main.conf'
+```
+
+Not a recipe bug and not a version problem — **the cached source tree was truncated by the interrupted download**, and Conan reused it instead of re-fetching. Measured against the working 3.5.2 source in the same cache:
+
+| | files | `Configurations/` |
+|---|---|---|
+| openssl 3.5.2 (builds) | 5714 | 27 files, incl. `10-main.conf` |
+| openssl 3.5.8 (failed) | 5240 | absent entirely |
+
+The recipe `chdir`s to the source folder and patches the MSVC runtime flag into `Configurations/10-main.conf` — an msvc-only path, which is exactly why the Linux gate passed on the same version.
+
+**The lesson worth keeping: source checksums do not protect against this.** They are verified at download time, not on reuse of an already-extracted tree. Any package that fails strangely right after a network drop is a candidate for `conan remove <ref>`, not for debugging the recipe.
+
+Fixed by `conan remove "openssl/3.5.8" -c` and a clean rebuild: the source came back at **5767 files with all 27 `Configurations/` entries**, and openssl 3.5.8 **built successfully under msvc 194 / Debug**. So 3.5.8 is sound on Windows and there is no need to hold at 3.5.2. The binary is now in the local cache, so the next configure has nothing left to build.
+
+*(Housekeeping: that rebuild ran `conan install` with an `--output-folder` outside the repo, which rewrote `server_components/CMakeUserPresets.json` to point at it. Restored to its original content. The file is gitignored, so it could not have reached a commit, but it would have broken the next VS configure.)*
+
 # Phase 5 — Code-touching bumps, one commit each
 
 The only changes that can force a C++ edit. Foundation and services before testing, per the layer rule.

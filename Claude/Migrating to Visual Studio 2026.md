@@ -254,7 +254,7 @@ Aside worth keeping: the first version of the TIFF *fixture helper* hit the same
 - [x] **Linux docker gate for `server_components`: GREEN.** `1764 tests from 177 suites ran, all passed`, `[honuware] OK`, exit 0. Every bumped dependency compiled from source on gcc 14 without incident. ✅ 2026-09-04
 
   Took three attempts, and the first two are worth recording. **Attempt 1** died with `docker run` returning **125** and `error waiting for container: unexpected EOF` partway through building `date/3.0.5` — a Docker-level failure with no build diagnostic anywhere in the log; a follow-up `docker version` then hung for 120s, so Docker Desktop had crashed. Restarting it also silently took down `knotty-postgres-docker`, which the suite needs — worth checking first if a future gate run fails at startup rather than mid-build. **Attempt 2** built and ran clean except for the two new TIFF tests, which is how the defect below was found.
-- [ ] Mason: build all three repos on Windows and run the suites.
+- [x] Mason: build all three repos on Windows and run the suites. ✅ 2026-09-05
 
 # Phase 4 — Recipe bumps: services, platform, app
 
@@ -290,7 +290,7 @@ Continuing upward through the layers.
 - [x] **Resolution re-verified after the bumps** — all three repos × msvc 194 and 195, composing the committed profile as the CMakeLists does. Six combinations, zero errors, zero Invalid packages. ✅ 2026-09-04
 - [x] **Blocker scan: ZERO.** All 26 packages in the post-Phase-4 graph, and not one declares a `cmake/[… <4]` cap. Spot-checked against the three bumped recipes directly rather than trusting the loop again, after the false all-clear in Phase 3. **Both VS2026 CMake blockers are now cleared.** ✅ 2026-09-04
 - [x] **Linux docker gate for `server_components`: GREEN.** `1764 tests from 177 suites ran, all passed`, `[honuware] OK`, exit 0 — the same count as Phase 3, so nothing was lost. openssl 3.5.8 and libzip 1.11.4 both compiled from source on gcc 14, including across the six malformed-archive cases. ✅ 2026-09-04
-- [ ] Mason: build all three repos on Windows and run the suites.
+- [x] Mason: build all three repos on Windows and run the suites. ✅ 2026-09-05
 
 **Note on the failed Windows configure of 2026-09-04 — it was an internet outage, not this work.** The log is unambiguous: every version range resolved (all from cache), and the first and only real error was DNS — `Failed to resolve 'center2.conan.io' ([Errno 11001] getaddrinfo failed)` while checking for a `b2/5.5.3` binary. The `find_package(Boost)` failure underneath it is purely downstream: Conan aborted, so `ConanLibImports.cmake` was never generated, so there was no `BoostConfig.cmake` for the trigger call to find. Nothing to fix in the repos.
 

@@ -340,12 +340,18 @@ The only changes that can force a C++ edit. Foundation and services before testi
 
 ### 5.2 testing + tests — gtest 1.12.1 → 1.17.0
 
-- [ ] All three conanfiles. 1.17 requires C++17; we build at 20.
-- [ ] The "no fixtures, self-contained tests" convention keeps the surface area small — exposure is matcher spellings and death-test details, not test structure.
-- [ ] Check the custom matchers in `components/testing/test/src/util/` first (`table_matcher`, `json_value_matcher`, `json_test_util`); they are the code most likely to need an edit.
-- [ ] **Tests:** those matchers have their own tests (`table_matcher_test.cpp`, `json_value_matcher_test.cpp`, `test_helper_test.cpp`) and are the gate for this bump.
+**OUTCOME: clean. Zero code changes needed — the only bump in the whole migration that cost nothing.**
+
+- [x] All three conanfiles. 1.17 requires C++17; we build at 20. ✅ 2026-09-05
+- [x] **Pre-assessed the risk surface before bumping**, by scanning the repo for the names gtest actually removed: `INSTANTIATE_TEST_CASE_P`, `TYPED_TEST_CASE`, `REGISTER_TYPED_TEST_CASE_P`, `::testing::TestCase`, `testing::internal::`. **None appear anywhere.** The "no fixtures, self-contained tests" convention is what keeps that surface empty — this is a concrete dividend from it. ✅ 2026-09-05
+- [x] The only exposure was the two custom matchers — `JsonWvalueMatcher` (`json_value_matcher.h:15`) and `PostGresResultMatcher` (`table_matcher.h:91`), both deriving from `::testing::MatcherInterface`, plus three `::testing::MakeMatcher(new …)` call sites. That is the *supported* custom-matcher API with an unchanged `MatchAndExplain` signature, so it compiled untouched, as predicted. ✅ 2026-09-05
+- [x] **Gate green: 1764 tests, all passed, zero compile errors**, with the matcher tests (`JsonTestUtilTest.*`, `table_matcher_test`, `json_value_matcher_test`) among them. ✅ 2026-09-05
+- [x] **Tests: none added.** The matchers' own tests are the gate for this bump and already existed. ✅ 2026-09-05
 
 **Gate:** full docker suite **with the test-count floor intact** — a silently vanished route or test is exactly what a dependency swap can cause.
+
+- [x] Linux docker gate green after both 5.1 (reverted state) and 5.2. **1764 tests, all passed**, floor 1000, exit 0 — the same count as Phases 3 and 4, so nothing vanished across the whole dependency migration. ✅ 2026-09-05
+- [ ] Mason: build all three repos on Windows and run the suites. Two separate commits — 5.1 (Asio fix + ThreadPool PIMPL, pins unchanged) and 5.2 (gtest).
 
 # Phase 6 — Hand to Levi: first VS2026 build
 

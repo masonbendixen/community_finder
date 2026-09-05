@@ -262,29 +262,34 @@ Continuing upward through the layers.
 
 ### 4.1 services — openssl 3.5.2 → 3.5.8
 
-- [ ] All three conanfiles. Same LTS line, patch-only. Deliberately **not** 4.0.x — that is a separate decision with its own blast radius.
-- [ ] **Tests:** `components/services/util/mail/mail_helper_test.cpp` and `components/services/util/secrets/secrets_at_rest_test.cpp` cover the consumers.
+- [x] All three conanfiles. Same LTS line, patch-only. Deliberately **not** 4.0.x. ✅ 2026-09-04
+- [x] **Tests: none needed.** `mail_helper_test.cpp` and `secrets_at_rest_test.cpp` already exercise both consumers, and a patch bump inside one LTS line has no API surface to test. The existing suite is the test. ✅ 2026-09-04
 
 ### 4.2 platform — libzip 1.10.1 → 1.11.4
 
-- [ ] All three conanfiles. The theme-bundle reader, and the one dependency that parses untrusted input, so currency matters more here than elsewhere.
-- [ ] **Tests:** `theme_bundle_zip_test.cpp` and `theme_bundle_round_trip_test.cpp` already cover it. Confirm a malformed-archive case exists; add one if not.
+- [x] All three conanfiles. ✅ 2026-09-04
+- [x] **Tests: none needed — already the best-covered dependency in the set.** `theme_bundle_zip_test.cpp` carries six distinct malformed-input cases: `RefusesSomethingThatIsNotAZip`, `RefusesATruncatedArchiveRatherThanCrashing`, `ReaderRefusesAnEntryThatIsAPath`, `ReaderRefusesAnArchiveWithNoThemeJson`, `ReaderRefusesTooManyEntries`, `ReaderRefusesAnOversizedEntryBeforeExpandingIt` — plus `LargeButLegalAssetsSurvive` and the round-trip file. The plan's "add a malformed case if none exists" is already satisfied several times over. ✅ 2026-09-04
 
 ### 4.3 app — abseil 20220623.1 → 20250814.2
 
-- [ ] `knottyyoga` and `communityfinder` conanfiles.
-- [ ] `server_components/conanfile.py` — bump for consistency, or drop the entry entirely (Open Question 3).
-- [ ] **This is the second VS2026 blocker** (drops the `cmake/[>=3.16 <4]` cap). Low risk in practice: only `absl/flags` is used, and that API has been stable since 2020.
-- [ ] Target stays `abseil::abseil`; the `${ABSL_LIB}` link lines in `src/database_helper/CMakeLists.txt` and `src/test_helper/CMakeLists.txt` are unaffected.
-- [ ] **Tests:** the two consumers are `main()` functions with no test seam. Verify by hand instead — `--recreate_database`, `--migrate`, and the test-helper REPL flags each still parse. Do not refactor the mains to make them testable as part of this migration.
+- [x] All three conanfiles. Bumped in `server_components` too rather than removed — **Open Question 3 is still unanswered**, and bumping is the reversible choice; removing it is not. ✅ 2026-09-04
+- [x] **The second VS2026 blocker is gone.** 20250814.2 declares `cmake/[>=3.16]`, unbounded. ✅ 2026-09-04
+- [x] Target stays `abseil::abseil`; the `${ABSL_LIB}` link lines in `src/database_helper/CMakeLists.txt` and `src/test_helper/CMakeLists.txt` are untouched. ✅ 2026-09-04
+- [x] **Tests: not possible, and the exposure is precisely three symbols.** The consumers are `main()` functions with no seam. The entire abseil surface in both apps is `ABSL_FLAG(...)`, `absl::ParseCommandLine(argc, argv)` and `absl::GetFlag(FLAGS_x)`, from `absl/flags/flag.h` and `absl/flags/parse.h` — all stable since the flags library shipped in 2019, which is what makes a 2022→2025 jump low risk rather than a leap of faith. ✅ 2026-09-04
+- [ ] Mason: hand-check the flags still parse — `--recreate_database`, `--migrate`, and the test-helper REPL flags. This is the one part of the phase no automated gate covers, because honuware's suite does not build the app CLI mains.
 
 ### 4.4 app — ftxui and replxx
 
-- [ ] Hold ftxui at 5.0.0 (6.x and 7.x are breaking UI-API changes and the REPL is not on the critical path) — see Open Question 4.
-- [ ] replxx 0.0.4 is already the newest published; nothing to do.
-- [ ] Both were checked: neither caps CMake, and both satisfy msvc 195. Neither is a migration blocker.
+- [x] ftxui held at 5.0.0 — 6.x and 7.x are breaking UI-API changes and the REPL is not on the critical path. Open Question 4 still stands. ✅ 2026-09-04
+- [x] replxx 0.0.4 confirmed still the newest published (0.0.2 / 0.0.3 / 0.0.4). Nothing to do. ✅ 2026-09-04
+- [x] Neither caps CMake; both satisfy msvc 195. Neither is a migration blocker. ✅ 2026-09-04
 
-**Gate:** docker green; VS2022 builds all three repos; re-run the 3.5 resolution check at 195.
+**Gate:** docker green; VS2022 builds all three repos.
+
+- [x] **Resolution re-verified after the bumps** — all three repos × msvc 194 and 195, composing the committed profile as the CMakeLists does. Six combinations, zero errors, zero Invalid packages. ✅ 2026-09-04
+- [x] **Blocker scan: ZERO.** All 26 packages in the post-Phase-4 graph, and not one declares a `cmake/[… <4]` cap. Spot-checked against the three bumped recipes directly rather than trusting the loop again, after the false all-clear in Phase 3. **Both VS2026 CMake blockers are now cleared.** ✅ 2026-09-04
+- [ ] Linux docker gate for `server_components` — running.
+- [ ] Mason: build all three repos on Windows and run the suites.
 
 # Phase 5 — Code-touching bumps, one commit each
 

@@ -43,6 +43,10 @@ Conan honours those caps, downloads a 3.x CMake as a tool dependency, and that C
 
 **2.2 — Boost's build engine does not know toolset 14.5.** The Boost recipe writes `using msvc : 14.5 : …` into `user-config.jam` (Conan resolves v145 correctly). But `b2/5.3.2` — the version in your cache — declares `.known-versions = 14.3 14.2 14.1 14.0 …` in `msvc.jam`. There is no 14.5, so the toolset never configures. **b2 5.3.3 and newer add 14.5.** Boost asks for `b2/[>=5.2 <6]`, so this is fixed with a version floor, not a Boost upgrade — but a cached 5.3.2 satisfies that range and keeps winning until pinned.
 
+**2.5 — libsodium builds through an MSBuild solution, and the 1.0.20 recipe has no entry for msvc 195.** Added after Phase 6, because this plan did not predict it. `_msvc_sln_folder` maps only 190–193 and falls back to `"vs2022"`, into which Conan injects `PlatformToolset=v145` — MSBuild then reports `MSB8020: The build tools for v145 cannot be found`. Fixed by libsodium ≥ 1.0.21, which map `"195": "vs2026"`.
+
+The wider point: **the `cmake/[… <4]` scan in 2.1 can only see CMake-based recipes.** A recipe that drives MSBuild, b2 or autotools has its own toolset-version assumptions and needs its own check. Five packages in the graph touch MSBuild (boost, libjpeg, libpq, xz_utils, libsodium); libsodium was the only one carrying a per-version solution map.
+
 **2.3 — Every dependency compiles from source on VS2026, and no version bump changes that.** ConanCenter publishes msvc binaries at exactly one configuration: `compiler.version=194`, `compiler.cppstd=17`. Verified against zlib, openssl, boost, abseil, gtest and libpqxx at both their oldest and newest versions — there is no 195 anywhere in the index. Upgrading recipes does not buy prebuilt binaries; it buys sources and recipes that survive a source build under MSVC 19.5x and CMake 4.4. Expect a long first build on Levi's machine and do not read it as a fault.
 
 **2.4 — mailio pins Boost exactly, so the two move as one.** `mailio/0.25.3` requires `boost/1.86.0` — an exact pin, not a range. That, rather than a preference, is why Boost sits at 1.86. `mailio/0.26.0` pins `boost/1.91.0`. A mismatched pair fails at graph resolution with a version conflict before anything compiles.
@@ -285,6 +289,8 @@ Continuing upward through the layers.
 - [x] replxx 0.0.4 confirmed still the newest published (0.0.2 / 0.0.3 / 0.0.4). Nothing to do. ✅ 2026-09-04
 - [x] Neither caps CMake; both satisfy msvc 195. Neither is a migration blocker. ✅ 2026-09-04
 
+> **SUPERSEDED — libsodium was NOT safe to hold.** This subsection originally also held libsodium at 1.0.20 on the reasoning "recent, no CMake cap, builds clean — churn with no payoff." That was wrong, and Phase 6.2 proves it: 1.0.20 cannot build under msvc 195 at all. "Builds clean" was observed on the 194 machine, where a prebuilt binary exists and libsodium's MSBuild path never runs. Bumped to **1.0.22** in Phase 6. Note that ftxui and replxx were held on the *same kind* of evidence — both did reach `Build` on the 195 machine's graph, so they are better attested than libsodium was, but neither has been observed compiling under 195 yet.
+
 **Gate:** docker green; VS2022 builds all three repos.
 
 - [x] **Resolution re-verified after the bumps** — all three repos × msvc 194 and 195, composing the committed profile as the CMakeLists does. Six combinations, zero errors, zero Invalid packages. ✅ 2026-09-04
@@ -359,13 +365,28 @@ Everything reaches Levi already proven under CMake 4.4, so anything that fails h
 
 ### 6.1 Sync and build
 
-- [ ] Levi pulls all three repos at the Phase 5 state and builds from a **cold Conan cache**, so no stale 194 artifact can mask a problem.
-- [ ] Expect a long first build: with no 195 binaries and a C++20 profile, roughly twenty packages compile from source, Boost and OpenSSL among them.
+- [x] First VS2026 configure run, on `MASONLG` (VS 2026 Community 18.0, `cl 19.51.36256`, MSVC toolset 14.51.36231 → **msvc 195**, v145). ✅ 2026-09-06
+- [x] **The scaffolding all worked.** The provider detected `compiler.version=195` unaided, generated the auto-cmake profile at cppstd=20, composed the committed `conan/profiles/windows` ahead of it (`boost/*: b2/[>=5.3.3 <6]` visible in the input profile), and resolved the whole graph without a single conflict or invalid package. ✅ 2026-09-06
+- [x] Confirmed the expected shape of a cold 195 cache: **21 packages marked `Build`** — no 195 binaries exist, exactly as Finding 2.3 predicted. ✅ 2026-09-06
 
 ### 6.2 Confirm the blockers are gone
 
-- [ ] libtiff and abseil configure without a CMake 3.x tool dependency being pulled in.
-- [ ] Boost configures its toolset — confirm `b2 5.3.3+` was selected and `using msvc : 14.5` was accepted.
+- [x] **Findings 2.1 and 2.2 are both CONFIRMED FIXED**, by the log rather than by inference. `cmake/[>=3.16]`, `[>=3.18]`, `[>=3.16.3]` and `[>=3.20]` all resolved to **cmake/4.4.2** — no CMake 3.x was pulled in, so the libtiff and abseil bumps did their job. `b2/[>=5.3.3 <6]` resolved to **b2/5.5.3**, so the Phase 2 profile floor did its job. Neither of the two predicted blockers fired. ✅ 2026-09-06
+- [x] **A THIRD blocker appeared that this plan never predicted: `libsodium/1.0.20`.** The build died at:
+
+  ```
+  error MSB8020: The build tools for v145 (Platform Toolset = 'v145') cannot be found
+    [libsodium.vcxproj]  ...\builds\msvc\vs2022\libsodium.sln
+  ```
+
+  **libsodium does not build with CMake — it builds a checked-in MSBuild solution.** Its `_msvc_sln_folder` maps only msvc 190–193 to a solution folder and silently falls back to `"vs2022"` for anything newer, then injects `PlatformToolset=v145` into that VS2022 project. The give-away is in the log: `TargetPath ... \Debug\v143\static\` — the solution is hardwired around v143. **1.0.21+ add `"194": "vs2022"` and `"195": "vs2026"`.** ✅ 2026-09-06
+- [x] Bumped libsodium **1.0.20 → 1.0.22** in all three conanfiles, with the whole diagnosis in a comment above the pin. Resolution verified at 194 and 195 across all three repos; Linux gate green at **1764 tests, all passed**, zero compile errors, 25 libsodium-consumer tests (secrets/auth) passing. ✅ 2026-09-06
+
+**Two corrections to earlier phases, both mine.**
+
+**The Phase 4 "zero CMake blockers" conclusion was correct but too narrowly scoped.** It scanned for `cmake/[… <4]` caps, which can only see CMake-based recipes. libsodium builds through MSBuild and was invisible to that method however carefully it was run. The gap is now closed: all 24 packages in the graph were re-scanned for MSBuild-based builds — **five touch MSBuild** (boost, libjpeg, libpq, xz_utils, libsodium) and **libsodium is the only one with a per-version solution-folder map**, so this class should be exhausted. Any future "is the graph VS2026-clean?" check needs *both* scans.
+
+**The Phase 4.4 decision to hold libsodium was based on bad evidence.** It read "recent, no CMake cap, builds clean — churn with no payoff." But "builds clean" came from the 194 machine, where a prebuilt binary exists and the MSBuild path never executes. That is exactly the trap Findings §4 describes — a green 194 machine proves nothing about 195 — applied to a package that had been written off as boring. **The general lesson: on the 2022 machine, "it builds" and "its build path was exercised" are different claims**, and only packages that actually compiled from source there tell you anything about 195.
 
 ### 6.3 Run the gates on 2026
 
@@ -435,5 +456,9 @@ Cross-repo order within every phase: `server_components` → `knottyyoga` → `c
 
     - **The credential itself.** It is in version control, in a repo with a public GitHub Actions workflow. It should probably be rotated and moved to the same `config_secrets` / environment path everything else uses. Not touched here — rotating a credential is your call, not a side effect of a dependency migration.
     - **`MailHelperTest.SendMessage` is not a mock.** It authenticates to Gmail and sends a real email to a real hotmail address on **every full suite run** — the 1681 ms that test takes is a live SMTP round trip. Every gate run in this migration sent one. Worth deciding whether the unit suite should do that at all; the natural fix is to drive it through the existing `TestMailHelper` double and leave real sending to the `--send_real_email` path the test helper already has.
+
+12. **The two machines resolve different transitive versions from the same ranges.** Spotted in the Phase 6 log. From identical conanfiles, the VS2026 box resolved `libpq/17.11`, `xz_utils/5.8.3`, `zstd/1.5.7`; the VS2022 box resolves `libpq/15.5`, `xz_utils/5.4.5`, `zstd/1.5.5`. Version ranges resolve against whatever the local cache already holds, so two developers can build genuinely different dependency sets from the same commit — and `libpq` 15 vs 17 is not a trivial difference for a Postgres client.
+
+    Not blocking, and it did not cause any failure here. But it is a reproducibility hole, and it will eventually produce a "works on my machine" that is very hard to read. The fix is a lockfile (`conan lock create`, committed alongside the conanfiles) — which would also make the Windows and Linux gates provably identical. Worth doing after the migration settles rather than during it.
 
 8. **The knottyyoga test-count floor is slack.** Carried over from the Phase 1 Linux run: `MIN_EXPECTED_TESTS=3500` against an actual 5163. A third of the suite could vanish before it trips, which is the opposite of what the floor is for. Raise it toward ~4800? Unrelated to the migration, so not changed here.

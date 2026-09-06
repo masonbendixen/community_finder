@@ -10,6 +10,8 @@ tags:
 # Setting up machine
 - Installing CMake 4.4.3
 	- https://cmake.org/download/
+- Install Conan 2.31.2 from
+	- https://conan.io/downloads
 - 
 
 # Related Documents

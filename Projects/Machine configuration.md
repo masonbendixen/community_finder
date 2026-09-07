@@ -12,7 +12,9 @@ tags:
 	- https://cmake.org/download/
 - Install Conan 2.31.2 from
 	- https://conan.io/downloads
-- 
+- Install Pytyhon
+	- From an elevated command prompt
+	- winget install Python.Python.3.13 --scope machine
 
 # Related Documents
 - Links to related documents

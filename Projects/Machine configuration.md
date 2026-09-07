@@ -15,7 +15,10 @@ tags:
 - Install Pytyhon
 	- From an elevated command prompt
 	- winget install Python.Python.3.13 --scope machine
-
+- Install server components
+	- cd c:/users/{user}/source/repos
+	- git clone https://github.com/honuware/server_components.git
+- 
 # Related Documents
 - Links to related documents
 

@@ -381,6 +381,33 @@ Everything reaches Levi already proven under CMake 4.4, so anything that fails h
 
   **libsodium does not build with CMake — it builds a checked-in MSBuild solution.** Its `_msvc_sln_folder` maps only msvc 190–193 to a solution folder and silently falls back to `"vs2022"` for anything newer, then injects `PlatformToolset=v145` into that VS2022 project. The give-away is in the log: `TargetPath ... \Debug\v143\static\` — the solution is hardwired around v143. **1.0.21+ add `"194": "vs2022"` and `"195": "vs2026"`.** ✅ 2026-09-06
 - [x] Bumped libsodium **1.0.20 → 1.0.22** in all three conanfiles, with the whole diagnosis in a comment above the pin. Resolution verified at 194 and 195 across all three repos; Linux gate green at **1764 tests, all passed**, zero compile errors, 25 libsodium-consumer tests (secrets/auth) passing. ✅ 2026-09-06
+- [x] **Confirmed fixed on VS2026**: the next run reported `libsodium/1.0.22: Already installed! (5 of 27)`. Blocker three is closed. ✅ 2026-09-06
+
+### 6.2b Fourth stop: `libpq/17.11` — a MACHINE issue, not a repo issue
+
+- [x] The run then died in libpq's Meson configure with **error 9009** ("command not found") and, immediately above it:
+
+  ```
+  Python was not found; run without arguments to install from the Microsoft Store,
+  or disable this shortcut from Settings > Apps > Advanced app settings > App execution aliases.
+  ```
+
+  **libpq 17.11 builds with Meson; Meson is a Python application.** That machine has Windows' Microsoft-Store `python.exe` alias stub on PATH instead of a real interpreter, so meson cannot launch. Nothing in the three repos is implicated. ✅ 2026-09-06
+- [ ] **Fix on that machine**, either: install a real Python (3.x, on PATH), or turn off the Store aliases at *Settings → Apps → Advanced app settings → App execution aliases* (`python.exe` and `python3.exe`), or both. Then re-run the configure.
+
+**This is Open Question 12 arriving in person, and it is worse than it first looked.** The two machines do not merely resolve different libpq versions from `libpq/[>=15.4 <18]` — they build libpq with **completely different build systems**:
+
+| | resolves | Windows build system | needs |
+|---|---|---|---|
+| VS2022 desktop | `libpq/15.5` | Autotools + **MSBuild** | pkgconf |
+| VS2026 laptop | `libpq/17.11` | **Meson** | meson + **Python** |
+
+Two consequences worth holding onto:
+
+1. **The divergence accidentally helped.** libpq 15.5 goes through MSBuild with no per-version solution map — the same shape as the libsodium failure. libpq 17.11's Meson build is toolchain-agnostic and has no v145 assumption at all, so it is *more* likely to survive VS2026 than 15.5 would have been. Converging the machines downward onto 15.5 could reintroduce a v145 MSBuild problem; if they are converged, it should be **upward**.
+2. **But it also means the VS2026 machine has never validated what the VS2022 machine actually ships.** A green build on one says nothing about the other for this dependency.
+
+The durable fix remains a committed lockfile rather than an ad-hoc pin — pinning `libpq` to 17.x across all three repos would push a Postgres *client major version* change onto the Linux gate and the deploy image, which is a bigger decision than this migration should make on its own.
 
 **Two corrections to earlier phases, both mine.**
 

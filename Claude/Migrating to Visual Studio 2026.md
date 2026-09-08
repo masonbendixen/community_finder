@@ -393,7 +393,7 @@ Everything reaches Levi already proven under CMake 4.4, so anything that fails h
   ```
 
   **libpq 17.11 builds with Meson; Meson is a Python application.** That machine has Windows' Microsoft-Store `python.exe` alias stub on PATH instead of a real interpreter, so meson cannot launch. Nothing in the three repos is implicated. ✅ 2026-09-06
-- [ ] **Fix on that machine**, either: install a real Python (3.x, on PATH), or turn off the Store aliases at *Settings → Apps → Advanced app settings → App execution aliases* (`python.exe` and `python3.exe`), or both. Then re-run the configure.
+- [x] **Fix on that machine**, either: install a real Python (3.x, on PATH), or turn off the Store aliases at *Settings → Apps → Advanced app settings → App execution aliases* (`python.exe` and `python3.exe`), or both. Then re-run the configure. ✅ 2026-09-08
 
 **This is Open Question 12 arriving in person, and it is worse than it first looked.** The two machines do not merely resolve different libpq versions from `libpq/[>=15.4 <18]` — they build libpq with **completely different build systems**:
 
@@ -417,8 +417,8 @@ The durable fix remains a committed lockfile rather than an ad-hoc pin — pinni
 
 ### 6.3 Run the gates on 2026
 
-- [ ] Full suite on Levi's machine at the same test count as the 2022 machine.
-- [ ] Any delta in test count is a broken endpoint anchor, not a flake — chase it before proceeding.
+- [x] Full suite on Levi's machine at the same test count as the 2022 machine. ✅ 2026-09-08
+- [x] Any delta in test count is a broken endpoint anchor, not a flake — chase it before proceeding. ✅ 2026-09-08
 
 **Gate:** both machines build all three repos and produce identical test counts.
 

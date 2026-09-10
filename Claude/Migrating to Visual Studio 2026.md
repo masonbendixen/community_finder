@@ -748,6 +748,8 @@ Answering *"Can you put together a plan to fix these issues?"*. Two genuinely se
 
 - [ ] **The local-disk inventory has grown since this item was written, partly as a side effect of 8.1's tooling.** Current known copies of `rquya…kwuyc`, targeted search (not exhaustive):
 
+  **Verified by a full recursive scan** of all three repos plus the working scratchpad (2026-09-10). It returns **exactly these three files and nothing else**, and `git log -S` confirms this literal has never been committed to `server_components` in any branch. So the local exposure is bounded — on *this* machine. The other machine has not been scanned.
+
   - `communityfinder/server/communityfinder_server/launch_defaults.local.json` — **created 2026-09-09** while folding launch settings into the generator. Gitignored.
   - `communityfinder/server/communityfinder_server/.vs/launch.vs.json` — generated *from* that defaults file, so it reappears on every `sync_launch_targets.ps1` run. **Deleting it does not remove the credential; delete or edit the defaults file, or it comes straight back.**
   - the scratchpad backup of the old repo-root `communityfinder/.vs/launch.vs.json`, taken before that workspace was removed.

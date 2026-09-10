@@ -712,9 +712,50 @@ Answering *"Can you put together a plan to fix these issues?"*. Two genuinely se
 `components/services/util/secrets/secret_values.cpp` lines 18–22 hold a real Gmail app password next to `smtp.gmail.com:465`, in a repo that runs a public GitHub Actions workflow.
 
 - [ ] **Revoke the existing app password** at the Google account's App Passwords page. Do this first and independently of any code change — the credential is already disclosed and every hour it stays valid is exposure.
-- [ ] **There is at least one more plaintext copy than OQ11 accounted for.** `communityfinder/.vs/launch.vs.json` carries the same app password as a `HONUWARE_MAIL_APP_PASSWORD` launch-profile environment variable, alongside `HONUWARE_ALLOW_DESTRUCTIVE=1` and `--recreate_database`. Found while diagnosing the Visual Studio launch-settings problem (8.1) — entirely unrelated to that symptom.
 
-  **Not committed** — `.gitignore:52` ignores `.vs/` and the file is untracked, verified — so this is a local-disk exposure, not a repository one. But it means **rotation is a sweep, not a single edit**: treat every VS launch profile, every `.vs` folder, and both machines as holding a copy. A credential that has been pasted into a launch profile once has usually been pasted elsewhere too.
+  **Prerequisite, and the reason the page sometimes appears not to exist.** App Passwords are only offered when **2-Step Verification is on**. The entry is *hidden*, not empty, when: 2SV is off; 2SV is configured as **security keys only**; **Advanced Protection** is enabled; or the account is a **Workspace / school account** whose admin has disabled app passwords. If the URL below bounces you to the Security overview, that is why — it is not a sign the password does not exist.
+
+  **Sign in as the right account first.** This is the mailbox that sends, i.e. the address behind `kMailSenderAddress` / `::Mail::LoadSenderAddress` — not necessarily your personal Google account.
+
+  **To revoke:**
+
+  1. Go to **https://myaccount.google.com/apppasswords** (menu path: Google Account → **Security** → under *How you sign in to Google*, **2-Step Verification** → scroll to the bottom → **App passwords**).
+  2. Re-authenticate when prompted — Google always challenges before showing this page.
+  3. The table lists each app password by **the name given when it was created**, with created and last-used dates. The 16-character value itself is *never* shown again.
+  4. Click **Remove** (the trash icon) on the row, and confirm.
+  5. Revocation is **immediate** — SMTP auth with that string starts failing on the next attempt. Nothing needs to be restarted.
+
+  **If you cannot tell which row is which** — likely, since the values are not displayed and names like *"Mail on Windows"* are ambiguous — **change the Google account password instead. That revokes every app password on the account at once.** Blunt, and it will break anything else on that account still using one, but it is the guaranteed close. Given there are **two** distinct credentials to account for here (see below), this is the option that does not depend on identifying them correctly.
+
+  **To create the replacement:**
+
+  1. Same page. Google removed the old *"Select app" / "Select device"* dropdowns — there is now a single **App name** free-text field.
+  2. Name it something specific and greppable, e.g. `honuware-smtp-2026-09`. **The name is the only handle you will ever have on it**, which is precisely the problem being worked around above.
+  3. Click **Create**. The 16-character password appears in a dialog as four groups of four. **It is shown exactly once** — there is no way to retrieve it later.
+  4. The spaces are presentation only. Strip them; store the 16 characters unbroken.
+
+  **Where it goes:** the `config_secrets` / `HONUWARE_MAIL_APP_PASSWORD` path only. Not `secret_values.cpp`, not any `launch.vs.json`, and — new since this item was written — **not `launch_defaults.local.json`** unless you consciously accept that as another plaintext copy on disk (it is gitignored, but it is still a file).
+
+  Sources: [Sign in with app passwords](https://support.google.com/accounts/answer/185833?hl=en) · [App passwords page](https://myaccount.google.com/apppasswords)
+- [ ] **Correction 2026-09-10: these are TWO DIFFERENT app passwords, not one.** This item previously said the launch profile carried "the same app password". It does not. Verified by comparing the literals:
+
+  | credential | where | exposure |
+  |---|---|---|
+  | `ctojsn…lbdz` | `server_components/components/services/util/secrets/secret_values.cpp:18` | **committed and public** — in `HEAD` and in history since the initial-extraction commit `f95d099`, in a repo running a public Actions workflow (`.github/workflows/ci.yml`) |
+  | `rquya…kwuyc` | launch profiles only — never in any repo. `git grep` across `server_components` finds it nowhere | local disk only |
+
+  **Both must be revoked.** Rotating one and assuming the other is covered is exactly the mistake this correction exists to prevent — and it is the case for changing the account password rather than removing rows individually.
+
+- [ ] **The local-disk inventory has grown since this item was written, partly as a side effect of 8.1's tooling.** Current known copies of `rquya…kwuyc`, targeted search (not exhaustive):
+
+  - `communityfinder/server/communityfinder_server/launch_defaults.local.json` — **created 2026-09-09** while folding launch settings into the generator. Gitignored.
+  - `communityfinder/server/communityfinder_server/.vs/launch.vs.json` — generated *from* that defaults file, so it reappears on every `sync_launch_targets.ps1` run. **Deleting it does not remove the credential; delete or edit the defaults file, or it comes straight back.**
+  - the scratchpad backup of the old repo-root `communityfinder/.vs/launch.vs.json`, taken before that workspace was removed.
+  - The original `communityfinder/.vs/launch.vs.json` is **gone** — removed with the mistaken root workspace (8.1).
+
+  *Note what happened here: a tool built to stop settings being lost also made a credential harder to delete, by turning one hand-edited copy into a generated one with a durable source. That is a fair trade for launch arguments and a bad one for secrets.* Once rotation is done, the honest fix is for `HONUWARE_MAIL_APP_PASSWORD` to come from the seeded `config_secrets` row or the ambient environment rather than from a checked-in-shaped file.
+
+  **Not committed** — `.gitignore` ignores both `.vs/` and `launch_defaults.local.json`, verified with `git check-ignore` — so this half is local-disk exposure, not a repository one. But it means **rotation is a sweep, not a single edit**: treat every VS launch profile, every `.vs` folder, every `launch_defaults.local.json`, and both machines as holding a copy. A credential pasted into a launch profile once has usually been pasted elsewhere too.
 - [ ] Worth noting what this copy also reveals: communityfinder already reads the password from an **environment variable** (`HONUWARE_MAIL_APP_PASSWORD` appears in `app_secret_values.cpp` and `create_database.cpp`), so the app side of 9.2 may largely exist already and the literal in honuware's `secret_values.cpp` is the outlier. Confirm before designing a new seam — the mechanism is probably already there.
 - [ ] Issue a replacement and put it **only** in the `config_secrets` / environment path the rest of the system already uses. Do not commit it.
 - [ ] **Understand what rotation does and does not fix.** Removing the value from `HEAD` does **not** remove it from git history — it stays in every clone, every fork, and GitHub's raw object store. Rotation is what actually closes it.

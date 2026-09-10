@@ -519,136 +519,29 @@ Phases 1–7 are done and are not to be edited. Everything below is new work ari
 **Four questions closed with no work required**, recorded here so they are not reopened:
 
 - **OQ1 / OQ5 (sequencing).** Both moot — the migration is done, and doing it before the bucket work was right because both machines needed VS2026.
-- **OQ2 (Boost 1.86 under 19.51).** **Answered by Phase 6/7: yes.** Boost 1.86 builds on both machines with the b2 floor from Phase 2 doing its job (`b2/[>=5.3.3 <6]` → `b2/5.5.3`, confirmed in the 6.2 log). This is a real result, not an absence of failure: it means **Phase 5.1 was never load-bearing for the migration** and the boost/mailio bump is now pure hygiene. It also removes the fallback argument for OQ10 — see 15.1.
+- **OQ2 (Boost 1.86 under 19.51).** **Answered by Phase 6/7: yes.** Boost 1.86 builds on both machines with the b2 floor from Phase 2 doing its job (`b2/[>=5.3.3 <6]` → `b2/5.5.3`, confirmed in the 6.2 log). This is a real result, not an absence of failure: it means **Phase 5.1 was never load-bearing for the migration** and the boost/mailio bump is now pure hygiene. It also removes the fallback argument for OQ10 — see 14.1.
 - **OQ3 (drop abseil from honuware).** Mason: keep it. No change; the `#` in `conanfile.py` stays a superset-consistent pin. The invariant "app conanfile is a superset of honuware's" is preserved by *not* removing it, which is the reversible choice anyway.
 
-**Ordering rationale.** Phase 8 goes first because it is a hard block — nothing can be run or debugged until Visual Studio's Debug menu works again. Phase 9 follows because a disclosed live credential outranks everything else that is merely important. Phase 10 is third: it is Mason's explicit ask and it removes a daily workflow tax. TIFF removal (11) precedes the build-integrity work (12) so that the lockfile and the floors capture the dependency set *after* it shrinks, not before.
+**Ordering rationale.** Phase 8 goes first because a live credential in version control outranks everything else here. Phase 9 is second because it is Mason's explicit ask and it removes a daily workflow tax. TIFF removal (10) precedes the build-integrity work (11) so the lockfile and floors are captured *after* the dependency set shrinks, not before.
 
-# Phase 8 — Unblock: restore Visual Studio's Debug and Launch settings
-
-**First, because nothing else can be run until it is done.** *Debug → Debug and Launch Settings* silently does nothing, and deleting `.vs` does not bring it back.
-
-### 8.1 Immediate unblock
-
-**RESOLVED 2026-09-08. The cause was that no startup item was selected.** *Debug → Debug and Launch Settings* is "…for `<startup item>`": with no target chosen in the toolbar dropdown there is nothing for it to act on, and VS **does nothing at all** — no dialog, no error, no greyed-out menu entry. Selecting a startup item fixed it, and the project runs.
-
-- [x] Select a startup item in the toolbar dropdown beside the run button. ✅ 2026-09-08
-- [x] Note what the menu entry actually does, because expecting a dialog is half of why this was hard to read: it opens **`.vs\launch.vs.json` as a text file**. There is no settings UI. `File → Open → File` on that path is equivalent and works with or without a startup item. ✅ 2026-09-08
-
-**Two wrong diagnoses preceded the right one. Both are recorded because each was plausible and each cost time.**
-
-**Wrong theory 1 — `CMakeUserPresets.json` put VS in Presets mode.** The reasoning: all three repos carry *both* a `CMakeSettings.json` and a Conan-generated `CMakeUserPresets.json`, and *none* has a `CMakePresets.json`; VS switches to Presets mode on sight of the former and then ignores `CMakeSettings.json`, where the `CONAN_CMD` / `CMAKE_PROJECT_TOP_LEVEL_INCLUDES` wiring lives. It fit the symptom, it fit `Machine configuration.md`'s existing "delete it before opening VS2026" instruction, and it was **wrong** — the file was deleted and the menu still did nothing. *The instruction in `Machine configuration.md` is therefore itself unexplained: whatever it was originally worked around, it was not this.* Worth knowing before that line is deleted in 8.2.
-
-**Wrong theory 2 — the command was firing and the file was opening unnoticed.** `launch.vs.json` was timestamped 18:34:12, right at the click. But the whole `.vs` folder — `ProjectSettings.json`, `slnx.sqlite`, `VSWorkspaceState.json` — shared that exact stamp, so it was VS saving session state, not the command running. **A timestamp that matches the moment you looked is not evidence that the thing you were looking for happened.**
-
-**And a piece of advice given here was backwards, corrected on the evidence.** An earlier draft said to open `server\communityfinder_server` (the folder containing `CMakeLists.txt`) rather than the repo root. The opposite is true: the **repo root is the configured workspace** — `communityfinder/.vs/CMakeWorkspaceSettings.json` holds `{"enableCMake": true, "sourceDirectory": "server\\communityfinder_server"}`, and the inner folder has no such file. The repo root is also where the *useful* `launch.vs.json` lives, carrying `HONUWARE_ALLOW_DESTRUCTIVE`, the mail password and `--recreate_database`; the inner one is bare. **Open the repo root.**
-
-- [x] Deleted the three generated `CMakeUserPresets.json` files anyway. Not the cause, but see 8.2 — the file is a genuine problem for a different reason, and removing it costs nothing since it is gitignored and regenerable. ✅ 2026-09-08
-- [ ] Belt-and-braces, per machine: Tools → Options → CMake → *"Prefer using CMake Presets…"* → **Never**. Still worth setting — it makes the mode explicit rather than dependent on which files exist — but it should now be understood as **hygiene, not the fix**.
-- [ ] Merge the repo-root launch configuration's `env` and `args` into whichever workspace is actually used, so that debugging `database_helper` runs with `HONUWARE_ALLOW_DESTRUCTIVE=1` and `--recreate_database` rather than bare. This is what unblocks 16.1.
-
-### 8.2 Stop Conan writing `CMakeUserPresets.json` into the source tree
-
-**Scope correction: this is not what fixed the Debug menu** (8.1 was a missing startup item). It stands on its own merits: the file genuinely does flip VS into CMake Presets mode, where `CMakeSettings.json` — and with it the `CONAN_CMD` and `CMAKE_PROJECT_TOP_LEVEL_INCLUDES` wiring the whole Windows build depends on — is ignored outright. A container run silently editing a developer's IDE configuration is worth stopping regardless of which symptom first drew attention to it.
-
-**Why hand-deleting never sticks, and this is the part worth keeping.** `build_common.sh:33-34` runs `conan install "$SRC_DIR" --output-folder="$BUILD_DIR"` where `$SRC_DIR = /src/<app>_server`, and `/src` is a **bind mount of the Windows working tree**. Conan writes `CMakeUserPresets.json` beside the recipe — so **every Linux gate run recreates the file inside the Windows repo**, with an `include` pointing at a Linux path (`/build/...`) that VS cannot resolve. The Phase 4 housekeeping note recorded one instance of this and treated it as an accident; it is not. It is what the gate does every time, and both Phase 7.3 verification runs did it.
-
-**IMPLEMENTED 2026-09-08.** The mechanism was verified end to end before anything was edited, because the first attempt to reproduce it *failed* and nearly produced a wrong conclusion — see the note below.
-
-- [x] Added to the committed windows profile in all three repos, with the full diagnosis in a comment above it:
-
-  ```
-  [conf]
-  tools.cmake.cmaketoolchain:user_presets=
-  ```
-
-  From `conan config list`: *"(Experimental) Select a different name instead of CMakeUserPresets.json, empty to disable."* The **(Experimental)** marking is called out in the profile comment, because if a future Conan renames or drops this conf the symptom returns as a **dead Debug menu rather than an error** — there would be nothing to grep for. All three profiles re-verified byte-identical by SHA-256 after the edit (`B35D7009C191E5B6`). ✅ 2026-09-08
-- [x] **Set on the Linux side too** — `-c tools.cmake.cmaketoolchain:user_presets=''` appended to the `conan install` in `communityfinder/server/docker/build_common.sh`, `knottyyoga/server/docker_project/build_common.sh` and `server_components/docker/build_and_test.sh`, plus `server_components/.github/workflows/ci.yml`. They need their own copy because the committed profile is composed into `CONAN_HOST_PROFILE` **only on WIN32**. All three scripts pass `bash -n`. ✅ 2026-09-08
-- [x] Each script already carried a comment explaining that `conan install` writes `ConanLibImports.cmake` into the mounted Windows tree and that this is *"expected and harmless"*. That comment is now extended to say that **`CMakeUserPresets.json` arrives by the same mechanism and is emphatically not harmless** — the original note is what made the second file easy to overlook for so long. ✅ 2026-09-08
-- [x] **Retire the manual step it replaces.** `Machine configuration.md` currently says *"If there is a CMakeUserPresets.json in each project, delete it before opening in Visual Studio 2026."* That instruction exists solely because of this behaviour. Once this is committed, delete the instruction rather than leaving a superstition behind (see 14.3). ✅ 2026-09-08
-- [x] Delete the one surviving generated file: `server_components/CMakeUserPresets.json` (timestamped 18:12 today, i.e. written by a *Windows* configure, not by a gate). The two app copies are already gone. ✅ 2026-09-08
-- [x] **Linux half verified by a full gate run, not just by the isolated `conan install`.** communityfinder gate with the change in place: `1785 tests from 183 test suites ran`, all passed, `[communityfinder] OK`, exit 0 — the identical count to the pre-change run in 7.3, so the flag cost nothing. The file was checked on the Windows side either side of the run: **`BEFORE present: False` → `AFTER present: False`.** Before the change, the same operation flipped it to `True`. ✅ 2026-09-08
-- [x] Windows half still unproven: the profile path is exercised only by a VS configure, which cannot be driven from here. **Confirm on the next VS configure that no `CMakeUserPresets.json` reappears.** Until that is done, half of this item rests on the profile parsing correctly (verified — the `[conf]` block shows in the composed `conan profile show` output) rather than on observed behaviour. ✅ 2026-09-08
-
-**A near-miss worth recording, because it would have put a false claim in this document.** The first attempt to reproduce the write used a scratch `conanfile.txt` with `CMakeToolchain`; no user-presets file appeared. A second attempt with a scratch `conanfile.py` using `vs_layout` — matching the real recipes — *also* produced nothing. Two failed reproductions pointed at the conclusion that **the Linux gate was not the writer at all** and that this whole subsection was misdiagnosed.
-
-Timestamps were what forced the issue rather than settling it: `ConanLibImports.cmake` in both app trees carried gate timestamps (13:53 and 13:56), proving `conan install` *does* write into the bind-mounted tree — while `server_components/CMakeUserPresets.json` was hours newer at 18:12, pointing at a Windows configure instead. Ambiguous either way.
-
-The decisive test was to stop simulating and **run the gate's exact `conan install` inside the real container against the real recipe**, checking the Windows side before and after: `present: False` → `present: True`. Then, with the conf: not recreated. **Both writers are real** — the Linux container and the Windows provider — which is exactly why the fix has to be applied in both places.
-
-The lesson generalises past this item: **a simplified reproduction that fails to reproduce is not evidence that the behaviour does not occur.** Both scratch recipes were reasonable-looking and both were wrong, and either would have "disproved" a real defect. When the real thing is cheap to run, run the real thing.
-
-### 8.3 Environment variables — the working reference
-
-Names below were enumerated from the source, not from memory. **Defaults are marked as verified only where the code was actually read**; the rest are listed as present without asserting semantics.
-
-**For the immediate goal — running the helpers and the server on Windows — you need almost nothing.** The connection defaults already resolve correctly on this machine: the `test_helper` failure reported `host=localhost port=5432 dbname=communityfinder user=docker`, which is the shared docker PostgreSQL. What was missing was schema, not configuration.
-
-**Database connection** (`database_helper_init.cpp:52-54`; the legacy `KNOTTYYOGA_DB_*` names are still accepted as a fallback):
-
-| variable | default |
-|---|---|
-| `HONUWARE_DB_HOST` | `localhost` on Windows, `postgresql` on Linux |
-| `HONUWARE_DB_PORT` | `5432` |
-| `HONUWARE_DB_USER` | `docker` |
-| `HONUWARE_DB_PASSWORD` | `docker` |
-| `HONUWARE_DB_SSLMODE` | unset — the docker gate sets `disable` |
-| `HONUWARE_DB_NAME`, `HONUWARE_DB_SSLROOTCERT` | present in code; not needed for local runs |
-
-**The ones you actually set by hand:**
-
-| variable | why |
-|---|---|
-| `HONUWARE_ALLOW_DESTRUCTIVE=1` | gates `--recreate_database`; without it the command refuses rather than self-healing |
-| `HONUWARE_MAIL_APP_PASSWORD` | read **at seed time** by `create_database.cpp:32`, which UPDATEs the `config_secrets` row. Not needed at runtime once seeded |
-| `HONUWARE_SECRET_KEY` | at-rest key for `config_secrets`; non-prod falls back to a fixed dev key, so it is optional locally and **mandatory in production** |
-| `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` | the scheduler service account |
-| `PORT` | `18081` for the communityfinder server (`ng serve` is 4201) |
-| `HONUWARE_SRC_DIR` | **build-time only** → `-DFETCHCONTENT_SOURCE_DIR_HONUWARE`, for cross-repo co-development |
-
-**Also present in the source, semantics not verified here** — listed so a search for them finds this table rather than nothing: `HONUWARE_APP_NAME`, `HONUWARE_VERSION`, `HONUWARE_ENV`, `HONUWARE_LOG_DEST`, `HONUWARE_TENANT_MODE`, `HONUWARE_CONTROL_DB_NAME`, `HONUWARE_TRUST_PROXY`, `HONUWARE_DEV_CORS_ORIGIN`, `HONUWARE_ORIGIN_SECRET`, `HONUWARE_FIXED_SITE_KEY`, `HONUWARE_API_BASE`, `HONUWARE_CRUD_ACCESS`, `HONUWARE_MOCK_OPTIONS`.
-
-- [ ] Fold this table into the `server_components` README (14.1) — it is exactly the reference a new developer needs and it exists nowhere today.
-
-### 8.4 Running a subset of the tests — `--gtest_filter`
-
-The filter matches against the full `SuiteName.TestName`. Syntax is `POSITIVE[-NEGATIVE]`, patterns separated by `:`, with `*` and `?` as wildcards.
-
-| goal | filter |
-|---|---|
-| one whole suite | `--gtest_filter=MailHelperTest.*` |
-| one exact test | `--gtest_filter=ImageResizeTest.GetImageDimensionsTiff` |
-| anything mentioning TIFF, either half of the name | `--gtest_filter=*Tiff*` |
-| several patterns | `--gtest_filter=ThreadPoolTest.*:*Scheduler*` |
-| everything **except** the mail tests | `--gtest_filter=-*Mail*` |
-| a suite, minus one test | `--gtest_filter=ImageResizeTest.*-*Tiff*` |
-
-Other flags worth knowing: `--gtest_list_tests` (enumerate without running — the fastest way to find a name), `--gtest_repeat=N`, `--gtest_shuffle`, `--gtest_break_on_failure` (drops into the debugger at the failure), `--gtest_output=xml:results.xml`.
-
-**Where to put it.** In Visual Studio, add to the `"args"` array in `launch.vs.json` — the same place the existing `--recreate_database` entry sits. In the container, arguments pass straight through: `./docker/build_and_test.sh --gtest_filter=Event*`.
-
-**One gotcha, verified in the script** (`build_and_test.sh:63-66`): a filtered run **skips the test-count floor** and exits 0 early. That is correct behaviour — a subset can't be measured against a whole-suite floor — but it means **a filtered run is never a gate**. Always finish with an unfiltered run before believing anything is green.
-
-Two harness rules that bite when running a narrow filter, both from CLAUDE.md: tables are **pre-created** by `GlobalDatabaseTestSupport` from the composed `DatabaseInfo` and each test runs in a transaction that is aborted at the end (so tests never create tables, and nothing persists); and `ThreadPool::Shutdown()` must be called before the first DB-touching assertion after `handle_full()`, because the endpoints' async writes otherwise re-enter the test's non-thread-safe libpqxx connection. A single-test run is exactly where a missing `Shutdown()` shows up as a mysterious intermittent failure.
-
-# Phase 9 — The committed Gmail credential and the live-email test (OQ11)
+# Phase 8 — The committed Gmail credential and the live-email test (OQ11)
 
 Answering *"Can you put together a plan to fix these issues?"*. Two genuinely separate problems that happen to share a file; they want separate commits and have different urgency.
 
-### 9.1 Rotate the credential (Mason — cannot be done from here)
+### 8.1 Rotate the credential (Mason — cannot be done from here)
 
 `components/services/util/secrets/secret_values.cpp` lines 18–22 hold a real Gmail app password next to `smtp.gmail.com:465`, in a repo that runs a public GitHub Actions workflow.
 
 - [ ] **Revoke the existing app password** at the Google account's App Passwords page. Do this first and independently of any code change — the credential is already disclosed and every hour it stays valid is exposure.
-- [ ] **There is at least one more plaintext copy than OQ11 accounted for.** `communityfinder/.vs/launch.vs.json` carries the same app password as a `HONUWARE_MAIL_APP_PASSWORD` launch-profile environment variable, alongside `HONUWARE_ALLOW_DESTRUCTIVE=1` and `--recreate_database`. Found while diagnosing the Visual Studio launch-settings problem (8.1) — entirely unrelated to that symptom.
+- [ ] **There is at least one more plaintext copy than OQ11 accounted for.** `communityfinder/.vs/launch.vs.json` carries the same app password as a `HONUWARE_MAIL_APP_PASSWORD` launch-profile environment variable, alongside `HONUWARE_ALLOW_DESTRUCTIVE=1` and `--recreate_database`. Found while diagnosing the Visual Studio launch-settings problem (11.3b) — entirely unrelated to that symptom.
 
   **Not committed** — `.gitignore:52` ignores `.vs/` and the file is untracked, verified — so this is a local-disk exposure, not a repository one. But it means **rotation is a sweep, not a single edit**: treat every VS launch profile, every `.vs` folder, and both machines as holding a copy. A credential that has been pasted into a launch profile once has usually been pasted elsewhere too.
-- [ ] Worth noting what this copy also reveals: communityfinder already reads the password from an **environment variable** (`HONUWARE_MAIL_APP_PASSWORD` appears in `app_secret_values.cpp` and `create_database.cpp`), so the app side of 9.2 may largely exist already and the literal in honuware's `secret_values.cpp` is the outlier. Confirm before designing a new seam — the mechanism is probably already there.
+- [ ] Worth noting what this copy also reveals: communityfinder already reads the password from an **environment variable** (`HONUWARE_MAIL_APP_PASSWORD` appears in `app_secret_values.cpp` and `create_database.cpp`), so the app side of 8.2 may largely exist already and the literal in honuware's `secret_values.cpp` is the outlier. Confirm before designing a new seam — the mechanism is probably already there.
 - [ ] Issue a replacement and put it **only** in the `config_secrets` / environment path the rest of the system already uses. Do not commit it.
 - [ ] **Understand what rotation does and does not fix.** Removing the value from `HEAD` does **not** remove it from git history — it stays in every clone, every fork, and GitHub's raw object store. Rotation is what actually closes it.
-- [ ] **Decided (New OQ 18): rotate, do not scrub history.** Once the password is revoked the value in history is inert, and a `filter-repo`/BFG rewrite would rename every commit SHA — invalidating the honuware SHA both apps pin (`6abea141…` today), breaking every existing clone, and landing that cost directly on the work in this plan. **The one thing that must not slip: the rotation is what closes this, so it cannot be deferred behind the code change in 9.2.** Revoke first, tidy the code afterwards.
+- [ ] **Decided (New OQ 18): rotate, do not scrub history.** Once the password is revoked the value in history is inert, and a `filter-repo`/BFG rewrite would rename every commit SHA — invalidating the honuware SHA both apps pin (`6abea141…` today), breaking every existing clone, and landing that cost directly on the work in this plan. **The one thing that must not slip: the rotation is what closes this, so it cannot be deferred behind the code change in 8.2.** Revoke first, tidy the code afterwards.
 
-### 9.2 Make honuware follow the pattern communityfinder already implements
+### 8.2 Make honuware follow the pattern communityfinder already implements
 
 **Investigated, and this phase is smaller than it looked: no new mechanism is needed, and the correct design is already written down in this codebase.** The three tiers exist and work:
 
@@ -667,9 +560,9 @@ communityfinder already does the right thing end to end. `create_database.cpp:29
 - [ ] Add the rule to `components/services/util/secrets/CLAUDE.md`, which currently explains *how* to add a secret's default value without ever saying that a real credential must not have one. The document that taught the pattern is the document that should forbid this.
 - [ ] **Test:** a missing mail secret produces a clean, diagnosable failure rather than an attempt to authenticate with an empty password. `server_config.cpp:173-194` already has the "fail loud on missing required secret" shape to follow.
 
-**Correction to 9.1's sweep instruction.** An earlier draft said to delete the `HONUWARE_MAIL_APP_PASSWORD` line from `communityfinder/.vs/launch.vs.json`. **That is backwards.** That launch profile runs `--recreate_database`, which is the exact code that reads the env var to seed the secret — a gitignored launch profile is the *sanctioned* location, named as such in `create_database.cpp:30`. Keep it, and put the new password there. The sweep in 9.1 is about knowing where the copies are, not deleting the legitimate one.
+**Correction to 8.1's sweep instruction.** An earlier draft said to delete the `HONUWARE_MAIL_APP_PASSWORD` line from `communityfinder/.vs/launch.vs.json`. **That is backwards.** That launch profile runs `--recreate_database`, which is the exact code that reads the env var to seed the secret — a gitignored launch profile is the *sanctioned* location, named as such in `create_database.cpp:30`. Keep it, and put the new password there. The sweep in 8.1 is about knowing where the copies are, not deleting the legitimate one.
 
-### 9.3 Stop the unit suite from sending real email
+### 8.3 Stop the unit suite from sending real email
 
 `MailHelperTest.SendMessage` authenticates to Gmail and sends a real message to a real address **on every full suite run** — the ~1681 ms it takes is a live SMTP round trip. Every gate run in this migration sent one, including the seven or so run during Phases 1–7.
 
@@ -677,26 +570,13 @@ communityfinder already does the right thing end to end. `create_database.cpp:29
 - [ ] **Test:** the double-based test must still assert what the live one did — that the composed message reaches the transport with the right recipient, subject and CRLF-correct body. The existing CRLF coverage (`quick_account_welcome_mail_test.cpp`, `person_verify_mail_test.cpp`, `types_test.cpp`) stays as-is; this is about the send path, not the formatting.
 - [ ] Expect the suite to get **~1.7 s faster** and to stop depending on network egress and a third party's availability — worth noting because it also removes a flake source from CI.
 
-**A consequence for Phase 15 worth flagging now.** 9.3 removes the exact test that segfaults under mailio 0.26 (OQ10 / 5.1). That does **not** mean the bump becomes safe — it means the crash would no longer be *observed* by the suite. If 9.3 lands before any mailio work, the segfault must be reproduced deliberately (the `--send_real_email` path, or a scratch harness) rather than assumed gone. **Do not read a green suite after 9.3 as evidence that mailio 0.26 is fixed.**
+**A consequence for Phase 14 worth flagging now.** 8.3 removes the exact test that segfaults under mailio 0.26 (OQ10 / 5.1). That does **not** mean the bump becomes safe — it means the crash would no longer be *observed* by the suite. If 8.3 lands before any mailio work, the segfault must be reproduced deliberately (the `--send_real_email` path, or a scratch harness) rather than assumed gone. **Do not read a green suite after 8.3 as evidence that mailio 0.26 is fixed.**
 
-### 9.4 Where secrets actually live while developing
-
-The tiering in 9.2 says where a secret belongs *in the system*. This is the human question underneath it: where does the plaintext sit on a developer's machine between minting it and seeding it.
-
-**The sanctioned location is already correct and already in use: the gitignored VS launch profile.** `create_database.cpp:30` names it explicitly — *"the local, gitignored VS launch profile / shell"*. `.gitignore:52` covers `.vs/`, and the file is untracked (verified). So `communityfinder/.vs/launch.vs.json` holding `HONUWARE_MAIL_APP_PASSWORD` beside `--recreate_database` is the design working, not a leak.
-
-**Do not keep a master copy in a text file under `Documents`.** Measured on the desktop: the `Personal` shell folder is redirected to `C:\Users\mason\OneDrive\Documents`, so anything saved through Explorer's *Documents* shortcut **syncs to Microsoft's cloud with version history**. Confusingly, `C:\Users\mason\Documents` also exists as a *separate, non-synced* folder — it is where the Obsidian vault lives, and the vault is not duplicated into OneDrive. **Two folders both presenting as "Documents", only one of which syncs, and Explorer sends you to the syncing one.** That is not a distinction to be relying on while filing secrets.
-
-- [ ] **Preferred: mint one app password per machine** (`honuware-smtp-desktop`, `honuware-smtp-masonlg`). Google allows several per account, and this removes the storage problem rather than solving it: nothing has to travel between machines, each is independently revocable, a compromise on one machine does not touch the other, and each value lives only in that machine's launch profile and its own `config_secrets`. If one is lost, mint another — they are free and disposable, which is the entire point of app passwords.
-- [ ] **For anything that genuinely must be retrievable: a password manager**, not a file. Bitwarden (free, syncs across both machines), 1Password, or KeePassXC (a local encrypted database — literally "a file in Documents", but encrypted under a master password, so it is safe even inside OneDrive). Keep a record of *which* app password belongs to which machine even when the values themselves are disposable.
-- [ ] Note in passing, same pattern already in play: `C:\Users\mason\Documents\npm_recovery_codes.txt` sits in plaintext. Recovery codes outrank an app password — they are what bypasses 2FA. Worth moving into the password manager while one is being set up.
-- [ ] **Rule to write into `secrets/CLAUDE.md` alongside 9.2:** if a value can sit in a public repo it is not a secret (sender address, SMTP host, port, brand strings all belong in `*_secret_values.cpp`); a secret never gets a compiled-in default; and exactly one bootstrap secret (`HONUWARE_SECRET_KEY`) lives in the environment with everything else behind it.
-
-# Phase 10 — Parallel test runs: per-repo and per-platform test databases (Mason New Item 1)
+# Phase 9 — Parallel test runs: per-repo and per-platform test databases (Mason New Item 1)
 
 The goal in Mason's words: kick off all three repos' suites, on both platforms, walk away for an hour, and come back to all of them finished. Today every pair of those collides.
 
-### 10.1 Understand what actually collides (measured)
+### 9.1 Understand what actually collides (measured)
 
 Three databases exist, and the *names* are already distinct per repo — the collision is purely **platform**, because a Linux gate and a Windows run use the same name on the same shared PostgreSQL:
 
@@ -709,7 +589,7 @@ Three databases exist, and the *names* are already distinct per repo — the col
 - [ ] Note the seam that makes this cheap: `global_database_test_support.cpp:21` holds `static std::string name{kTestDatabaseName}`, set by `Initialize`, so the name is **already a runtime value with an app-supplied override**. communityfinder overrides it; knottyyoga does not.
 - [ ] **A wart to fix while here:** `global_database_test_support.h:12` reads `constexpr std::string_view kTestDatabaseName = "test_knottyyoga"`. **The framework's default is one specific application's database name.** knottyyoga works only because it inherits it. See New Open Question 2.
 
-### 10.2 foundation/testing — a compile-time platform suffix in honuware
+### 9.2 foundation/testing — a compile-time platform suffix in honuware
 
 **Design settled by New OQ 15 and 16, and it is simpler than the draft.** The first sketch used an environment variable (`HONUWARE_TEST_DB_SUFFIX`) defaulting to empty so Windows names stayed as they are. Mason asked instead that **all three projects append `windows` / `linux` depending on the platform**, and confirmed two slots per repo is enough. Those two answers together remove the need for an environment variable at all.
 
@@ -721,7 +601,7 @@ Three databases exist, and the *names* are already distinct per repo — the col
 - [ ] Accept the trade explicitly: with no env override, two Linux gates cannot run concurrently (two checkouts of the same repo would collide). That is precisely what OQ16 said is fine. If it ever stops being fine, the escape hatch is an override — and it should then arrive *with* the validation described above, not without it.
 - [ ] **Tests:** the composed name carries the right suffix for the built platform, and the base name is preserved. Since the branch is `#ifdef`, one side is unreachable per build — so assert the composition function's behaviour against an explicitly-passed platform token rather than only the compiled default, or the test proves nothing on the other platform.
 
-### 10.2b knottyyoga sets its own base name (New OQ 15 — cross-repo bump point)
+### 9.2b knottyyoga sets its own base name (New OQ 15 — cross-repo bump point)
 
 Mason: *"I'd like knotty yoga to specify its own database name like community finder in test setup."*
 
@@ -729,7 +609,7 @@ Mason: *"I'd like knotty yoga to specify its own database name like community fi
 - [ ] Give knottyyoga's test main an explicit base name, mirroring `communityfinder/server/communityfinder_server/test/src/main.cpp:24`. After this all three are symmetric: each app names its own database, and honuware's default is honuware's own.
 - [ ] **These two must land together.** If the honuware default changes and knottyyoga has not yet set its name, knottyyoga's suite silently starts building its schema in `honuware_test` — wrong database, still green. Push honuware → re-pin → knottyyoga in one bump point, and **verify by checking which database the run actually touched**, not merely that it passed.
 
-### 10.3 Update the documentation the change supersedes
+### 9.3 Update the documentation the change supersedes
 
 No harness wiring is needed — that is the dividend of the compile-time design.
 
@@ -737,13 +617,13 @@ No harness wiring is needed — that is the dividend of the compile-time design.
 - [ ] `communityfinder/CLAUDE.md:108` names `test_communityfinder`; update it too.
 - [ ] Mention that the **old unsuffixed databases become orphaned** (`honuware_test`, `test_knottyyoga`, `test_communityfinder`). They are dropped-and-recreated scratch databases with nothing to preserve, so they can simply be dropped by hand once — worth a line in the README so nobody wonders what they are.
 
-### 10.4 Prove the parallelism, don't assume it
+### 9.4 Prove the parallelism, don't assume it
 
 - [ ] Run **two suites concurrently against the same PostgreSQL** — the natural pair is a Linux gate and a Windows run of the *same* repo, since that is the case that fails today — and confirm both reach their normal test counts.
 - [ ] Then run all three Linux gates concurrently. Expect them to be slower individually (shared CPU and one PostgreSQL); the goal is total wall-clock while unattended, which Mason already accepted.
 - [ ] Watch for a non-obvious limit: PostgreSQL's `max_connections`. Six suites' worth of pooled connections against one dev server is the first thing likely to break, and it will present as connection errors, not as a test failure.
 
-# Phase 11 — Remove TIFF support (OQ9)
+# Phase 10 — Remove TIFF support (OQ9)
 
 Mason: *"TIFF isn't really used anymore. I'm fine with removing support for it."* This also deletes `libtiff` from all three dependency graphs — the package that was one of the two original VS2026 blockers.
 
@@ -751,7 +631,7 @@ Mason: *"TIFF isn't really used anymore. I'm fine with removing support for it."
 
 Worth stating once, because it applies well beyond this phase: **pre-deployment is a temporary licence.** Every removal in this plan is cheap precisely because nothing depends on it yet, and that stops being true the day the first real data lands. Anything of this shape that is worth doing is worth doing before then.
 
-### 11.1 READ THIS FIRST — removing libtiff silently removes libjpeg
+### 10.1 READ THIS FIRST — removing libtiff silently removes libjpeg
 
 `components/foundation/util/CMakeLists.txt:58` says it outright:
 
@@ -762,29 +642,29 @@ and line 60 links `${PNG_LIB} ${TIFF_LIB} ${ZLIB_LIB}` with **no JPEG edge**. So
 - [ ] Add an explicit `${JPEG_LIB}` edge to `honuware_foundation` **and** to `${HONUWARE_TESTS_TARGET}` (line 62 has the same transitive dependency) **before** removing `${TIFF_LIB}`, and confirm `JPEG_LIB` is defined in honuware's `ConanLibImports.cmake` rather than only in the apps'.
 - [ ] Verify by *building*, not by reading: the JPEG tests in `image_resize_test.cpp` are the check, and they must stay green across the intermediate commit.
 
-### 11.2 foundation — the image path
+### 10.2 foundation — the image path
 
 - [ ] `image_resize.h:8` — drop `IMAGE_TYPE_TIFF` from the enum.
 - [ ] `image_resize.cpp` — remove the `<boost/gil/extension/io/tiff.hpp>` include (line 6) and both switch arms (39–40 read, 86–87 write).
 - [ ] `image_resize_test.cpp` — remove the `TiffToArray` helper and both tests. **`ResizeTiffThrowsBecauseTheOutputSinkCannotSeek` is the characterization test written in Phase 3.2 to fail when the defect is fixed** — deleting the feature is the other way it can legitimately go, and this is that. Its long comment block is a good source for the removal commit message.
 
-### 11.3 platform — the upload/type surface
+### 10.3 platform — the upload/type surface
 
 - [ ] `image_helper.cpp:60-61` — remove the `"tiff"` → `IMAGE_TYPE_TIFF` mapping. Decide what an uploaded TIFF now does: rejected as an unsupported type is the honest answer, and there is already a `"Unsupported image type. Must be 'jpeg' or 'png'"` error in the suite output that says this is the existing shape.
 - [ ] `image_helper_test.cpp:254` — `"tiff"` appears in an accepted-types list; update, and **add a test asserting a TIFF upload is now cleanly rejected** rather than merely removing the old expectation.
 - [ ] `theme_bundle_assets.cpp:85` — `if (type == "tiff" || type == "tif") return "tif";` — **leave it alone. Decided (New OQ 13, Mason took the recommendation).** It is theme-bundle asset *extension mapping*, not image decoding: it names a stored file and carries no libtiff dependency, so it costs nothing to keep and removing it would reject bundles that work today. Add a short comment there saying it is deliberately unrelated to `IMAGE_TYPE_TIFF`, so the next person removing TIFF references does not "finish the job" and quietly change theme-bundle behaviour.
 
-### 11.4 Drop the dependency
+### 10.4 Drop the dependency
 
 - [ ] Remove the `libtiff` pin from all three `conanfile.py` files, including the "do not go back below 4.7.x" comment added in 3.2 — which becomes obsolete, and leaving it would mislead.
 - [ ] `NOTICE:17` lists libtiff among the bundled libraries. **Legal/attribution text must be updated with the dependency**, and it is exactly the kind of file a dependency change forgets.
 - [ ] Confirm the graph actually shrank: re-resolve all three repos and check libtiff is absent, rather than assuming the conanfile edit was sufficient.
 
-# Phase 12 — Build integrity: floors, CI CMake, lockfile (OQ8, OQ6, OQ12)
+# Phase 11 — Build integrity: floors, CI CMake, lockfile (OQ8, OQ6, OQ12)
 
-Three separate answers that all concern "does the gate actually prove what we think it proves". Sequenced after Phase 11 so the lockfile captures the post-TIFF graph.
+Three separate answers that all concern "does the gate actually prove what we think it proves". Sequenced after Phase 10 so the lockfile captures the post-TIFF graph.
 
-### 12.1 Raise the test-count floors (OQ8)
+### 11.1 Raise the test-count floors (OQ8)
 
 Mason: *"Whatever you think we should do."* Recommendation: raise all three, now. A floor at 56% of the actual count cannot catch the endpoint-anchor failure it exists for.
 
@@ -794,7 +674,7 @@ Mason: *"Whatever you think we should do."* Recommendation: raise all three, now
 - [ ] Add a line to each script's comment saying the floor tracks the count and must be raised as suites grow — the shared root cause is that all three were set once and never revisited.
 - [ ] **Record the count in this document on every gate run from now on.** Phase 7.3 proved why: knottyyoga's written-down 5163 made `+2 = the two TIFF tests` a precise claim, while communityfinder's missing baseline left only "it went up".
 
-### 12.2 Raise CMake in CI and the images (OQ6)
+### 11.2 Raise CMake in CI and the images (OQ6)
 
 Mason: *"Let's do it."* Note his answer applies to the argument recorded under OQ6, which says CI and the **deploy image** must move together — otherwise one divergence is traded for a worse one.
 
@@ -807,11 +687,30 @@ Measured starting point: every Linux image is `FROM gcc:14.2.0` and installs `cm
 - [ ] Expect `if(POLICY CMP0167)` to become **true** on Linux for the first time, flipping the Linux Boost lookup from module mode to config mode. That is the entire point, and it is also the one thing that could break — Phase 1.2's config-mode verification was done against Windows-generated Conan files only.
 - [ ] **Gate:** all three Linux suites green at their new floors. This is the change most likely to fail of anything in Phases 8–14; run it on its own commit.
 
-*(The `CMakeUserPresets.json` / Conan `user_presets` item that was drafted here has moved to **Phase 8.2** — it is what breaks Visual Studio's Debug menu, so it belongs in the unblocking phase rather than in build hygiene.)*
+### 11.3b Stop Conan writing `CMakeUserPresets.json` into the source tree
 
-### 12.3 Commit a lockfile (OQ12)
+Surfaced by a live symptom: **Visual Studio's *Debug → Debug and Launch Settings* silently does nothing**, and deleting `.vs` does not help.
 
-Mason: *"I'm fine with doing whatever you think would make sense."* Recommendation: do it, and do it here — after the TIFF removal so the lockfile captures the smaller graph, and after 12.2 so it captures the intended CMake.
+Measured state — all three repos carry **both** `CMakeSettings.json` and a Conan-generated `CMakeUserPresets.json` at the CMake root, and **none has a `CMakePresets.json`**. VS switches to CMake **Presets mode** as soon as it sees `CMakeUserPresets.json`, and then ignores `CMakeSettings.json` — which is exactly where the `CONAN_CMD` and `CMAKE_PROJECT_TOP_LEVEL_INCLUDES` wiring lives. Left in presets mode with only Conan's CLI-oriented presets (whose sole `include` points inside the build output tree), VS has no launchable configuration and the Debug commands that need one quietly no-op.
+
+**Why hand-deleting it never sticks — and this is the part worth keeping.** `build_common.sh:33-34` runs `conan install "$SRC_DIR" --output-folder="$BUILD_DIR"` with `$SRC_DIR = /src/<app>_server`, and `/src` is a **bind mount of the Windows working tree**. Conan writes `CMakeUserPresets.json` beside the recipe, so **every Linux gate run recreates the file inside the Windows repo**, with an `include` pointing at a Linux path (`/build/...`) that VS cannot resolve. The Phase 4 housekeeping note recorded one instance of this; it is not an accident, it is what the gate does every time. The two Phase 7.3 verification runs both did it.
+
+- [ ] Add to the committed windows profile in all three repos:
+
+  ```
+  [conf]
+  tools.cmake.cmaketoolchain:user_presets=
+  ```
+
+  Verified against `conan config list`: *"tools.cmake.cmaketoolchain:user_presets: (Experimental) Select a different name instead of CMakeUserPresets.json, empty to disable"*. Note the **(Experimental)** marking — worth a comment beside the setting so a future Conan upgrade that renames or removes it is diagnosable rather than mysterious.
+- [ ] Consider setting it in the Linux harnesses too, not just the Windows profile — the Linux gate is the *writer*, and the Windows profile is not applied there. Setting it only on the Windows side stops nothing.
+- [ ] **This retires a manual step**: `Machine configuration.md` currently says *"If there is a CMakeUserPresets.json in each project, delete it before opening in Visual Studio 2026."* That instruction exists because of this behaviour. Once suppressed, delete the instruction rather than leaving a superstition behind (see 13.3).
+- [ ] Per-machine belt-and-braces while the above is pending: Tools → Options → CMake → *"Prefer using CMake Presets…"* → **Never**.
+- [ ] Note the second symptom seen alongside it: `.vs` folders exist at **two levels** (repo root and CMake root), meaning VS has been opened at two different folder roots. Open the folder that *contains* `CMakeLists.txt`.
+
+### 11.3 Commit a lockfile (OQ12)
+
+Mason: *"I'm fine with doing whatever you think would make sense."* Recommendation: do it, and do it here — after the TIFF removal so the lockfile captures the smaller graph, and after 11.2 so it captures the intended CMake.
 
 The concrete problem this closes, from the Phase 6 log: identical conanfiles resolved `libpq/17.11`, `xz_utils/5.8.3`, `zstd/1.5.7` on one machine and `libpq/15.5`, `xz_utils/5.4.5`, `zstd/1.5.5` on the other. **libpq 15 vs 17 is a Postgres client major version, and the two build through entirely different build systems** (MSBuild vs Meson — 6.2b).
 
@@ -820,7 +719,7 @@ The concrete problem this closes, from the Phase 6 log: identical conanfiles res
 - [ ] Wire the gates and CI to `--lockfile`, otherwise the file is decorative — the same trap as the committed Conan profile in Phase 2 that did nothing until it was named in `CONAN_HOST_PROFILE`.
 - [ ] **Converge upward if they must converge**, per 6.2b: libpq 15.5's MSBuild path carries the v145 assumption that broke libsodium, while 17.11's Meson build is toolchain-agnostic.
 
-# Phase 13 — A live smoke test for the real HttpClient (OQ7)
+# Phase 12 — A live smoke test for the real HttpClient (OQ7)
 
 Mason: *"I'm fine with doing this work."* Closes the gap from 3.4: `MakeHttpClient()` — the actual libcurl-backed implementation — is executed by **no test in the suite**, and libcurl has just moved 7.86.0 → 8.21.0 and will keep moving.
 
@@ -830,35 +729,27 @@ Mason: *"I'm fine with doing this work."* Closes the gap from 3.4: `MakeHttpClie
 - [ ] Keep it to **one** test. This deliberately introduces a live-server pattern the codebase has avoided; the justification is one uncovered production component, and it does not generalise into a second such test without its own argument.
 - [ ] Also cover the TLS path, or explicitly decide not to — `certs/cacert.pem` is resolved CWD-relative by the real client (`build_and_test.sh:56-58`), which is itself untested and is the kind of thing that breaks in the release image rather than in the gate.
 
-# Phase 14 — server_components README and shared dev-environment setup (Mason New Item 2)
+# Phase 13 — server_components README and shared dev-environment setup (Mason New Item 2)
 
 Goal: a new developer can get from a bare machine to a green `server_components` build by following one document.
 
-### 14.1 Extend `server_components/README.md`
+### 13.1 Write `server_components/README.md`
 
-**Correction to the original framing of this item: the README already exists.** `server_components/README.md` is 8271 bytes with sections *The layer stack*, *What is NOT here*, *Build & test*, *Consuming these components*, *New-consumer checklist* and *License* — and it already documents the `HONUWARE_DB_*` variables and the legacy `KNOTTYYOGA_DB_*` fallback at line 92. So this is an **extension of an existing document**, not a new one, and the work is to add the machine-setup material that is missing rather than to restate what is there. Writing a second setup document beside it would be the worst outcome.
-
-- [ ] Add a **"Developer machine setup"** section ahead of *Build & test*, drawing on `knottyyoga/server/SERVER.md` and the vault's `Projects/Machine configuration.md`.
-- [ ] Cover, in order: prerequisites (Git, CMake 4.4.3, Conan 2.31.2, Python, Visual Studio 2026) → clone → Windows/VS build → Docker/WSL setup → PostgreSQL → create and seed the dev database → running `honuware_test_runner` and the Linux gate.
-- [ ] **Include the Visual Studio CMake-mode setting as a numbered setup step**, not as troubleshooting:
-
-  > Tools → Options → CMake → *"Prefer using CMake Presets…"* → **Never**
-
-  The reason belongs with it: these repos are driven by `CMakeSettings.json`, which is where the `CONAN_CMD` and `CMAKE_PROJECT_TOP_LEVEL_INCLUDES` wiring lives, and VS silently switches to Presets mode whenever a `CMakeUserPresets.json` happens to be present. **Setting it to Never makes the choice explicit rather than dependent on which files happen to exist in the tree at the moment VS opens** — which matters here because the Linux gate writes that file into the Windows working tree on every run (8.2). Even once 8.2 suppresses the file, keep this step: it makes a new machine deterministic instead of relying on the suppression having been applied everywhere.
-- [ ] Carry over the environment-variable table from **8.3** — it is the reference a new developer needs and it exists nowhere today.
-- [ ] **Fold in the three machine-level failures this migration actually hit**, because each cost real time, each is a setup problem a new developer will hit identically, and none is discoverable from its error message: the Store-alias `python.exe` stub breaking Meson for libpq (6.2b), Git for Windows missing after a VS reinstall (7.1), and the **unseeded dev database** (16.1).
+- [ ] Base it on `knottyyoga/server/SERVER.md` and fold in the vault's `Projects/Machine configuration.md`.
+- [ ] Cover, in order: prerequisites (Git, CMake 4.4.3, Conan 2.31.2, Python, Visual Studio 2026) → clone → Windows/VS build → Docker/WSL setup → PostgreSQL → running `honuware_test_runner` and the Linux gate.
+- [ ] **Fold in the three machine-level failures this migration actually hit**, because each cost real time, each is a setup problem a new developer will hit identically, and none is discoverable from its error message: the Store-alias `python.exe` stub breaking Meson for libpq (6.2b), Git for Windows missing after a VS reinstall (7.1), and the **unseeded dev database** (15.1).
 - [ ] **"Create and seed the dev database" must be an explicit numbered step**, with the `HONUWARE_ALLOW_DESTRUCTIVE=1` + `--recreate_database` invocation written out. It is currently documented nowhere — `Machine configuration.md` stops at cloning the repo — which is exactly why it was missed on a freshly-built machine.
 - [ ] Make the **two-database distinction** explicit, because a green suite hides this: the test suite drives `test_<app>` while the helpers and the server drive `<app>`. Creating one does not create the other, and 1785 passing tests say nothing about the dev database.
 
-### 14.2 Factor the shared Docker/PostgreSQL setup out of knottyyoga
+### 13.2 Factor the shared Docker/PostgreSQL setup out of knottyyoga
 
 Mason is right that this is shared functionality: all three repos build in `gcc:14.2.0` containers on `knotty-net` against one PostgreSQL, and the setup currently lives in knottyyoga's tree while being a dependency of all three.
 
 - [ ] Move the database/container setup into `server_components`, leaving pointers behind in both apps rather than duplicating.
-- [ ] **Sequence this after Phase 10**, which changes the database-per-suite arrangement the current documents describe. Moving the text first would mean moving it twice.
+- [ ] **Sequence this after Phase 9**, which changes the database-per-suite arrangement the current documents describe. Moving the text first would mean moving it twice.
 - [ ] Note the harness path inconsistency documented back in 1.4: knottyyoga uses `server/docker_project/`, communityfinder uses `server/docker/`. Worth converging while the files are being moved anyway — and CLAUDE.md's generic reference to `server/docker/` is only correct for communityfinder.
 
-### 14.3 Cleanup recommendations for the current setup
+### 13.3 Cleanup recommendations for the current setup
 
 From reading `Machine configuration.md` and the harnesses — offered as recommendations, not changes:
 
@@ -870,19 +761,19 @@ From reading `Machine configuration.md` and the harnesses — offered as recomme
 - [ ] `knottyyoga/database_server/Dockerfile.archive` and `Dockerfile.old` are `FROM gcc:7.3.0` and appear dead. Confirm and delete rather than carrying them into the moved layout.
 - [ ] Revisit `knottyyoga/server/docker_project/conan_profiles/default` — Phase 2 found it inert (nothing references it) and drifted (`compiler.cppstd=gnu20` while the build passes `17`). Delete it or wire it up deliberately; moving it as-is would propagate a known-dead file.
 
-# Phase 15 — Deferred, with recommendations (OQ10, OQ4)
+# Phase 14 — Deferred, with recommendations (OQ10, OQ4)
 
 Both were answered with a question back. Recommendations below; neither is scheduled until confirmed.
 
-### 15.1 Boost 1.91 / mailio 0.26 (OQ10) — recommendation: **not now, but not never**
+### 14.1 Boost 1.91 / mailio 0.26 (OQ10) — recommendation: **not now, but not never**
 
 Mason: *"Is this worth tackling now? I'm fine with doing it if you think it is a good idea."*
 
 - [ ] **My read: no, not now — and OQ2's answer is why.** The reason to fear holding was that Boost 1.86 might not survive MSVC 19.51; Phase 6 proved it does. So the bump is now *pure hygiene* with a known crash attached, and the honest trade is unchanged from 5.1: **do not trade a segfault in the mail path for currency.**
-- [ ] **Two things change the calculation, and both are in this plan.** Phase 9.3 removes `MailHelperTest.SendMessage`, so the crash stops being observable by the suite — see the warning at the end of Phase 9. And Phase 9.2 moves the mail credential, which changes how that path is configured. **Whoever revisits mailio must do it after Phase 9 and must reproduce the segfault deliberately**, because the suite will no longer do it for them.
+- [ ] **Two things change the calculation, and both are in this plan.** Phase 8.3 removes `MailHelperTest.SendMessage`, so the crash stops being observable by the suite — see the warning at the end of Phase 8. And Phase 8.2 moves the mail credential, which changes how that path is configured. **Whoever revisits mailio must do it after Phase 8 and must reproduce the segfault deliberately**, because the suite will no longer do it for them.
 - [ ] When it is picked up: gdb in the Linux container, a backtrace out of mailio's `smtps` connect/submit, then decide upstream-report vs usage-change. Everything else is already done — the Asio fix and the `thread_pool.h` PIMPL are in the tree and compile against 1.86, so the pin is a one-line change once the crash is understood.
 
-### 15.2 ftxui (OQ4) — recommendation: **hold at 5.0.0**
+### 14.2 ftxui (OQ4) — recommendation: **hold at 5.0.0**
 
 Mason: *"Is there a big advantage to moving to the newer version? I'm open to it."*
 
@@ -891,16 +782,16 @@ Measured: ConanCenter publishes 2.0.0, 3.0.0, 4.0.0, 4.1.0, 4.1.1, **5.0.0** (cu
 - [ ] **Direct answer: no, there is no advantage that matters here.** ftxui's only consumer is the `test_helper` REPL — a developer tool, not shipped, not on the critical path, and not currently being worked on. 6.x and 7.x carry breaking UI-API changes, so the cost is real code churn and the benefit is a version number.
 - [ ] Confirmed it is not a migration blocker either: it neither caps CMake nor fails at msvc 195 (Phase 4.4), and it reached `Build` on the 195 machine's graph.
 - [x] **The caveat is now discharged (New OQ 19).** It carried forward from 4.4's superseded note: reaching `Build` in a graph is not the same as having compiled, and libsodium taught that lesson expensively. Mason confirms **`test_helper` builds for both knottyyoga and communityfinder on the 195 machine**, so ftxui 5.0.0 and replxx 0.0.4 are now *observed* compiling under msvc 195 rather than merely resolving. The last "held on 194-grade evidence" item from Phase 4.4 is closed. ✅ 2026-09-08
-- [ ] That answer also carried a live defect with it — `test_helper` **runs** on knottyyoga but hits a database issue on communityfinder. Tracked as Phase 16; it is unrelated to ftxui and does not affect the hold decision.
+- [ ] That answer also carried a live defect with it — `test_helper` **runs** on knottyyoga but hits a database issue on communityfinder. Tracked as Phase 15; it is unrelated to ftxui and does not affect the hold decision.
 - [ ] Revisit only if the REPL is due for work anyway, at which point moving once is cheaper than moving twice.
 
-# Phase 16 — `communityfinder_test_helper` fails against its database
+# Phase 15 — `communityfinder_test_helper` fails against its database
 
 Surfaced by New OQ 19, which was asked about something else entirely. Mason: *"Test helper builds for knotty yoga and community finder. It runs on knotty yoga but has a database issue on community finder."*
 
 **This is a real defect in an app binary, not a migration artifact**, and it is the only known behavioural difference between the two apps' identical-by-design CLI helpers. It also matters more than a dev tool usually would, because `test_helper` is one of exactly two consumers of abseil's flags API (4.3) and one of the two binaries no automated harness executes — `communityfinder_tests` links `communityfinder_test_cases`, not the helper's `main`.
 
-### 16.1 Diagnosed — and it is a machine-setup gap, not a code defect
+### 15.1 Diagnosed — and it is a machine-setup gap, not a code defect
 
 The reported error:
 
@@ -932,14 +823,14 @@ Error: Failed to connect to database: ERROR:  relation "config_secrets" does not
 - [ ] **Take the free verification while doing it.** CLAUDE.md notes that the test harness composes its schema from `MakeDatabaseInfo` and **does not run `create_database`'s seed** — so the seed path is verified by nothing in the 1785-test suite, and a live `--recreate_database` is the only thing that exercises it. This run is therefore also the first real check of communityfinder's seed. Watch for `event=recreate_database_done` rather than assuming success.
 - [ ] Also discharges the unchecked bullet in **4.3** ("hand-check the flags still parse at runtime") for `--recreate_database`, since running it *is* that check.
 
-### 16.2 The real finding: this is the third machine-setup gap in a row
+### 15.2 The real finding: this is the third machine-setup gap in a row
 
 Store-alias `python.exe` (6.2b) → missing Git for Windows (7.1) → **an unseeded dev database**. Three consecutive failures that looked like build or code problems and were all environment gaps, all on a freshly-set-up machine, none discoverable from the error message.
 
-- [ ] **Feed this into Phase 14's README as a first-class setup step.** "Create and seed the dev database" is currently written down nowhere, which is precisely why it was missed — `Machine configuration.md` stops at cloning the repo. A new developer will hit this exact error.
+- [ ] **Feed this into Phase 13's README as a first-class setup step.** "Create and seed the dev database" is currently written down nowhere, which is precisely why it was missed — `Machine configuration.md` stops at cloning the repo. A new developer will hit this exact error.
 - [ ] Note the shape for future diagnosis: **the suite passing tells you nothing about the dev database.** The suite drives `test_communityfinder` (37 tables, healthy); the helpers drive `communityfinder` (empty). Two databases, one green signal, and it covers only one of them.
 
-### 16.3 Close the coverage gap that let it hide
+### 15.3 Close the coverage gap that let it hide
 
 Still worth doing, and unchanged by the diagnosis being benign.
 
@@ -1012,9 +903,9 @@ Cross-repo order within every phase: `server_components` → `knottyyoga` → `c
 
 8. **The knottyyoga test-count floor is slack.** Carried over from the Phase 1 Linux run: `MIN_EXPECTED_TESTS=3500` against an actual 5163. A third of the suite could vanish before it trips, which is the opposite of what the floor is for. Raise it toward ~4800? Unrelated to the migration, so not changed here.
 	- Mason- Whatever you think we should do.
-	- **Answered — scheduled as 12.1.** Raising all three (communityfinder 1000 → 1700, knottyyoga 3500 → 4800, honuware CI 1000 → 1700), plus recording the count per gate run, which is what made the Phase 7.3 `+2` claim precise.
+	- **Answered — scheduled as 11.1.** Raising all three (communityfinder 1000 → 1700, knottyyoga 3500 → 4800, honuware CI 1000 → 1700), plus recording the count per gate run, which is what made the Phase 7.3 `+2` claim precise.
 
-# New Open Questions — arising from Phases 9–16
+# New Open Questions — arising from Phases 8–14
 
 Numbered from 13 to avoid colliding with the answered set above. Several of these are blocking for their phase; each says which.
 
@@ -1022,47 +913,47 @@ Numbered from 13 to avoid colliding with the answered set above. Several of thes
 
 | # | answer | lands in |
 |---|---|---|
-| 13 | leave `theme_bundle_assets.cpp:85` alone; comment it so nobody "finishes the job" | 11.3 |
-| 14 | nothing deployed → no stored data, no migration dimension | Phase 11 preamble |
-| 15 | knottyyoga names its own database; honuware's default becomes `honuware_test` | **new 10.2b** (cross-repo bump point) |
-| 16 | two slots per repo is enough | 10.2 — and it is what let the env var go away |
-| 17 | official tarball pinned by version + SHA-256; **all five images, release included** | 12.2 |
-| 18 | rotate, do not scrub | 9.1 |
-| 19 | `test_helper` builds on 195 for both apps → ftxui/replxx caveat discharged | 15.2 — but it surfaced a defect, now **Phase 16** |
+| 13 | leave `theme_bundle_assets.cpp:85` alone; comment it so nobody "finishes the job" | 10.3 |
+| 14 | nothing deployed → no stored data, no migration dimension | Phase 10 preamble |
+| 15 | knottyyoga names its own database; honuware's default becomes `honuware_test` | **new 9.2b** (cross-repo bump point) |
+| 16 | two slots per repo is enough | 9.2 — and it is what let the env var go away |
+| 17 | official tarball pinned by version + SHA-256; **all five images, release included** | 11.2 |
+| 18 | rotate, do not scrub | 8.1 |
+| 19 | `test_helper` builds on 195 for both apps → ftxui/replxx caveat discharged | 14.2 — but it surfaced a defect, now **Phase 15** |
 
-**Two of these changed the plan rather than merely confirming it.** 15 and 16 together deleted the `HONUWARE_TEST_DB_SUFFIX` environment variable from the design: once the suffix is per-platform and two slots is enough, it can be a compile-time `#ifdef`, which needs no harness wiring and — because the harness DROPs and CREATEs whatever name it is given — removes an externally-controlled string from a destructive operation. **The answers made that phase smaller and safer, which is the opposite of how scope questions usually resolve.** And 19, asked as a low-stakes tidy-up about ftxui, turned up a live defect in a shipped-adjacent binary; that is now Phase 16.
+**Two of these changed the plan rather than merely confirming it.** 15 and 16 together deleted the `HONUWARE_TEST_DB_SUFFIX` environment variable from the design: once the suffix is per-platform and two slots is enough, it can be a compile-time `#ifdef`, which needs no harness wiring and — because the harness DROPs and CREATEs whatever name it is given — removes an externally-controlled string from a destructive operation. **The answers made that phase smaller and safer, which is the opposite of how scope questions usually resolve.** And 19, asked as a low-stakes tidy-up about ftxui, turned up a live defect in a shipped-adjacent binary; that is now Phase 15.
 
-13. **TIFF removal: does `theme_bundle_assets.cpp:85` go too?** *(Blocks 11.3.)* That line maps `"tiff"`/`"tif"` → the `"tif"` file extension for **theme-bundle assets**, which is a different concern from image *resizing* — it governs how an uploaded asset is stored and named, not whether it can be decoded and scaled. Removing `IMAGE_TYPE_TIFF` does not automatically mean a theme bundle may no longer contain a `.tif`.
+13. **TIFF removal: does `theme_bundle_assets.cpp:85` go too?** *(Blocks 10.3.)* That line maps `"tiff"`/`"tif"` → the `"tif"` file extension for **theme-bundle assets**, which is a different concern from image *resizing* — it governs how an uploaded asset is stored and named, not whether it can be decoded and scaled. Removing `IMAGE_TYPE_TIFF` does not automatically mean a theme bundle may no longer contain a `.tif`.
 
     My inclination is to **leave it**, on the grounds that it costs nothing, carries no libtiff dependency, and removing it would reject bundles that work today. But it is your call, and if the answer is "nothing should ever accept a TIFF anywhere" then it goes and the theme-bundle tests need a case asserting the rejection.
     - Mason- I'll go with your recommendation.
 
-14. **Do any real stored images use TIFF?** *(Blocks Phase 11 as a whole.)* "Not really used anymore" is enough to stop *accepting* TIFFs; it is not automatically enough to stop being able to *decode* one. If any production row holds a TIFF that something still reads, removing the read path turns a working record into a failure. Worth one query against the real data before 11.2 — and note that `ResizeImage` has never worked for TIFF anyway, so only the **read/dimensions** path could have live callers.
+14. **Do any real stored images use TIFF?** *(Blocks Phase 10 as a whole.)* "Not really used anymore" is enough to stop *accepting* TIFFs; it is not automatically enough to stop being able to *decode* one. If any production row holds a TIFF that something still reads, removing the read path turns a working record into a failure. Worth one query against the real data before 10.2 — and note that `ResizeImage` has never worked for TIFF anyway, so only the **read/dimensions** path could have live callers.
 	- Mason- We haven't deployed yet so there are no existing anything. Do whatever you think is best.
 
-15. **Should honuware's default test-database name stop being `test_knottyyoga`?** *(Blocks 10.2.)* `global_database_test_support.h:12` hard-codes one application's database as the framework default, and knottyyoga depends on inheriting it. Changing it to `honuware_test` and having knottyyoga set its own name explicitly — the way communityfinder already does — is the clean shape, and it makes all three apps symmetric.
+15. **Should honuware's default test-database name stop being `test_knottyyoga`?** *(Blocks 9.2.)* `global_database_test_support.h:12` hard-codes one application's database as the framework default, and knottyyoga depends on inheriting it. Changing it to `honuware_test` and having knottyyoga set its own name explicitly — the way communityfinder already does — is the clean shape, and it makes all three apps symmetric.
 
-    It is a cross-repo bump point (honuware change + a knottyyoga change that must land together, or knottyyoga's suite silently starts using the wrong database). Do it as part of Phase 10, or leave the wart alone?
+    It is a cross-repo bump point (honuware change + a knottyyoga change that must land together, or knottyyoga's suite silently starts using the wrong database). Do it as part of Phase 9, or leave the wart alone?
     - Mason- I'm fine with a cross repo bump point. I'd like knotty yoga to specify it's own database name like community finder in test setup. I'd also like all three projects to append windows / linux depending on the platform.
 
-16. **How many parallel slots do you actually want?** *(Shapes 10.2.)* The `_linux` / empty suffix scheme gives exactly two per repo, which satisfies the stated goal — Linux gate plus Windows run, unattended. If you would also want, say, two Linux gates at once (a branch and master), the suffix wants to come from something per-checkout rather than per-platform. Two is simpler and I would start there; say if you want more.
+16. **How many parallel slots do you actually want?** *(Shapes 9.2.)* The `_linux` / empty suffix scheme gives exactly two per repo, which satisfies the stated goal — Linux gate plus Windows run, unattended. If you would also want, say, two Linux gates at once (a branch and master), the suffix wants to come from something per-checkout rather than per-platform. Two is simpler and I would start there; say if you want more.
 	- Mason- Let's go with your simpler recommendation.
 
-17. **How should CMake 4.4.3 be installed in the `gcc:14.2.0` images?** *(Blocks 12.2.)* Bookworm apt tops out at 3.25, so the options are Kitware's APT repository, `pip install cmake==4.4.3`, or the official binary tarball. The tarball is the most reproducible and adds no package sources; pip is the shortest; Kitware's repo is the most conventional. I lean tarball, pinned by version and checksum.
+17. **How should CMake 4.4.3 be installed in the `gcc:14.2.0` images?** *(Blocks 11.2.)* Bookworm apt tops out at 3.25, so the options are Kitware's APT repository, `pip install cmake==4.4.3`, or the official binary tarball. The tarball is the most reproducible and adds no package sources; pip is the shortest; Kitware's repo is the most conventional. I lean tarball, pinned by version and checksum.
 
     Related and more consequential: **your "let's do it" covers the release image too, correct?** `knottyyoga/server/knottyyoga_server/package/Dockerfile` builds what actually ships. The OQ6 argument is explicit that raising CI without raising the deploy image trades one divergence for a worse one — so I am planning to move all five together, but that changes the shipped artifact's build toolchain and I want it stated rather than assumed.
     - Mason- Which of these options would you recommend? I don't really have an opinion so go with whichever option you think would be best.
 
-18. **The Gmail credential: rotate only, or also scrub git history?** *(Does not block 9.1 — rotate regardless.)* Rotation closes the exposure. Scrubbing (`git filter-repo` / BFG) removes the value from history but rewrites every commit SHA, which breaks every existing clone and fork, invalidates the honuware SHA pinned in both apps, and is highly disruptive for a repo two other repos consume by commit hash.
+18. **The Gmail credential: rotate only, or also scrub git history?** *(Does not block 8.1 — rotate regardless.)* Rotation closes the exposure. Scrubbing (`git filter-repo` / BFG) removes the value from history but rewrites every commit SHA, which breaks every existing clone and fork, invalidates the honuware SHA pinned in both apps, and is highly disruptive for a repo two other repos consume by commit hash.
 
     My recommendation is **rotate and do not scrub** — the credential is dead once rotated, and the cost of rewriting a repo that two applications pin by SHA is large and lands squarely on the work in this plan. But if the repo is ever to go public in a stricter sense, that calculus changes.
     - Mason- Let's rotate and not scrub.
 
-19. **Does the 195 machine's `test_helper` actually build?** *(Shapes 15.2, low stakes.)* ftxui and replxx were held on the reasoning that they resolve fine at msvc 195 — the same class of evidence that proved wrong for libsodium in 6.2. Resolving is not compiling. One deliberate build of `test_helper` on a 195 machine would convert the assumption into a fact; if it has already happened as part of 6.3's full-suite run, say so and this closes.
+19. **Does the 195 machine's `test_helper` actually build?** *(Shapes 14.2, low stakes.)* ftxui and replxx were held on the reasoning that they resolve fine at msvc 195 — the same class of evidence that proved wrong for libsodium in 6.2. Resolving is not compiling. One deliberate build of `test_helper` on a 195 machine would convert the assumption into a fact; if it has already happened as part of 6.3's full-suite run, say so and this closes.
 	- Test helper builds for knotty yoga and community finder. It runs on knotty yoga but has a database issue on community finder.
-	- **Answered, and it closes the ftxui/replxx caveat (15.2): both compile under msvc 195, observed rather than inferred.** The database failure it surfaced is now Phase 16, and it raises New OQ 20.
+	- **Answered, and it closes the ftxui/replxx caveat (14.2): both compile under msvc 195, observed rather than inferred.** The database failure it surfaced is now Phase 15, and it raises New OQ 20.
 
-20. **What exactly is the `communityfinder_test_helper` database failure?** *(Blocks Phase 16.)* The one-line report is enough to know there is a defect but not enough to fix it, and 16.2 is currently a hypothesis list rather than a diagnosis. What would settle it:
+20. **What exactly is the `communityfinder_test_helper` database failure?** *(Blocks Phase 15.)* The one-line report is enough to know there is a defect but not enough to fix it, and 15.2 is currently a hypothesis list rather than a diagnosis. What would settle it:
 
     - The **exact error text**, and whether it appears at startup or on a particular REPL command.
     - Whether it was run on Windows or in the Linux container, and against which database host — the `HONUWARE_DB_*` defaults point at the container's `postgresql`, so a Windows run needs the real host.
@@ -1070,7 +961,7 @@ Numbered from 13 to avoid colliding with the answered set above. Several of thes
 
     **My leading hypothesis, worth stating so it can be falsified quickly:** the database was never created on that machine, or the `create_database` seed is broken. CLAUDE.md is explicit that the test harness composes its schema from `MakeDatabaseInfo` and **does not run the seed** — so a broken seed is invisible to all 1785 passing tests and would surface for the first time in exactly this binary. That would also explain why knottyyoga is fine: its database gets created by its own suite runs.
 
-    **Timing matters here.** Phase 10 renames every test database. If this is diagnosed after 10.2 lands, the rename and the defect will each look like the cause of the other. Worth ten minutes now rather than an hour later.
+    **Timing matters here.** Phase 9 renames every test database. If this is diagnosed after 9.2 lands, the rename and the defect will each look like the cause of the other. Worth ten minutes now rather than an hour later.
 
     - Mason- provided the error: `Failed to connect to database: ERROR: relation "config_secrets" does not exist`, against `dbname=communityfinder host=localhost user=docker`.
-    - **ANSWERED, and the hypothesis was right — see 16.1.** The connection succeeded; the database is an empty shell (0 tables, against `test_communityfinder`'s 37 and `knottyyoga`'s 118). `--recreate_database` has never been run on that machine. **Not a code defect, and nothing to do with the 195 toolchain.** Fix is one command; the durable fix is documenting the step in Phase 14's README, since it is written down nowhere today.
+    - **ANSWERED, and the hypothesis was right — see 15.1.** The connection succeeded; the database is an empty shell (0 tables, against `test_communityfinder`'s 37 and `knottyyoga`'s 118). `--recreate_database` has never been run on that machine. **Not a code defect, and nothing to do with the 195 toolchain.** Fix is one command; the durable fix is documenting the step in Phase 13's README, since it is written down nowhere today.

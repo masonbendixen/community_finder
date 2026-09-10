@@ -8,6 +8,8 @@ Version: 0.1
 tags:
 ---
 # Setting up machine
+- Install Git
+	- https://git-scm.com/
 - Installing CMake 4.4.3
 	- https://cmake.org/download/
 - Install Conan 2.31.2 from
@@ -18,7 +20,6 @@ tags:
 - Install server components
 	- cd c:/users/{user}/source/repos
 	- git clone https://github.com/honuware/server_components.git
-- 
 # Related Documents
 - Links to related documents
 

@@ -645,9 +645,30 @@ Names below were enumerated from the source, not from memory. **Defaults are mar
 | `PORT` | `18081` for the communityfinder server (`ng serve` is 4201) |
 | `HONUWARE_SRC_DIR` | **build-time only** → `-DFETCHCONTENT_SOURCE_DIR_HONUWARE`, for cross-repo co-development |
 
-**Also present in the source, semantics not verified here** — listed so a search for them finds this table rather than nothing: `HONUWARE_APP_NAME`, `HONUWARE_VERSION`, `HONUWARE_ENV`, `HONUWARE_LOG_DEST`, `HONUWARE_TENANT_MODE`, `HONUWARE_CONTROL_DB_NAME`, `HONUWARE_TRUST_PROXY`, `HONUWARE_DEV_CORS_ORIGIN`, `HONUWARE_ORIGIN_SECRET`, `HONUWARE_FIXED_SITE_KEY`, `HONUWARE_API_BASE`, `HONUWARE_CRUD_ACCESS`, `HONUWARE_MOCK_OPTIONS`.
+**Now verified against the source (2026-09-09).** The previous "semantics not verified" list is resolved below, and **four of its thirteen entries were not environment variables at all** — see the correction after the table.
 
-- [ ] Fold this table into the `server_components` README (14.1) — it is exactly the reference a new developer needs and it exists nowhere today.
+| variable | verified behaviour |
+|---|---|
+| `PORT` | server listen port. **`18081` communityfinder** (`src/main.cpp:30`), **`18080` knottyyoga** (`src/main.cpp:45`) — different defaults, easy to trip over |
+| `HONUWARE_VERSION` | build version in the health response, re-read **on every call**; falls back to `KNOTTYYOGA_VERSION`, then the literal `"unknown"`. Operators set it on the EC2 to pin which artifact is live |
+| `HONUWARE_APP_NAME` | theme-bundle export metadata only (`manage_site_theme_bundle.cpp:278`); empty when unset. Never needed locally |
+| `HONUWARE_TENANT_MODE` | `Fixed` (default — one tenant, no control database, no site header) or `Control` (multiplexes CloudFront-fronted sites off the control DB's `tenants` table) |
+| `HONUWARE_FIXED_SITE_KEY` | Fixed mode only: overrides the site key, which otherwise **defaults to the app database name** |
+| `HONUWARE_CONTROL_DB_NAME` | Control mode only; legacy `KNOTTYYOGA_CONTROL_DB_NAME` fallback |
+| `HONUWARE_LOG_DEST` | where the `LogXxx()` streams write; legacy `KNOTTYYOGA_LOG_DEST` fallback |
+| `HONUWARE_TRUST_PROXY`, `HONUWARE_ORIGIN_SECRET`, `HONUWARE_DEV_CORS_ORIGIN` | auth / CORS, all with legacy `KNOTTYYOGA_*` fallbacks |
+| `CURL_CA_BUNDLE` | `http_client.cpp:86`; the runner otherwise resolves `certs/cacert.pem` relative to the working directory |
+| `HONUWARE_SRC_DIR` | **container-side only** — `load_container.cmd` turns it into `-e HONUWARE_SRC_DIR=/honuware`. On Windows the equivalent is the CMake cache variable `FETCHCONTENT_SOURCE_DIR_HONUWARE`, not an env var |
+
+**Correction — four entries were miscategorised, and it matters because setting them does nothing.**
+
+- `HONUWARE_API_BASE`, `HONUWARE_CRUD_ACCESS`, `HONUWARE_MOCK_OPTIONS` are **Angular dependency-injection tokens**, not environment variables — `inject(HONUWARE_CRUD_ACCESS)`, `{ provide: HONUWARE_API_BASE, useValue: environment.apiBase }`. They live in the UI and are configured through `environment.ts`.
+- `HONUWARE_ENV` is a **local batch variable** inside `load_container.cmd` (`set HONUWARE_ENV=-e HONUWARE_SRC_DIR=/honuware`) that accumulates docker arguments. No code ever reads an env var by that name.
+
+*They earned their place on the list by matching a `HONUWARE_*` grep, which is exactly how a name-shaped search produces a plausible wrong answer. The fix was to read each use site rather than to trust the pattern.*
+
+- [x] Fold this table into the `server_components` README (14.1). ✅ 2026-09-09 — added as **"Environment variables"** under *Build & test*, with the DB connection table, the set-by-hand table, and the correction above.
+- [x] Teach the tooling the same names: `tools/launch_defaults.example.json` carries the verified reference, so the file where you set `env` for a debug target also tells you what may be set. ✅ 2026-09-09
 
 ### 8.4 Running a subset of the tests — `--gtest_filter`
 

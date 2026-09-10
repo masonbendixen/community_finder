@@ -530,16 +530,44 @@ Phases 1–7 are done and are not to be edited. Everything below is new work ari
 
 ### 8.1 Immediate unblock
 
-**RESOLVED 2026-09-08. The cause was that no startup item was selected.** *Debug → Debug and Launch Settings* is "…for `<startup item>`": with no target chosen in the toolbar dropdown there is nothing for it to act on, and VS **does nothing at all** — no dialog, no error, no greyed-out menu entry. Selecting a startup item fixed it, and the project runs.
+**RESOLVED 2026-09-09 — it is a Visual Studio 2026 defect, and there is no fix on our side.** *Debug → Debug and Launch Settings* fails with:
 
-- [x] Select a startup item in the toolbar dropdown beside the run button. ✅ 2026-09-08
-- [x] Note what the menu entry actually does, because expecting a dialog is half of why this was hard to read: it opens **`.vs\launch.vs.json` as a text file**. There is no settings UI. `File → Open → File` on that path is equivalent and works with or without a startup item. ✅ 2026-09-08
+```
+Microsoft.VisualStudio.Shell.ServiceUnavailableException:
+  The VsTextManagerClass service is unavailable.
+   at AsyncServiceProvider.GetSyncService[TInterface](ServiceRequest request)
+   at ...VS.CommandHandler.OpenDocumentAndReplaceRange(String documentFilePath,
+                                String replaceText, Tuple`2 range, Action callback)
+   at ...VS.CommandHandler.<ExecEditDebugTargetAsync>d__35.MoveNext()
+```
 
-**Two wrong diagnoses preceded the right one. Both are recorded because each was plausible and each cost time.**
+Two of the three documented entry points are broken, and they fail *identically* because they share `ExecEditDebugTargetAsync`:
+
+| entry point | documented | actual |
+|---|---|---|
+| Debug menu | autopopulates `projectTarget`, opens the file | **writes the entry, never opens the file** |
+| Targets View → *Add Debug Configuration* | autopopulates, opens the file | **does nothing at all** |
+| Root `CMakeLists.txt` → *Add Debug Configuration* | opens the file, does *not* autopopulate | works as documented |
+
+**The write half works.** The entry is appended to `launch.vs.json` correctly every time; only the open-and-highlight step dies. Proven by deleting the file, invoking the command, and watching it reappear with the correct target 4 seconds later.
+
+Note the failing call is **`GetSyncService`** — a *synchronous* request for `SVsTextManager`, which is UI-thread-affinitized, issued from an `async` continuation. That is a threading defect, which is why it reproduces on **every machine and every project**, including a four-line `CMakeLists.txt` with one target. It survived a repair, a reboot, and a full rollback from 18.10.12201.205 to 18.9.12120.119, and reproduces on both. The third entry point works precisely because it runs on the UI thread via the *Select a Debugger* dialog — and that is also why it cannot autopopulate `projectTarget` and appends a blank `CMakeLists.txt`, `CMakeLists.txt(1)`, … skeleton on each invocation.
+
+No public report matches: searching the exception string, both internal method names, and VS2026+CMake across Developer Community and GitHub returned nothing. That is weak evidence — Developer Community renders via JavaScript and indexes poorly, and VS2026 is days old — but it means there is no fix to wait for yet. **File it.**
+
+- [x] Confirm the JSON editor itself is healthy — `File → Open → File` on `.vs\launch.vs.json` opens it with full syntax highlighting. The editor is fine; only the programmatic open fails. ✅ 2026-09-09
+- [x] Note what the menu entry is *supposed* to do, because expecting a dialog is half of why this was hard to read: it appends an entry for the selected target to **`.vs\launch.vs.json`** and opens it as a text file. There is no settings UI. ✅ 2026-09-08
+- [ ] Report via *Help → Send Feedback → Report a Problem*, with the exception above and the four-line repro. Nothing else in this document is blocked on it — 8.1 is worked around, not waiting.
+
+**Three wrong diagnoses preceded the right one. All are recorded because each was plausible and each cost time — the third cost a day and was written into this document as "RESOLVED".**
 
 **Wrong theory 1 — `CMakeUserPresets.json` put VS in Presets mode.** The reasoning: all three repos carry *both* a `CMakeSettings.json` and a Conan-generated `CMakeUserPresets.json`, and *none* has a `CMakePresets.json`; VS switches to Presets mode on sight of the former and then ignores `CMakeSettings.json`, where the `CONAN_CMD` / `CMAKE_PROJECT_TOP_LEVEL_INCLUDES` wiring lives. It fit the symptom, it fit `Machine configuration.md`'s existing "delete it before opening VS2026" instruction, and it was **wrong** — the file was deleted and the menu still did nothing. *The instruction in `Machine configuration.md` is therefore itself unexplained: whatever it was originally worked around, it was not this.* Worth knowing before that line is deleted in 8.2.
 
 **Wrong theory 2 — the command was firing and the file was opening unnoticed.** `launch.vs.json` was timestamped 18:34:12, right at the click. But the whole `.vs` folder — `ProjectSettings.json`, `slnx.sqlite`, `VSWorkspaceState.json` — shared that exact stamp, so it was VS saving session state, not the command running. **A timestamp that matches the moment you looked is not evidence that the thing you were looking for happened.**
+
+**Wrong theory 3 — no startup item was selected.** Recorded here on 2026-09-08 as the resolution, and it is **wrong**. The docs do say the menu entry greys out with no target chosen, which made it fit; but the entry was never greyed out, it was *enabled and inert*, and re-testing on 2026-09-09 with `honuware_test_runner` explicitly selected reproduced the failure exactly. **The distinction that was missed: a greyed-out command and an enabled command that silently does nothing are different failures, and the docs only explain the first.** Worse, the workaround adopted at the time — select a startup item and press F5 — genuinely does work, because *debugging* was never broken. Only the settings editor was. A workaround that makes the pain go away is not a diagnosis.
+
+**A fourth line of enquiry ran a long way on a real but unrelated defect.** `ActivityLog.xml` shows `Microsoft.VisualStudio.LanguageServer.ContainedLanguage.dll` missing from disk, which collapses ~25 MEF parts in the Web Tools LSP delegation layer — including one named `TextDocumentHandler`. With "the text service is unreachable" as the remembered symptom, that looked like a direct hit. It is a genuine flaw in this installation and worth reporting separately, **but it is not this bug**: the JSON editor assemblies are all present and healthy, and `File → Open` on `launch.vs.json` renders it correctly. *A real defect found while looking for a different real defect is the most expensive kind of red herring, because everything about it reads as confirmation.*
 
 **And a piece of advice given here was backwards, corrected on the evidence.** An earlier draft said to open `server\communityfinder_server` (the folder containing `CMakeLists.txt`) rather than the repo root. The opposite is true: the **repo root is the configured workspace** — `communityfinder/.vs/CMakeWorkspaceSettings.json` holds `{"enableCMake": true, "sourceDirectory": "server\\communityfinder_server"}`, and the inner folder has no such file. The repo root is also where the *useful* `launch.vs.json` lives, carrying `HONUWARE_ALLOW_DESTRUCTIVE`, the mail password and `--recreate_database`; the inner one is bare. **Open the repo root.**
 

@@ -866,6 +866,27 @@ Mason: *"I'd like knotty yoga to specify its own database name like community fi
 
   **Note the local-override subtlety this exposed.** knottyyoga's first build failed with `'ComposeTestDatabaseName': identifier not found` — because the build tree had been configured with the plain `x64-Debug` preset and was compiling against the **pinned** honuware in `_deps`, not the working copy. Reconfiguring with `x64-Debug-local-honuware` fixed it. Worth remembering: which honuware a knottyyoga build sees depends on which preset last configured the tree, and the failure surfaces as a missing identifier rather than as anything about pins.
 
+### 10.2c The escape: SECONDARY databases were not qualified (found by the gate, 2026-09-11)
+
+**The first cut of 10.2 suffixed only the PRIMARY database and missed every other one.** `GlobalDatabaseTestSupport::EnsureNamedDatabase` stands up *additional* physical databases from hardcoded names in test code — `test_honuware_tenant_b`, `test_honuware_named_db` — and those were left bare. Both platforms therefore drove the same physical database, which is exactly the defect this phase exists to remove.
+
+It surfaced as a communityfinder Linux gate failure, four tests, all with the same cause:
+
+```
+ERROR:  database "test_honuware_tenant_b" is being accessed by other users
+DETAIL:  There is 1 other session using the database.
+```
+
+- [x] Apply the platform token inside `EnsureNamedDatabase` rather than at each call site. ✅ 2026-09-11 — that method owns the destructive DROP + CREATE, so it owns the naming. A caller who forgot to compose would reintroduce the identical defect, and **that defect is invisible until two platforms happen to run at once**: it passes in isolation and fails only under concurrency. Callers now pass a BASE name and the suffix is applied exactly once, in one place.
+- [x] Fix the assertion that pinned the old behaviour: `tenant_physical_isolation_test.cpp:47` compared `current_database()` against the bare base name. ✅ 2026-09-11
+- [x] Add a regression guard a SINGLE run can catch. ✅ 2026-09-11 — `NamedDatabasesArePlatformQualifiedToo` asserts the secondary database's physical name carries the token *and* differs from the bare base name. 14 tests green (10 harness + the 4 tenant-isolation tests that failed on Linux), and `test_honuware_tenant_b_windows` / `test_honuware_named_db_windows` now exist.
+
+**The lesson, and it is not "I missed a call site".** The verification in 10.2b was well designed — it *observed* the physical database rather than trusting a constant — but it only ever looked at the primary one. A check that proves the mechanism works on the case you thought of says nothing about the cases you did not. What actually caught this was running the thing for real on the other platform, which is the same lesson as 8.2's "when the real thing is cheap to run, run the real thing".
+
+**Also worth noting: this failure mode is silent by construction.** Every suite passed on Windows, every suite passed on Linux, and the defect appeared only when both ran at once — which is precisely the scenario this phase was built to enable and therefore the scenario nobody had ever exercised before. The feature and its own test case arrived together.
+
+Two more orphans join the list in 10.3: `test_honuware_tenant_b` and `test_honuware_named_db`.
+
 ### 10.3 Update the documentation the change supersedes
 
 No harness wiring is needed — that is the dividend of the compile-time design.

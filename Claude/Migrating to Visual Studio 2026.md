@@ -878,9 +878,20 @@ No harness wiring is needed — that is the dividend of the compile-time design.
 
 ### 10.4 Prove the parallelism, don't assume it
 
-- [ ] Run **two suites concurrently against the same PostgreSQL** — the natural pair is a Linux gate and a Windows run of the *same* repo, since that is the case that fails today — and confirm both reach their normal test counts.
-- [ ] Then run all three Linux gates concurrently. Expect them to be slower individually (shared CPU and one PostgreSQL); the goal is total wall-clock while unattended, which Mason already accepted.
-- [ ] Watch for a non-obvious limit: PostgreSQL's `max_connections`. Six suites' worth of pooled connections against one dev server is the first thing likely to break, and it will present as connection errors, not as a test failure.
+- [x] Run **two suites concurrently against the same PostgreSQL** — the natural pair is a Linux gate and a Windows run of the *same* repo, since that is the case that fails today — and confirm both reach their normal test counts. ✅ 2026-09-11 — **done with exactly that pair, and both reached the identical count:**
+
+  | run | tests | wall clock | database |
+  |---|---|---|---|
+  | knottyyoga Windows (`knottyyoga_tests.exe`) | **5173** passed | 1,049 s | `test_knottyyoga_windows` |
+  | knottyyoga Linux gate (`build_and_test.sh`) | **5173** passed, `[knottyyoga] OK` | 379 s | `test_knottyyoga_linux` |
+
+  Overlap confirmed while it was happening, not assumed afterwards: `ps` inside the gate container showed `knottyyoga_tests` running 283 s into its test phase while the Windows suite was still going. And `pg_database` listed **both** `test_knottyyoga_linux` and `test_knottyyoga_windows` at that moment — under the old scheme those were one database, and the second starter would have DROPped the first's mid-run.
+
+  Same query also confirmed the three orphans predicted in 10.3 (`honuware_test`, `test_knottyyoga`, `test_communityfinder`) exist and are now unused. Left in place deliberately; dropping is destructive and they are harmless.
+
+  **The cost is real and matches the prediction.** The Windows suite took 1,049 s against 745 s when run alone — ~40% slower for sharing CPU and one PostgreSQL. Exactly the trade accepted up front: worse individually, better in total while unattended.
+- [ ] Then run all three Linux gates concurrently. Expect them to be slower individually (shared CPU and one PostgreSQL); the goal is total wall-clock while unattended, which Mason already accepted. **Blocked until the pin bump** — communityfinder cannot build against pinned honuware `8aa7137`, which predates `ComposeTestDatabaseName`. Worth doing right after the bump, because it is the first run that exercises all six databases at once.
+- [x] Watch for a non-obvious limit: PostgreSQL's `max_connections`. Six suites' worth of pooled connections against one dev server is the first thing likely to break, and it will present as connection errors, not as a test failure. ✅ 2026-09-11 — **not hit with two suites**, which is the most that can run until the pin moves; no connection errors in either run. Documented in communityfinder's docker README, where someone launching several gates will be looking. **Still unproven at six** — two suites is a weak test of a connection ceiling, so treat this as "not yet observed" rather than "not a problem".
 
 # Phase 11 — Remove TIFF support (OQ9)
 

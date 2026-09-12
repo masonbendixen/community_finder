@@ -930,26 +930,61 @@ Worth stating once, because it applies well beyond this phase: **pre-deployment 
 
 and line 60 links `${PNG_LIB} ${TIFF_LIB} ${ZLIB_LIB}` with **no JPEG edge**. So JPEG decoding currently reaches libjpeg *through libtiff's* dependency. Dropping `${TIFF_LIB}` without adding an explicit JPEG edge breaks JPEG — the format that actually is used.
 
-- [ ] Add an explicit `${JPEG_LIB}` edge to `honuware_foundation` **and** to `${HONUWARE_TESTS_TARGET}` (line 62 has the same transitive dependency) **before** removing `${TIFF_LIB}`, and confirm `JPEG_LIB` is defined in honuware's `ConanLibImports.cmake` rather than only in the apps'.
-- [ ] Verify by *building*, not by reading: the JPEG tests in `image_resize_test.cpp` are the check, and they must stay green across the intermediate commit.
+- [x] Add an explicit `${JPEG_LIB}` edge to `honuware_foundation` **and** to `${HONUWARE_TESTS_TARGET}` (line 62 has the same transitive dependency) **before** removing `${TIFF_LIB}`, and confirm `JPEG_LIB` is defined in honuware's `ConanLibImports.cmake` rather than only in the apps'. ✅ 2026-09-11 — **and it was worse than this item assumed: `JPEG_LIB` did not exist ANYWHERE.** `libjpeg` was already a direct requirement in all three recipes but carried no `CMakeInfo`, and `ConanLibImports.cmake` is generated only for libraries that have one. The fix was to give it `CMakeInfo("JPEG", "JPEG::JPEG")`, which emits `find_package(JPEG REQUIRED)` + `set(JPEG_LIB JPEG::JPEG)`.
+
+  **A second-order trap this item did not see, and it would have been silent.** In consumed mode `${JPEG_LIB}` resolves from the **APP's** `ConanLibImports.cmake`, not honuware's (knottyyoga's `CMakeLists.txt:87` says so outright). Defining it only in honuware would have left both apps linking an *empty* variable — an empty `${...}` simply vanishes from the link line, so it would have kept working while libtiff was still present, then broken later and somewhere else. All three recipes got the `CMakeInfo` in the same change.
+- [x] Verify by *building*, not by reading: the JPEG tests in `image_resize_test.cpp` are the check, and they must stay green across the intermediate commit. ✅ 2026-09-11 — done as a genuine intermediate step: JPEG edge added with `${TIFF_LIB}` **still linked**, reconfigured, built, **7 `ImageResizeTest` passed**. That isolation earned its keep — it proved `find_package(JPEG)` resolves and `JPEG::JPEG` is the right target name, separately from the TIFF removal, so a bad target name could not have been misread as fallout from dropping libtiff.
 
 ### 11.2 foundation — the image path
 
-- [ ] `image_resize.h:8` — drop `IMAGE_TYPE_TIFF` from the enum.
-- [ ] `image_resize.cpp` — remove the `<boost/gil/extension/io/tiff.hpp>` include (line 6) and both switch arms (39–40 read, 86–87 write).
-- [ ] `image_resize_test.cpp` — remove the `TiffToArray` helper and both tests. **`ResizeTiffThrowsBecauseTheOutputSinkCannotSeek` is the characterization test written in Phase 3.2 to fail when the defect is fixed** — deleting the feature is the other way it can legitimately go, and this is that. Its long comment block is a good source for the removal commit message.
+- [x] `image_resize.h:8` — drop `IMAGE_TYPE_TIFF` from the enum. ✅ 2026-09-11 — now `{ IMAGE_TYPE_BMP, IMAGE_TYPE_JPEG, IMAGE_TYPE_PNG }`, with a comment recording that libjpeg used to arrive through libtiff.
+- [x] `image_resize.cpp` — remove the `<boost/gil/extension/io/tiff.hpp>` include (line 6) and both switch arms (39–40 read, 86–87 write). ✅ 2026-09-11
+- [x] ✅ 2026-09-11 — `image_resize_test.cpp` — remove the `TiffToArray` helper and both tests. A comment block replaces them, keeping the one fact that outlives the feature: **resizing a TIFF never worked in any build on any platform**, so "restore TIFF" means writing the seekable-sink fix too, not just putting the enum value back. Original item: **`ResizeTiffThrowsBecauseTheOutputSinkCannotSeek` is the characterization test written in Phase 3.2 to fail when the defect is fixed** — deleting the feature is the other way it can legitimately go, and this is that. Its long comment block is a good source for the removal commit message.
 
 ### 11.3 platform — the upload/type surface
 
-- [ ] `image_helper.cpp:60-61` — remove the `"tiff"` → `IMAGE_TYPE_TIFF` mapping. Decide what an uploaded TIFF now does: rejected as an unsupported type is the honest answer, and there is already a `"Unsupported image type. Must be 'jpeg' or 'png'"` error in the suite output that says this is the existing shape.
-- [ ] `image_helper_test.cpp:254` — `"tiff"` appears in an accepted-types list; update, and **add a test asserting a TIFF upload is now cleanly rejected** rather than merely removing the old expectation.
-- [ ] `theme_bundle_assets.cpp:85` — `if (type == "tiff" || type == "tif") return "tif";` — **leave it alone. Decided (New OQ 13, Mason took the recommendation).** It is theme-bundle asset *extension mapping*, not image decoding: it names a stored file and carries no libtiff dependency, so it costs nothing to keep and removing it would reject bundles that work today. Add a short comment there saying it is deliberately unrelated to `IMAGE_TYPE_TIFF`, so the next person removing TIFF references does not "finish the job" and quietly change theme-bundle behaviour.
+- [x] ✅ 2026-09-11 — removed; `"tiff"` now falls through to `-1` and is rejected as an unsupported type, which was the honest answer this item predicted. Original: `image_helper.cpp:60-61` — remove the `"tiff"` → `IMAGE_TYPE_TIFF` mapping. Decide what an uploaded TIFF now does: rejected as an unsupported type is the honest answer, and there is already a `"Unsupported image type. Must be 'jpeg' or 'png'"` error in the suite output that says this is the existing shape.
+- [x] `image_helper_test.cpp:254` — `"tiff"` appears in an accepted-types list; update, and **add a test asserting a TIFF upload is now cleanly rejected** rather than merely removing the old expectation. ✅ 2026-09-11 — with two corrections to the item itself.
+
+  **Line 254 was not an accepted-types list.** It is the *not-a-vector* list inside `IsVectorTypeAcceptsEverySpellingAndNothingElse`, and `IsVectorType("tiff")` is still correctly `false`. Left untouched: changing it would have weakened a passing assertion for no reason.
+
+  **The new test goes through the PUBLIC path.** The first attempt called `ImageHelper::ImageTypeFromString` directly — which is **private**, and the test also lacked `image_resize.h`, so it did not compile. Making a production method public to suit a test is the wrong trade, so `UploadPhotoRejectsTiffAsUnsupported` drives `UploadAndAssociatePhoto` instead and asserts `"Unsupported image type 'tiff'"` plus that no source-photo row is created. It feeds **valid JPEG bytes** deliberately: the rejection must come from the declared TYPE, so if validation were ever reordered after the decode this stops failing for the right reason.
+
+  **That failure nearly slipped through as a pass.** The build failed with `exit code 2` while the test run in the same command reported *96 passed* — against the previous, stale binary. A test result is only meaningful if the build that produced it succeeded, and a pipeline that runs tests after a failed build will happily tell you otherwise.
+- [x] ✅ 2026-09-11 — left alone, with the explanatory comment added as instructed (it also notes the list covers `gif` and `webp`, neither of which `ImageResize` ever decoded — the clearest evidence that this function maps MIME types to filenames, not to decoders). Original: `theme_bundle_assets.cpp:85` — `if (type == "tiff" || type == "tif") return "tif";` — **leave it alone. Decided (New OQ 13, Mason took the recommendation).** It is theme-bundle asset *extension mapping*, not image decoding: it names a stored file and carries no libtiff dependency, so it costs nothing to keep and removing it would reject bundles that work today. Add a short comment there saying it is deliberately unrelated to `IMAGE_TYPE_TIFF`, so the next person removing TIFF references does not "finish the job" and quietly change theme-bundle behaviour.
 
 ### 11.4 Drop the dependency
 
-- [ ] Remove the `libtiff` pin from all three `conanfile.py` files, including the "do not go back below 4.7.x" comment added in 3.2 — which becomes obsolete, and leaving it would mislead.
-- [ ] `NOTICE:17` lists libtiff among the bundled libraries. **Legal/attribution text must be updated with the dependency**, and it is exactly the kind of file a dependency change forgets.
-- [ ] Confirm the graph actually shrank: re-resolve all three repos and check libtiff is absent, rather than assuming the conanfile edit was sufficient.
+- [x] Remove the `libtiff` pin from all three `conanfile.py` files, including the "do not go back below 4.7.x" comment added in 3.2 — which becomes obsolete, and leaving it would mislead. ✅ 2026-09-11 — **but NOT as one step, and this item is wrong to imply it can be.**
+
+  **This is a cross-repo bump point, the same shape as 10.2b.** The apps compile honuware *from the pin*. Removing `libtiff` from an app recipe deletes `tiffio.h` from its graph while it is still compiling honuware source that does `#include <boost/gil/extension/io/tiff.hpp>`:
+
+  ```
+  fatal error C1083: Cannot open include file: 'tiffio.h': No such file or directory
+  ```
+
+  Found by doing exactly that and watching communityfinder fail to build. The correct order is **push honuware's removal → bump both `GIT_TAG`s → only then delete `libtiff` app-side**. In between, the app recipes carried the entry with a `# TEMPORARY` comment naming the order, so the delay read as deliberate rather than forgotten.
+
+  `${JPEG_LIB}` is the opposite case and lands *early* in all three — harmless before honuware needs it, essential the moment it does.
+- [x] **Completed the app-side deletion after the pin moved** (pin `d82efc0`). ✅ 2026-09-11 — libtiff is now absent from all three recipes; remaining mentions are historical comments that still read correctly (e.g. abseil's "Like libtiff 4.6.0…" analogy).
+- [x] `NOTICE:17` lists libtiff among the bundled libraries. **Legal/attribution text must be updated with the dependency**, and it is exactly the kind of file a dependency change forgets. ✅ 2026-09-11 — and the point generalises further than the item claims: checking the line against the recipe showed **`libzip` had never been listed at all**, a pre-existing attribution gap from Tenant Theming Phase 9. The TIFF edit surfaced it. `NOTICE` now matches the recipe exactly, 14 libraries on both sides — *the right check is not "remove what left" but "does this list still equal the dependency set".*
+- [x] Confirm the graph actually shrank: re-resolve all three repos and check libtiff is absent, rather than assuming the conanfile edit was sufficient. ✅ 2026-09-11 — and the scepticism was warranted: `FindTIFF.cmake` and the TIFF `-data.cmake` files were **still sitting in the build tree** after the removal, because CMakeDeps does not delete generated files it no longer emits. Reading the directory would have said libtiff was still there.
+
+  **Timestamps settled it.** The current Conan run wrote `FindJPEG.cmake` and `conanrun.bat` at 13:33:55 and wrote no TIFF file at all; the TIFF files were frozen at 13:32:31, the previous run. Corroborated three further ways: no `tiff` string anywhere in honuware's `build.ninja`, and **zero libtiff mentions in either app's full Linux gate log**.
+
+  *Stale generated files outlive the dependency that produced them — "is the file present" is the wrong question, "did this run write it" is the right one.*
+
+**Verified on both platforms, all three repos (2026-09-11).** Counts match per repo across platforms, and each app dropped by exactly one test — the signature of Phase 11 propagating (honuware deleted two TIFF tests, added one upload-rejection test). An unchanged count would have meant the pin had not really moved.
+
+| repo | Windows | Linux |
+|---|---|---|
+| honuware | **1772 passed** | **1772 passed** — `[honuware] OK` |
+| communityfinder | **1793 passed** | **1793 passed** — `[communityfinder] OK` |
+| knottyyoga | **5173 passed** | **5173 passed** — `[knottyyoga] OK` |
+
+This was also the first knottyyoga run that verifies anything about Phases 10 *or* 11: every earlier knottyyoga result was built against pinned honuware predating both. Its full 2470-target rebuild is what confirms the new honuware actually reached it.
+
+**libtiff is gone from every dependency graph — the second of the two original VS2026 blockers, closed.**
 
 # Phase 12 — Build integrity: floors, CI CMake, lockfile (OQ8, OQ6, OQ12)
 

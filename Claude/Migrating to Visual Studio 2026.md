@@ -1042,11 +1042,25 @@ The concrete problem this closes, from the Phase 6 log: identical conanfiles res
 
 Mason: *"I'm fine with doing this work."* Closes the gap from 3.4: `MakeHttpClient()` — the actual libcurl-backed implementation — is executed by **no test in the suite**, and libcurl has just moved 7.86.0 → 8.21.0 and will keep moving.
 
-- [ ] Stand up a Crow server on `127.0.0.1` inside the test, issue one real GET through `MakeHttpClient()`, assert the round trip. Crow is already linked into the tests target, so there is no new dependency.
-- [ ] **Bind to port 0 and read back the assigned port.** A hardcoded port is the classic way this test becomes flaky in docker and CI, and it will fail rarely and confusingly rather than consistently.
-- [ ] Respect the harness rule from CLAUDE.md: `ThreadPool::Shutdown()` before any DB-touching assertion, since the endpoints' async writes re-enter the test's libpqxx connection.
-- [ ] Keep it to **one** test. This deliberately introduces a live-server pattern the codebase has avoided; the justification is one uncovered production component, and it does not generalise into a second such test without its own argument.
-- [ ] Also cover the TLS path, or explicitly decide not to — `certs/cacert.pem` is resolved CWD-relative by the real client (`build_and_test.sh:56-58`), which is itself untested and is the kind of thing that breaks in the release image rather than in the gate.
+- [x] Stand up a Crow server on `127.0.0.1` inside the test, issue one real GET through `MakeHttpClient()`, assert the round trip. ✅ 2026-09-12 — `components/foundation/util/http/http_client_test.cpp`, `HttpClientTest.RealClientRoundTripsAgainstALiveServer`. Crow arrives transitively through honuware_foundation's PUBLIC `${CROW_LIB}`, so no new dependency, as the item predicted.
+
+  **It asserts the response HEADERS as well as status and body.** Status plus body alone would still pass if header parsing were broken, and headers are what carry auth and content type in real use — so a header assertion is what makes this a round-trip test rather than a reachability check.
+- [x] **Bind to port 0 and read back the assigned port.** ✅ 2026-09-12 — done, with a trap worth recording: **`crow::App::port()` returns the CONFIGURED value until the server has started**, and only afterwards delegates to the acceptor's real `local_endpoint().port()`. Read it before `wait_for_server_start()` and it hands back `0`, which would have produced a URL of `http://127.0.0.1:0/ping` and a failure pointing at the HTTP client rather than at the test. The test reads it after and asserts it is non-zero.
+
+  Also bound to `127.0.0.1` rather than all interfaces: the gate containers share a docker network, and a test server should not be reachable across it.
+- [x] Respect the harness rule from CLAUDE.md: `ThreadPool::Shutdown()` before any DB-touching assertion. ✅ 2026-09-12 — **does not apply, and the file says so rather than staying silent.** This test involves no ThreadPool, no database and no endpoint, so nothing re-enters the test transaction provider. What it does do instead is `app.stop()` and wait on the server future BEFORE asserting, so a failed expectation cannot leave the io_context running and hang the suite.
+- [x] Keep it to **one** test. ✅ 2026-09-12 — one test, and the reasoning is written into the file itself so the constraint travels with the code: the justification is narrow (one uncovered production component), and a second live-server test needs its own argument rather than a reference to this one. Everything else in the suite keeps using the `TestHttpClient` double.
+- [x] Also cover the TLS path, or explicitly decide not to. ✅ 2026-09-12 — **decided NOT to, and the decision is recorded next to the code rather than only here.** Covering it honestly means an HTTPS server with a certificate the test trusts, i.e. generating or committing a test CA — materially larger than the single uncovered component this phase exists to close.
+
+  What IS captured, because it is the part that bites: the real client always sets `CURLOPT_SSL_VERIFYPEER`/`VERIFYHOST` and resolves its CA bundle from `CURL_CA_BUNDLE`, falling back to the **working-directory-relative** `certs/cacert.pem` (`http_client.cpp:86-91`). That only resolves when the process runs from the directory containing `certs/`, which is exactly why `build_and_test.sh` cd's into the build directory first. **A deployment that starts the server from anywhere else gets certificate failures no test here would predict** — now written beside the code instead of living only in this plan.
+
+**Verified on both platforms (2026-09-12).** Count rose 1772 → **1773**, the single test this phase adds.
+
+| repo | Windows | Linux |
+|---|---|---|
+| honuware | **1773 passed** | **1773 passed** — `[honuware] OK`, floor 1700 |
+
+The Linux result is the one that mattered: a live server binding a port inside a container is where this class of test fails, not on a dev box. It ran in 0 ms there.
 
 # Phase 14 — server_components README and shared dev-environment setup (Mason New Item 2)
 

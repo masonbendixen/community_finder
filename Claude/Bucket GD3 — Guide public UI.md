@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
-Last Updated: 8/12/2026
-Version: 0.1
+Last Updated: 10/26/2026
+Version: 0.2
 tags:
 ---
 
@@ -37,7 +37,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 - **Link-out cards (GD1 §4/§7):** platform icon + label, outbound `target="_blank" rel="noopener noreferrer"`; used for "where this scene talks" on profiles AND as the whole body of `link_out`-posture scene landings ("we point you to this scene's own curators, with credit").
 - **Cross-stream reads happen in Stream B files:** venue/scene pages show "coming up" by calling Stream A's public `/api/events/upcoming?venue_id=…` / `?scene=…` from `GuideAccess` (own HTTP method, own mock) — no import of Stream A client code, no payload coupling. Sub-fetch failure or an empty result renders as a quiet empty state, never an error (the knottyyoga isolation pattern) — so this bucket works even before EV1's endpoints exist.
 - **Venue-page identity:** URLs use `venue_profiles.slug` (`/guide/venues/:slug`). A resolver route `/guide/venues/by-id/:venueId` looks the slug up from the directory listing client-side and redirects — this is what lets Stream A's event pages link to venue pages later with zero payload change (EV2 OQ3's follow-up: after this lands, ping Levi; linking is a one-line edit on their side).
-- **Markdown:** `guide_pages.body_markdown` renders via ngx-markdown with `provideMarkdown()` **route-scoped on the guide routes** (knottyyoga's blog keeps `marked` out of the initial bundle this way). Content is trusted-editor-authored; default sanitization stays on.
+- **Markdown:** `guide_pages.body_markdown` renders via ngx-markdown with `provideMarkdown()` **route-scoped on the guide routes** (knottyyoga's blog keeps `marked` out of the initial bundle this way). Content is trusted-editor-authored; default sanitization stays on. Per [[Bucket GD2 — Directory data layer, server]] OQ5 (10/26): bodies may contain raw HTML (filtered by that sanitizer — no embeds at MVP), and they link to other guide pages with plain relative markdown links (`/guide/venues/<slug>`, …). Those render as ordinary `<a href>`s, so the rendered body carries the in-app-links directive (§2.6) to turn same-origin clicks into router navigations instead of full reloads.
 
 # Layered work items
 
@@ -57,6 +57,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 - [ ] 2.3 `scene-chips/` — chips from scene-tag slugs → `routerLink /guide/scenes/:slug`. **Spec.**
 - [ ] 2.4 `adult-gate/` — the interstitial wrapper per the pin-down (content-projected body renders only past the gate). **Spec:** blocked without the flag; accept sets sessionStorage + renders; decline navigates away.
 - [ ] 2.5 `entity-card/` (venue/org/place/service card: name, chips, neighborhood, one-line description, freshness stamp inline, closed badge) — the list-item workhorse. **Spec.**
+- [ ] 2.6 `ui/src/app/shared/directives/in-app-links/` — attribute directive for a rendered-markdown host: listens for clicks on descendant `<a>`s and, for a same-origin href with a plain left-click (no modifier keys, no `target`, no `download`), calls `preventDefault()` + `router.navigateByUrl(path + query + hash)`. External, `mailto:`, `tel:`, and modified clicks fall through to the browser. **Spec:** relative link → router navigation, no reload; external link untouched; ctrl/meta-click untouched.
 
 ### 3. Guide pages (`ui/src/app/pages/guide/`, lazy `guide.routes.ts`; `app.routes.ts` one-liner `{ path: 'guide', loadChildren: … }`; header gains "Guide" — one-line shared-file edits)
 
@@ -68,7 +69,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 - [ ] 3.6 `PlacePage` (`/guide/places/:slug`) — place fields + related article links; adult places gated. `ServicesPage` (`/guide/services`) — kind-grouped list of link-out service cards (services have no detail pages at MVP). **Specs:** adult gating; kind grouping.
 - [ ] 3.7 `NeighborhoodsPage` (`/guide/neighborhoods`) — index grouped by GD1 §3's regions (Eastside first-class); `NeighborhoodPage` (`/guide/neighborhoods/:slug`) — rundown article (slug convention) + venues/orgs/places here. **Specs.**
 - [ ] 3.8 `GraveyardPage` (`/guide/graveyard`) — the closure graveyard: closed venues + orgs with closure notes and dates, framed as history (voice per GD1 §6). **Spec.**
-- [ ] 3.9 `GuideArticlePage` (`/guide/pages/:slug`) — title, markdown body, related-listing links (by shared scene tags), freshness footer; `adult` pages gated; 404 state for unknown/unpublished slugs. `SectionIndexPage` (`/guide/sections/:section`) — published pages of that section (title + verified stamp list); `adult` section mounts the gate. **Specs:** markdown renders; draft slug → notFound; adult article gated.
+- [ ] 3.9 `GuideArticlePage` (`/guide/pages/:slug`) — title, markdown body (with the §2.6 in-app-links directive on the rendered body), related-listing links (by shared scene tags), freshness footer; `adult` pages gated; 404 state for unknown/unpublished slugs. The scene-intro and neighborhood-rundown bodies (§3.3, §3.7) render through the same markdown + directive pairing. `SectionIndexPage` (`/guide/sections/:section`) — published pages of that section (title + verified stamp list); `adult` section mounts the gate. **Specs:** markdown renders; an in-body guide link navigates in-app; draft slug → notFound; adult article gated.
 
 ### 4. Gates
 
@@ -86,3 +87,8 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 4. **noindex on adult pages?** Site-wide robots/meta policy is RT4's; nothing here blocks on it. *Rec: defer to RT4; leave a code comment at the AdultGate.*
 5. **Tiny local date formatter** in `freshness-footer` (Month Year only) instead of importing Stream A's `events-date.utils`. *Rec: as pinned — 5 lines of `Intl.DateTimeFormat` beats a cross-stream import; if the streams later want one shared date module, merge it as a deliberate post-M2 cleanup.*
 6. **Empty-state copy** ("Nothing here yet — this guide section is being written") appears wherever content hasn't landed, so GD3 can merge before GD4b/Pool content exists. *Rec: as pinned; the mock dataset keeps the demo experience full regardless.*
+
+# Change Log
+
+- **10/26/2026 (v0.2)** — Folded in [[Bucket GD2 — Directory data layer, server]] OQ5 (decided 10/26): article bodies are markdown with sanitizer-filtered HTML, and they link with plain relative links. The Markdown pin is extended, a new §2.6 `in-app-links` directive turns same-origin clicks into router navigations, and §3.9 applies it (also to the scene-intro and neighborhood-rundown bodies) with an in-app-navigation spec.
+- **8/12/2026 (v0.1)** — Initial draft.

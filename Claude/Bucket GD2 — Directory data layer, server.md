@@ -4,14 +4,14 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/26/2026
-Version: 0.2
+Version: 0.3
 tags:
 ---
 
 # Bucket GD2 — Directory data layer, server
 
 **Track:** GD — Guide & content · **Size:** M · **Stream:** B · **Owner:** Mason
-**Needs:** GD1 (locked vocabularies + listing-type field matrix + freshness convention) **and EV1 Slice 1 merged** (the shared `categories`/`scene_tags`/`neighborhoods` tables and `venues` — this bucket FKs into them; Levi pings when it lands). **Feeds:** GD3 (guide UI), GD4b (registry seeding), GD8 (Freeze directory data), CM1/CM2 (flags + recommendations attach to these tables), EV5 (the verifier consumes the freshness columns generically).
+**Needs:** GD1 (locked vocabularies + listing-type field matrix + freshness convention) **and EV1 Slice 1 merged** (the shared `categories`/`scene_tags`/`neighborhoods` tables and `venues` — this bucket FKs into them; per OQ8, Mason builds EV1 first and GD2 starts once Slice 1 merges). **Feeds:** GD3 (guide UI), GD4b (registry seeding), GD8 (Freeze directory data), CM1/CM2 (flags + recommendations attach to these tables), EV5 (the verifier consumes the freshness columns generically).
 
 # Context
 
@@ -52,6 +52,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 - **Draft safety:** `guide_pages` (and all guide tables) are **NOT added to the public `allowed_tables`** — public reads go through the bespoke shaped endpoints only, so an unpublished draft can never leak through generic `get_table_rows`. (EV1 added only the four vocabulary tables + venues to the public list; that stands.)
 - **Preview:** a caller holding `manage_guide` gets unpublished pages from the page endpoint (the knottyyoga author-preview pattern); anonymous gets 404.
 - **Page-slug conventions** (so GD3 and the Pool can rely on them): a scene's intro editorial = `guide_pages` row with `section='scenes'` and `slug == the scene tag's slug`; a neighborhood's rundown = `section='new-to-seattle'`, `slug == the neighborhood's slug`. Everything else is free-form.
+- **Page body format (OQ5):** `body_markdown` is markdown. Raw HTML inside it is allowed and gets filtered client-side by Angular's sanitizer — layout tags and `class` survive; scripts, iframes, inline `style`, and event handlers are stripped (no embeds at MVP). Links to other guide pages are plain relative markdown links into GD3's routes (`/guide/venues/<slug>`, `/guide/orgs/<slug>`, …), keyed by slug; no custom shortcode syntax. The server stores and serves the body verbatim — no server-side rendering or sanitizing.
 - **Verification act:** setting `last_verified_at_us` is an explicit human action (GD1 §5) — via the admin editor or the `verify-listing` test_helper command; routine edits don't bump it.
 
 # Layered work items
@@ -139,6 +140,8 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 		- **Linking to other site pages: yes, with plain markdown links — no extension needed.** `[The Cuff](/guide/venues/the-cuff)` renders as an ordinary `<a href>` into GD3's routes (`/guide/venues/:slug`, `/guide/orgs/:slug`, `/guide/places/:slug`, `/guide/scenes/:slug`, `/guide/neighborhoods/:slug`, `/guide/pages/:slug`). Slugs are the stable identity (OQ6), so links survive name changes. Two caveats, both GD3's: such a link does a full page reload unless the article component hands same-origin clicks to the Angular router (a small directive), and nothing flags a link to a slug that doesn't exist.
 		- **Extensibility beyond that:** `marked` has an extension API (custom tokenizer + renderer), exposed through `provideMarkdown({ markedExtensions: [...] })` — e.g. a shortcode that renders a link titled with the venue's *current* name, or a whitelisted embed. *Rec: not at MVP* — plain links cover the need with zero custom syntax and render identically everywhere. If we ever add a shortcode, avoid `[[…]]`: it collides with Obsidian wiki-links if Pool content is drafted in the vault.
 		- **GD2 impact: none either way** — the server stores and serves `body_markdown` verbatim; rendering and sanitizing are GD3's. *Rec: markdown as pinned + plain relative links; on "Agreed" the same-origin-link directive gets added to GD3 §3.9.* "Agreed" locks it.
+		- Mason- Agreed.
+		- Claude- Decided (10/26) — markdown with sanitizer-filtered HTML and plain relative links, no shortcodes; pinned in Behavior pins ("Page body format"). The same-origin-link directive is now [[Bucket GD3 — Guide public UI]] §2.6, applied in §3.9.
 6. **CM1/CM2 forward-compatibility:** nothing extra now — flags/recommendations will FK to these tables later; the only shape decision they need from us is stable ids + slugs, which we have. *Rec: confirm nothing speculative gets added (no empty `recommendation_count` columns).*
 	- Mason- I'll go with your recommendation.
 	- Claude- Decided (10/26) — nothing speculative for CM1/CM2; stable ids + slugs are the whole forward contract. No body change.
@@ -146,8 +149,11 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- Mason- I'll go with your recommendation.
 	- Claude- Decided (10/26) — one nullable `neighborhood_id` on `organizations` (null = countywide/varies); no body change.
 8. **Start the EV1-independent `guide_pages` slice before EV1 Slice 1 merges?** *(Added 10/26.)* As of 10/26, EV1 Slice 1 hasn't merged (EV1 §1.7 is open; communityfinder `master` has no `venues` or vocabulary tables). Everything in this bucket FKs into those tables **except `guide_pages`**, which can go end-to-end now: schema (1.5), its `make_app_tables` + `create_database` share (1.8/1.9 — incl. the `manage_guide` permission, `guide_pages` admin metadata, and its photo row), helper + publish predicate (2.4), `GuideHelper`'s page methods (3.1's publish/preview bullet), `get_guide_page.cpp` (4.9), and `publish-page` (5.1). What waits for Slice 1: `venue_profiles`, `organizations`/`places`/`service_listings` (their `neighborhood_id` FKs), all four junctions (incl. `guide_page_scene_tag_assignments`), `guide_links`, and the `venues` → `manage_guide` permission row. *Rec: yes, unless Slice 1 is landing within days — it's a self-contained vertical slice (schema → endpoint, with the publish/preview matrix) and its shared-file edits sit in the Stream B section, so merging with Slice 1 is mechanical. Don't start orgs/services early by dropping their `neighborhood_id` FK — that buys little and adds a redo.*
+	- Mason- I can switch over to EV1 first.
+	- Claude- Decided (10/26) — no early slice. Mason builds EV1 first; GD2 starts in plan order (§1 onward) once EV1 Slice 1 merges. The Needs line is updated; no work-item changes.
 
 # Change Log
 
+- **10/26/2026 (v0.3)** — **All eight open questions are now closed.** OQ5 decided — markdown with sanitizer-filtered HTML and plain relative links, no shortcodes; new "Page body format" behavior pin (server impact: none); the same-origin-link directive went to [[Bucket GD3 — Guide public UI]] §2.6/§3.9 · OQ8 decided — no early `guide_pages` slice; Mason builds EV1 first, and GD2 starts in plan order once EV1 Slice 1 merges (Needs line updated).
 - **10/26/2026 (v0.2)** — Mason's OQ answers folded in: **OQ1–4, OQ6, OQ7 decided** as recommended — the body already matched every outcome, so no work-item changes · **OQ5 answered** (embedded HTML passes through Angular's sanitizer allow-list; site links are plain relative markdown links into GD3's routes; custom `marked` extensions are possible but not recommended at MVP) — awaiting "Agreed" · **OQ8 added** — start the EV1-independent `guide_pages` slice now? · Fixed a rendering break: `price_band`'s `$`–`$$$` was being parsed by Obsidian as LaTeX math; now inline code.
 - **8/12/2026 (v0.1)** — Initial draft.

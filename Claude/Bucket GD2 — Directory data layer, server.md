@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
-Last Updated: 8/12/2026
-Version: 0.1
+Last Updated: 10/26/2026
+Version: 0.2
 tags:
 ---
 
@@ -122,15 +122,32 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 1. **Page-slug conventions** (scene intro = tag slug under `section='scenes'`; neighborhood rundown = neighborhood slug under `'new-to-seattle'`). *Rec: as pinned — zero extra columns, and the Pool can pre-write pages that snap into place.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (10/26) — the slug conventions stand as pinned (Behavior pins); no body change.
 2. **`guide_links` as one table with the `num_nonnulls` CHECK** vs. four per-parent link tables. *Rec: one table — real FKs, one admin surface, one helper.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (10/26) — one `guide_links` table with the `num_nonnulls` CHECK, as pinned (schema, §1.7, §2.6); no body change.
 3. **`admin_table_permissions`: map `venues` → `manage_guide` too**, so non-admin guide curators can edit venue facts (address, status, verification) through the generic editor. Both `manage_events` and `manage_guide` then reach `venues` — the table supports multiple grants. *Rec: yes; verifying venue facts is exactly the guide curator's job.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (10/26) — `venues` maps to both `manage_events` and `manage_guide` (§1.9); no body change.
 4. **Guide tables stay out of public `allowed_tables`** (bespoke endpoints only — draft safety + shaped payloads). *Rec: as pinned.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (10/26) — guide tables stay out of public `allowed_tables` (Behavior pins, §1.9); no body change.
 5. **`body_markdown` format:** markdown (rendered client-side with the knottyyoga blog's ngx-markdown pattern), not HTML. *Rec: markdown — safer default, nicer diffs, editors are us.*
 	- Mason- Does the markdown engine support embedded HTML? Is there any extensibility to reference other pages on the site?
+	- Claude- Answered (10/26). Both answers come from the knottyyoga wiring GD3 copies: ngx-markdown 21 over `marked`, plain `provideMarkdown()`.
+		- **Embedded HTML: yes, filtered.** `marked` passes raw HTML through untouched; ngx-markdown then runs the output through Angular's `DomSanitizer` (`SecurityContext.HTML` — the default, and [[Bucket GD3 — Guide public UI]] already pins "default sanitization stays on"). **Survives:** structural and inline tags — `div`, `span`, `section`, `details`/`summary`, `figure`/`figcaption`, the `table` family, `img`, `video`/`audio`, `mark`, `small`, `sub`/`sup`, … — with `class`, `title`, `target`, and `aria-*` attributes. **Stripped:** `<script>`, `<style>`, `<iframe>` (so no embedded maps or YouTube), forms/inputs/buttons, `style="…"` and `id` attributes, `on*` handlers, `javascript:` URLs. Upshot: editors can reach for HTML where markdown has no syntax (a collapsible `<details>`, a captioned `<figure>`, a `class` hook GD3 styles); styling comes from classes, never inline styles. If we later want embeds, that's a whitelisted-embed extension in GD3, not turning the sanitizer off.
+		- **Linking to other site pages: yes, with plain markdown links — no extension needed.** `[The Cuff](/guide/venues/the-cuff)` renders as an ordinary `<a href>` into GD3's routes (`/guide/venues/:slug`, `/guide/orgs/:slug`, `/guide/places/:slug`, `/guide/scenes/:slug`, `/guide/neighborhoods/:slug`, `/guide/pages/:slug`). Slugs are the stable identity (OQ6), so links survive name changes. Two caveats, both GD3's: such a link does a full page reload unless the article component hands same-origin clicks to the Angular router (a small directive), and nothing flags a link to a slug that doesn't exist.
+		- **Extensibility beyond that:** `marked` has an extension API (custom tokenizer + renderer), exposed through `provideMarkdown({ markedExtensions: [...] })` — e.g. a shortcode that renders a link titled with the venue's *current* name, or a whitelisted embed. *Rec: not at MVP* — plain links cover the need with zero custom syntax and render identically everywhere. If we ever add a shortcode, avoid `[[…]]`: it collides with Obsidian wiki-links if Pool content is drafted in the vault.
+		- **GD2 impact: none either way** — the server stores and serves `body_markdown` verbatim; rendering and sanitizing are GD3's. *Rec: markdown as pinned + plain relative links; on "Agreed" the same-origin-link directive gets added to GD3 §3.9.* "Agreed" locks it.
 6. **CM1/CM2 forward-compatibility:** nothing extra now — flags/recommendations will FK to these tables later; the only shape decision they need from us is stable ids + slugs, which we have. *Rec: confirm nothing speculative gets added (no empty `recommendation_count` columns).*
 	- Mason- I'll go with your recommendation.
-7. **Org multi-neighborhood:** organizations get ONE nullable `neighborhood_id` (null = countywide/varies). Leagues that rotate venues stay null. *Rec: as pinned; a junction table for multi-neighborhood orgs is speculative until a real page needs it.
+	- Claude- Decided (10/26) — nothing speculative for CM1/CM2; stable ids + slugs are the whole forward contract. No body change.
+7. **Org multi-neighborhood:** organizations get ONE nullable `neighborhood_id` (null = countywide/varies). Leagues that rotate venues stay null. *Rec: as pinned; a junction table for multi-neighborhood orgs is speculative until a real page needs it.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (10/26) — one nullable `neighborhood_id` on `organizations` (null = countywide/varies); no body change.
+8. **Start the EV1-independent `guide_pages` slice before EV1 Slice 1 merges?** *(Added 10/26.)* As of 10/26, EV1 Slice 1 hasn't merged (EV1 §1.7 is open; communityfinder `master` has no `venues` or vocabulary tables). Everything in this bucket FKs into those tables **except `guide_pages`**, which can go end-to-end now: schema (1.5), its `make_app_tables` + `create_database` share (1.8/1.9 — incl. the `manage_guide` permission, `guide_pages` admin metadata, and its photo row), helper + publish predicate (2.4), `GuideHelper`'s page methods (3.1's publish/preview bullet), `get_guide_page.cpp` (4.9), and `publish-page` (5.1). What waits for Slice 1: `venue_profiles`, `organizations`/`places`/`service_listings` (their `neighborhood_id` FKs), all four junctions (incl. `guide_page_scene_tag_assignments`), `guide_links`, and the `venues` → `manage_guide` permission row. *Rec: yes, unless Slice 1 is landing within days — it's a self-contained vertical slice (schema → endpoint, with the publish/preview matrix) and its shared-file edits sit in the Stream B section, so merging with Slice 1 is mechanical. Don't start orgs/services early by dropping their `neighborhood_id` FK — that buys little and adds a redo.*
+
+# Change Log
+
+- **10/26/2026 (v0.2)** — Mason's OQ answers folded in: **OQ1–4, OQ6, OQ7 decided** as recommended — the body already matched every outcome, so no work-item changes · **OQ5 answered** (embedded HTML passes through Angular's sanitizer allow-list; site links are plain relative markdown links into GD3's routes; custom `marked` extensions are possible but not recommended at MVP) — awaiting "Agreed" · **OQ8 added** — start the EV1-independent `guide_pages` slice now? · Fixed a rendering break: `price_band`'s `$`–`$$$` was being parsed by Obsidian as LaTeX math; now inline code.
+- **8/12/2026 (v0.1)** — Initial draft.

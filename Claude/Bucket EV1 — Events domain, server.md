@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/27/2026
-Version: 0.5.1
+Version: 0.5.2
 tags:
 ---
 
@@ -61,7 +61,7 @@ The events engine's server half: schema → helpers → domain logic → endpoin
 
 - **`event_sources`** — `name`, `url`, `kind` (CHECK `IN ('ics_feed','venue_site','ticketing_org','aggregator','editorial_monitor','submission','social')` — merges D4's list with brainstorm C.2's intake types), `venue_id` (nullable FK), `enabled` (default true), `scan_hints` (text, for EV5), `volatility_tier` (CHECK in GD1 §5 tiers — the per-source scan cadence EV5 consumes), `last_scanned_at_us` (nullable), `notes`.
 - **`series`** — `title`, `slug` (unique), `description`, `cadence_text` ("2nd Saturdays"), `url`, `venue_id` (nullable FK), `status` (GD1 enum, default `'open'`), `last_verified_at_us` (nullable), timestamps.
-- **`events`** — `title`, `description`, `starts_at_us` (NOT NULL), `ends_at_us` (nullable), `venue_id` (nullable FK) + `location_text` (for venue-less events), `url`, `cost_text`, `source_id` (nullable FK → event_sources), `series_id` (nullable FK → series), `external_key`, `origin` (CHECK `IN ('scanned','manual','user_submitted')`), `status` (CHECK `IN ('pending','approved','rejected','archived')`, default `'pending'`), `created_by_person_id` (nullable FK → people), `reviewed_by_person_id` (nullable FK → people), `reviewed_us` (nullable), `review_notes`, timestamps.
+- **`events`** — `title`, `description`, `starts_at_us` (NOT NULL), `ends_at_us` (nullable), `venue_id` (nullable FK) + `location_text` (for venue-less events), `url`, `cost_text`, `source_id` (nullable FK → event_sources), `series_id` (nullable FK → series), `external_key`, `origin` (CHECK `IN ('scanned','manual','user_submitted')`), `status` (CHECK `IN ('pending','approved','rejected','archived')`, default `'pending'`), `created_by_person_id` (nullable person id, **not an FK** — decided OQ8 (e)), `reviewed_by_person_id` (nullable person id, not an FK), `reviewed_us` (nullable), `review_notes`, timestamps.
   - **`AddNamedUniqueConstraint` on `(source_id, external_key)`** — the ingestion idempotency anchor (Postgres allows repeated NULL `source_id`, so manual events don't collide).
   - `CreateEventsIndexes`: `(status, starts_at_us)` (the upcoming query), `(series_id)`, `(venue_id)` — raw `CREATE INDEX IF NOT EXISTS` DDL with a comment naming the query each serves, knottyyoga-style.
 - **`event_category_assignments`** — `event_id` FK, `category_id` FK, `AddUniqueConstraint(event_id, category_id)`.
@@ -78,6 +78,7 @@ The events engine's server half: schema → helpers → domain logic → endpoin
 - `CreateEventsIndexes` builds `events_status_starts_at_idx`, `events_series_idx` and `events_venue_idx`.
 - The assignment tables carry `created_us` only (they are never updated), and use the plain unnamed `UNIQUE` pair.
 - `kPermissionManageEvents` sits in `db_schema/events.h`, beside the table it gates (knottyyoga's `author_blog` pattern).
+- `events.created_by_person_id` and `reviewed_by_person_id` are plain nullable BIGINTs, not FKs, so deleting an account never deletes events (OQ8 (e), option 2). Re-linking them waits on honuware ledger item **H11** (`ON DELETE SET NULL`).
 
 No image columns anywhere — photos ride the framework pipeline (`table_item_photos`), enabled in §1.6/§2.6 below.
 
@@ -109,7 +110,7 @@ No image columns anywhere — photos ride the framework pipeline (`table_item_ph
 
 ### 2. Slice 2 — db_schema: events core
 
-*(Slice 2 built 10/27 — 2.1–2.6 green on both platforms: Windows 1940/1940, Linux docker gate 1940/1940 (floor 1700). Live seed check passed 10/27 (see §7.3's note). Remaining: OQ8 (decide (e) before Slice 3 writes to the person columns) and the commit.)*
+*(Slice 2 built 10/27 — 2.1–2.6 green on both platforms: Windows 1940/1940, Linux docker gate 1940/1940 (floor 1700). Live seed check passed 10/27 (see §7.3's note). OQ8 decided and (e) carried out (the person columns are plain ids, not FKs). Remaining: the commit.)*
 
 - [x] 2.1 `src/db_schema/event_sources.{h,cpp}`.
 - [x] 2.2 `src/db_schema/series.{h,cpp}`.
@@ -175,7 +176,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 - [ ] 7.2 **Raise the test-count floor** in `build_and_test.sh` at bucket exit to (new actual − ~10) — the floor is the Release dead-strip alarm; leaving it at the old value defeats it.
 - [x] 7.3 **Live seed gate (Mason):** `--recreate_database` (destructive-gated) exits 0; psql spot-check: 12 categories / 11 scene tags / 25 neighborhoods, `manage_events` granted to Administrator, events tables in the admin metadata + `allowed_tables` as specced. (The suite never runs the seed — this live pass is the only seed gate.)
 	- *Slice 1 portion passed 10/27* (Claude ran it at Mason's request with the Windows x64-Debug `communityfinder_database_helper.exe`, env from `launch_defaults.local.json`): exit 0; psql shows 12 categories, 11 scene tags (3 `link_out`: `qtpoc`, `sapphic`, `trans`), 25 neighborhoods across all 5 regions, 0 venues. All three CHECK constraints are present, as is the `venues.neighborhood_id` FK. All four tables are in `allowed_tables`, `admin_top_level_tables`, friendly names and display templates. `mail_app_password` is seeded. The `manage_events` and events-table items wait for Slice 2, so this box stays open until bucket exit.
-	- *Slice 2 portion passed 10/27* (same exe and env, re-run on the Slice 2 working tree): exit 0. The seven new tables are present and empty. All the CHECK constraints (source kind, both volatility tiers, series status, event origin and status) and UNIQUE constraints (series slug, `events_source_id_external_key_key`, the four assignment pairs) are present, along with the three `events` indexes. Every FK is `ON DELETE CASCADE`, including the two person FKs (OQ8 (e)). `manage_events` (not pricing-eligible) is granted to `admin`, and `admin_table_permissions` maps it to all 11 events-domain tables. All 11 are in `admin_top_level_tables` with friendly names and display templates, and the 4 assignment tables are also in `admin_nested_tables`. `photo_support_tables` = events, people, venues. `allowed_tables` = categories, neighborhoods, permission_implications, scene_tags, venues, so none of the event pipeline is public. Column data info has starts/ends as `date`, and the reviewer, creator and timestamp columns are read-only. A rolled-back insert test accepted two hand-entered events (pending, manual, NULL key). It rejected status `published`, source kind `rss`, and a second insert of the same feed item. The new source defaulted to `weekly`. **Everything §7.3 specifies now passes, so the box is checked.** Re-run it if a later slice changes the seed.
+	- *Slice 2 portion passed 10/27* (same exe and env, re-run on the Slice 2 working tree): exit 0. The seven new tables are present and empty. All the CHECK constraints (source kind, both volatility tiers, series status, event origin and status) and UNIQUE constraints (series slug, `events_source_id_external_key_key`, the four assignment pairs) are present, along with the three `events` indexes. Every FK is `ON DELETE CASCADE`, including the two person FKs (OQ8 (e)). *(Those two were dropped after this check, per OQ8. That change is DDL only and doesn't touch the seed. The schema test pins it, and the next `--recreate_database` will show it.)* `manage_events` (not pricing-eligible) is granted to `admin`, and `admin_table_permissions` maps it to all 11 events-domain tables. All 11 are in `admin_top_level_tables` with friendly names and display templates, and the 4 assignment tables are also in `admin_nested_tables`. `photo_support_tables` = events, people, venues. `allowed_tables` = categories, neighborhoods, permission_implications, scene_tags, venues, so none of the event pipeline is public. Column data info has starts/ends as `date`, and the reviewer, creator and timestamp columns are read-only. A rolled-back insert test accepted two hand-entered events (pending, manual, NULL key). It rejected status `published`, source kind `rss`, and a second insert of the same feed item. The new source defaulted to `weekly`. **Everything §7.3 specifies now passes, so the box is checked.** Re-run it if a later slice changes the seed.
 - [ ] 7.4 **Manual loop (Mason or Levi, Windows or Linux):** enter a venue + event via the admin CRUD editor (`/admin/tables`; if the generic date control fights you on times-of-day, use the `create-event` test_helper command — the bespoke event editor arrives in EV2 per OQ2) → `POST /api/admin/review_event` approve (or edit status via CRUD) → `curl /api/events/upcoming` shows it; re-run `ingest-demo` → idempotent.
 
 # Open Questions
@@ -230,6 +231,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 		*Rec: (2) now.* It's a two-line schema change, and there is no real data yet. Record (3) as a honuware ledger item in case the names are missed.
 		- Mason- Agreed. All this sounds good to me.
+		- Claude- **Decided (10/27): (a)–(d) locked; (e) option (2) carried out.** `events.created_by_person_id` and `reviewed_by_person_id` are now plain nullable BIGINTs with no link to `people`. Deleting an account leaves its events alone, and the admin editor shows the person's id. `EventsCarryTheReviewWorkflowNotTheFreshnessColumns` now asserts that neither column is a foreign key. Option (3) is recorded as honuware ledger item **H11** in [[Setting up the project]]. When it lands, the two links can come back as `SET NULL`. Windows 1940/1940 and Linux 1940/1940 after the change.
 
 # Change Log
 

@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/27/2026
-Version: 0.5
+Version: 0.5.1
 tags:
 ---
 
@@ -109,7 +109,7 @@ No image columns anywhere — photos ride the framework pipeline (`table_item_ph
 
 ### 2. Slice 2 — db_schema: events core
 
-*(Slice 2 built 10/27 — 2.1–2.6 green on both platforms: Windows 1940/1940, Linux docker gate 1940/1940 (floor 1700). Remaining: OQ8 (decide (e) before Slice 3 writes to the person columns), the live seed check of the Slice 2 rows (§7.3), and the commit.)*
+*(Slice 2 built 10/27 — 2.1–2.6 green on both platforms: Windows 1940/1940, Linux docker gate 1940/1940 (floor 1700). Live seed check passed 10/27 (see §7.3's note). Remaining: OQ8 (decide (e) before Slice 3 writes to the person columns) and the commit.)*
 
 - [x] 2.1 `src/db_schema/event_sources.{h,cpp}`.
 - [x] 2.2 `src/db_schema/series.{h,cpp}`.
@@ -173,8 +173,9 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 - [ ] 7.1 **Docker suite green per slice** (`server/docker/build_and_test.sh`), Linux, against the pinned honuware SHA (no co-dev override expected — this bucket is CF-only).
 - [ ] 7.2 **Raise the test-count floor** in `build_and_test.sh` at bucket exit to (new actual − ~10) — the floor is the Release dead-strip alarm; leaving it at the old value defeats it.
-- [ ] 7.3 **Live seed gate (Mason):** `--recreate_database` (destructive-gated) exits 0; psql spot-check: 12 categories / 11 scene tags / 25 neighborhoods, `manage_events` granted to Administrator, events tables in the admin metadata + `allowed_tables` as specced. (The suite never runs the seed — this live pass is the only seed gate.)
+- [x] 7.3 **Live seed gate (Mason):** `--recreate_database` (destructive-gated) exits 0; psql spot-check: 12 categories / 11 scene tags / 25 neighborhoods, `manage_events` granted to Administrator, events tables in the admin metadata + `allowed_tables` as specced. (The suite never runs the seed — this live pass is the only seed gate.)
 	- *Slice 1 portion passed 10/27* (Claude ran it at Mason's request with the Windows x64-Debug `communityfinder_database_helper.exe`, env from `launch_defaults.local.json`): exit 0; psql shows 12 categories, 11 scene tags (3 `link_out`: `qtpoc`, `sapphic`, `trans`), 25 neighborhoods across all 5 regions, 0 venues. All three CHECK constraints are present, as is the `venues.neighborhood_id` FK. All four tables are in `allowed_tables`, `admin_top_level_tables`, friendly names and display templates. `mail_app_password` is seeded. The `manage_events` and events-table items wait for Slice 2, so this box stays open until bucket exit.
+	- *Slice 2 portion passed 10/27* (same exe and env, re-run on the Slice 2 working tree): exit 0. The seven new tables are present and empty. All the CHECK constraints (source kind, both volatility tiers, series status, event origin and status) and UNIQUE constraints (series slug, `events_source_id_external_key_key`, the four assignment pairs) are present, along with the three `events` indexes. Every FK is `ON DELETE CASCADE`, including the two person FKs (OQ8 (e)). `manage_events` (not pricing-eligible) is granted to `admin`, and `admin_table_permissions` maps it to all 11 events-domain tables. All 11 are in `admin_top_level_tables` with friendly names and display templates, and the 4 assignment tables are also in `admin_nested_tables`. `photo_support_tables` = events, people, venues. `allowed_tables` = categories, neighborhoods, permission_implications, scene_tags, venues, so none of the event pipeline is public. Column data info has starts/ends as `date`, and the reviewer, creator and timestamp columns are read-only. A rolled-back insert test accepted two hand-entered events (pending, manual, NULL key). It rejected status `published`, source kind `rss`, and a second insert of the same feed item. The new source defaulted to `weekly`. **Everything §7.3 specifies now passes, so the box is checked.** Re-run it if a later slice changes the seed.
 - [ ] 7.4 **Manual loop (Mason or Levi, Windows or Linux):** enter a venue + event via the admin CRUD editor (`/admin/tables`; if the generic date control fights you on times-of-day, use the `create-event` test_helper command — the bespoke event editor arrives in EV2 per OQ2) → `POST /api/admin/review_event` approve (or edit status via CRUD) → `curl /api/events/upcoming` shows it; re-run `ingest-demo` → idempotent.
 
 # Open Questions
@@ -231,6 +232,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 # Change Log
 
+- **10/27/2026 (v0.5.1)** — The §7.3 live seed check passed for Slice 2 on a fresh `--recreate_database` of the dev database. It covered the new tables, constraints and indexes, the `manage_events` grant and table mapping, the admin, nested and photo rows, and nothing from the event pipeline in `allowed_tables`. A rolled-back insert test also confirmed the defaults and that the constraints reject bad rows. Note added under §7.3, and **7.3 checked**. Remaining for Slice 2: OQ8 and the commit.
 - **10/27/2026 (v0.5)** — **Slice 1 complete** (1.7 checked: merged as `43b8437`). **Slice 2 built (2.1–2.6)**, green on Windows (1940/1940) and the Linux Docker gate (1940/1940).
 	- New: `event_sources`, `series`, `events` and the four assignment tables. `manage_events` (granted to Administrator, mapped to all eleven events-domain tables), the nested-table rows and photo support for venues and events, all in `create_app_tables.cpp`. `create_database.cpp`'s empty permission stub was removed.
 	- Tests: five schema tests, four seed tests and one HTTP test (signed-out reads of the event pipeline are refused). The seed tests now run the framework seed first.

@@ -229,6 +229,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 		- **(3) Teach honuware an `ON DELETE SET NULL` link for record-keeping columns.** This is the right fix long term, but it's a cross-repo change with its own re-pin.
 
 		*Rec: (2) now.* It's a two-line schema change, and there is no real data yet. Record (3) as a honuware ledger item in case the names are missed.
+		- Mason- Agreed. All this sounds good to me.
 
 # Change Log
 

@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 10/26/2026
-Version: 0.4
+Last Updated: 10/27/2026
+Version: 0.4.1
 tags:
 ---
 
@@ -86,7 +86,7 @@ No image columns anywhere — photos ride the framework pipeline (`table_item_ph
 
 ### 1. Slice 1 — db_schema: shared vocabulary + venues
 
-*(Slice 1 built 10/26 — 1.1–1.6 green on both platforms: Windows 1930/1930, Linux docker gate 1930/1930, floor 1700 untouched (raised at bucket exit per §7.2). Remaining: the live seed gate (§7.3, Mason) and the merge (1.7).)*
+*(Slice 1 built 10/26 — 1.1–1.6 green on both platforms: Windows 1930/1930, Linux docker gate 1930/1930, floor 1700 untouched (raised at bucket exit per §7.2). Live seed check passed 10/27 (see §7.3's note). Remaining: the merge (1.7).)*
 
 - [x] 1.1 `src/db_schema/categories.{h,cpp}` — constants + `MakeCategoriesTable(DatabaseInfo)` per the schema pin-down. Model: knottyyoga `src/db_schema/class_schedules.{h,cpp}`.
 - [x] 1.2 `src/db_schema/scene_tags.{h,cpp}` — incl. the `coverage` CHECK.
@@ -146,6 +146,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 - [ ] 7.1 **Docker suite green per slice** (`server/docker/build_and_test.sh`), Linux, against the pinned honuware SHA (no co-dev override expected — this bucket is CF-only).
 - [ ] 7.2 **Raise the test-count floor** in `build_and_test.sh` at bucket exit to (new actual − ~10) — the floor is the Release dead-strip alarm; leaving it at the old value defeats it.
 - [ ] 7.3 **Live seed gate (Mason):** `--recreate_database` (destructive-gated) exits 0; psql spot-check: 12 categories / 11 scene tags / 25 neighborhoods, `manage_events` granted to Administrator, events tables in the admin metadata + `allowed_tables` as specced. (The suite never runs the seed — this live pass is the only seed gate.)
+	- *Slice 1 portion passed 10/27* (Claude ran it at Mason's request with the Windows x64-Debug `communityfinder_database_helper.exe`, env from `launch_defaults.local.json`): exit 0; psql shows 12 categories, 11 scene tags (3 `link_out`: `qtpoc`, `sapphic`, `trans`), 25 neighborhoods across all 5 regions, 0 venues. All three CHECK constraints are present, as is the `venues.neighborhood_id` FK. All four tables are in `allowed_tables`, `admin_top_level_tables`, friendly names and display templates. `mail_app_password` is seeded. The `manage_events` and events-table items wait for Slice 2, so this box stays open until bucket exit.
 - [ ] 7.4 **Manual loop (Mason or Levi, Windows or Linux):** enter a venue + event via the admin CRUD editor (`/admin/tables`; if the generic date control fights you on times-of-day, use the `create-event` test_helper command — the bespoke event editor arrives in EV2 per OQ2) → `POST /api/admin/review_event` approve (or edit status via CRUD) → `curl /api/events/upcoming` shows it; re-run `ingest-demo` → idempotent.
 
 # Open Questions
@@ -190,6 +191,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 # Change Log
 
+- **10/27/2026 (v0.4.1)** — The §7.3 live seed check passed for the Slice 1 portion, on a live `--recreate_database` of the `communityfinder` dev database: 12 categories, 11 scene tags, 25 neighborhoods, constraints and registrations present. A note was added under §7.3, and the box stays open for Slice 2's items. Remaining for Slice 1: the merge (1.7).
 - **10/26/2026 (v0.4)** — **Slice 1 built (1.1–1.6)**, green on Windows (1930/1930) and the Linux docker gate (1930/1930). New: `categories` / `scene_tags` / `neighborhoods` / `venues` schema + the shared `db_schema/freshness.h`; the app's DDL list + seed in `business_logic/create_app_tables.{h,cpp}` (composed by `create_database.cpp`); tests in `make_database_info_test.cpp` (rewritten — the two empty-app-stream tests retired as planned), `create_app_tables_test.cpp`, and `crud_test.cpp` (anonymous vocabulary reads). **OQ7 added** — four as-built calls awaiting "Agreed": `venues.volatility_tier`, `latitude`/`longitude`, 25 neighborhoods (GD1 verbatim; the "24" was a miscount), and the seed's move into `communityfinder_core`. §2.6 annotated (Slice 2's permission + photo seed goes in `PopulateAppTables`); §7.3's count corrected to 25. Remaining for Slice 1: the live seed gate (§7.3) and the merge (1.7).
 - **8/14/2026 (v0.3)** — **All six open questions are now closed.** OQ1 decided — **Option A**: the vocabulary lists are read through the framework's generic public table-reads via `allowed_tables` (already how the doc was specced — no body change) · OQ2's scope check closed adopted-by-default — **H10 = date-only** (SUTP's ledger row updated); times-of-day stay in EV2 §3.7's bespoke editor · OQ5's semantics check closed adopted-by-default — instance override = **replace-when-present** · OQ3/OQ4/OQ6 closed in earlier rounds. No work-item changes this round — the body already matched every outcome. The spec is settled; the outline's "EV1 doc" box (= drafted **+ approved**) awaits Mason's sign-off.
 - **8/14/2026 (v0.2.1)** — Answer round 2: **OQ3 decided** — title changes are **minor** (silent auto-update on re-scan; the ingest behavior pin already classed title minor, so no body change — this locks it) · **OQ1 expanded** into an explicit Option A (generic public table-reads via `allowed_tables`, no new code) vs Option B (three dedicated list endpoints) with pros/cons — awaiting the pick · still pending from round 1: OQ2's H10 scope check (date-only vs also a date+time control) and OQ5's override-vs-merge semantics check.

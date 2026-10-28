@@ -387,6 +387,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(c) Approving through the helper records you as the reviewer.** `create-event --status=approved` and `ingest-demo --approve` go through the same approval step as the review endpoint, so the reviewer and time are stamped. That means someone must be logged in. The helper logs in as you when it starts; if it can't, these refuse rather than record a nobody. `create-event` also records you as the creator. *Rec: keep.*
 	- **(d) Two small additions the spec didn't list.** `create-venue` takes an optional `--neighborhood=<slug>`, and `list-upcoming` takes the same category, scene and neighborhood filters as the endpoint. Without these, the neighborhood filter and series inheritance couldn't be checked from the helper. *Rec: keep.*
 	- **(e) The commands are tested.** The test_helper is its own program, and no test has ever run any of its code. Phase 16 of the VS 2026 doc notes the same gap. So its command parser and the events commands now also build into the test suite, and each command runs against the test database (10 new tests). The REPL, dashboard and startup code stay out. Times print in UTC, not Seattle time, because the helper has no time-zone support. *Rec: keep both.*
+	- Mason- I'll go with your recommendations
 
 # Change Log
 

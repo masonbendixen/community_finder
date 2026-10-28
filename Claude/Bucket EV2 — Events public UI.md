@@ -233,14 +233,44 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 - [x] 3.6 `core/utils/event-json-ld.ts` — `buildEventJsonLd(event, canonicalUrl)` per the pin-down. **Spec:** snapshot a full event and a minimal one (no venue, no end time, not "Free" → no offers).
 	- *As built (10/28):* `buildEventJsonLd(event, canonicalUrl, imageUrl?)`, with three additions to the pin (OQ9 (g)). `event-json-ld.spec.ts` covers a full event, a minimal one, the "Free" rule, and no location.
 - [x] 3.7 `ManageEventsPage` (`/admin/events`, `pages/admin/manage-events.*` — **decided in EV1 OQ2:** event entry/editing gets a bespoke page instead of leaning on the generic CRUD editor, whose date control can't express times-of-day). A `manage_events`-gated page calling `HONUWARE_CRUD_ACCESS` + the review endpoint directly (the `ManageRolesPage`/`ManageUsersPage` precedent — no new server surface): pending-queue list (`getFilteredTableRows('events', …, [{status: 'pending'}])`) with approve/reject → `POST /api/admin/review_event`; create/edit form — title/description/url/cost/location, **date+time picker composing Pacific wall-clock input to `_us`** (reuse `events-date.utils`), venue picker via `getFkOptions`, series picker, category + scene-tag checkboxes writing the junction tables (leave them empty to inherit the series' tags, per EV1's inheritance pin). One-line shared-file edits: `admin.routes.ts` route + an `AdminDashboard` tile. *Note: `/admin/*` sits behind `AdminGuard` (admin role) — fine while every curator is an admin; revisit the guard when a non-admin `manage_events` curator role becomes real.* **Specs:** form composes correct `_us` from Pacific datetimes (incl. DST edges); approve calls the review endpoint and drops the row from the queue; junction writes on save; empty tag selection leaves no event-level assignments.
+	- *As built (10/28):*
+		- **Files:**
+			- `pages/admin/manage-events.*`.
+			- `manage-events-form.ts`, the form's rules, tested on their own.
+			- `core/events-admin-access/`, the review call, with an offline version, wired in `app.config.ts`.
+			- The `/admin/events` route and an **Events** tile on the dashboard.
+		- **Queue:** pending events by start time, each with a line like "Thu, Aug 13 · 8:00 PM · Driftwood Hall", and Approve, Reject (which asks for an optional note) and Edit (OQ9 (j)).
+		- **Form:**
+			- Find an event by title, start a new one, or arrive from the queue or an event page (`?edit=<id>`).
+			- Times are typed in Seattle time. An end time alone that's earlier than the start means the next morning.
+			- Venue and series pickers.
+			- Category and scene checkboxes. Left empty on a series event, the event keeps the series' tags.
+		- **Saving:** a new event is saved as pending, recording who entered it (OQ9 (j)). An edit sends only what changed. Tag changes add and delete only the rows for the boxes shown.
+		- **One known gap:** emptying the description, location, website or cost can't be saved yet. The form says so instead of failing (OQ9 (a)).
+		- **Offline:** the mock's table store now holds the events tables (`core/mock/events-crud-mock.ts`), and the demo admin has `manage_events` (OQ9 (k)).
+		- **Specs:**
+			- `manage-events-form.spec.ts`: Seattle time to instants in summer and winter, both 2026 clock-change weekends, next-morning and month-end endings, a multi-day event, the error messages, loading a row, the insert and edit rows, the blocked blanks, the tag changes.
+			- `manage-events.spec.ts`, against the offline store: the queue; approve; reject with and without a note; `?edit=` loading Seattle times and tags; a new event's row and tags; a series event with no tags of its own; an edit sending only the cost and swapping a tag; the blocked blank description; a missing start.
+			- `events-crud-mock.spec.ts`: the offline rows, with no tag rows for events that inherit their series'.
 - [ ] 3.8 **Cross-stream venue-link-up (per OQ3, mirrored in GD3 §3.4):** whichever of EV2/GD3 lands **second** wires the detail page's venue name to `/guide/venues/by-id/{venue_id}` — a one-line edit in `EventDetailPage`, called out in that landing PR's checklist so it can't be forgotten.
-- [ ] 3.9 `<app-upcoming-events-strip>` (`shared/components/upcoming-events-strip/` — **decided OQ4**): self-contained compact strip — the next ~5 upcoming events (own `CommunityAccess` fetch; quiet-empty on error or no events), title/time/venue rows, "See all events →" link to `/events`. **Mount it on the home page:** if RT1's restyle hasn't landed, edit `pages/home/` directly (an announced one-block addition — the OQ4-sanctioned exception to the shared-shell etiquette; ping John-Michael in the PR); if RT1 landed first, mount into the slot it provides (mirrored contract in the outline's RT1 blurb). **Specs:** renders rows from mock; empty and error states stay quiet; the home page hosts it.
-- [ ] 3.10 `core/utils/page-meta.ts` (**decided OQ5**): a small meta helper over Angular's `Meta`/`Title` — `setEventPageMeta(event, canonicalUrl)` sets title, description (trimmed from the event description), canonical, `og:title` / `og:description` / `og:url`, and `og:image` (absolute scaled-photo URL when the event has a photo), plus list/calendar/series-page variants. Applied by every §3 page (replacing the bare `document.title` calls in 3.2–3.5); tags overwritten on each navigation so nothing stale lingers. Built to be adopted site-wide by RT4 (mirrored contract in the outline's RT4 blurb). **Specs:** tag set for a full event vs a photo-less event; navigating between pages overwrites stale tags.
+	- *Not done here (10/28):* GD3 hasn't landed, so GD3 lands second and wires the link (GD3 §3.4). A comment marks the spot in `event-detail.html`.
+- [x] 3.9 `<app-upcoming-events-strip>` (`shared/components/upcoming-events-strip/` — **decided OQ4**): self-contained compact strip — the next ~5 upcoming events (own `CommunityAccess` fetch; quiet-empty on error or no events), title/time/venue rows, "See all events →" link to `/events`. **Mount it on the home page:** if RT1's restyle hasn't landed, edit `pages/home/` directly (an announced one-block addition — the OQ4-sanctioned exception to the shared-shell etiquette; ping John-Michael in the PR); if RT1 landed first, mount into the slot it provides (mirrored contract in the outline's RT1 blurb). **Specs:** renders rows from mock; empty and error states stay quiet; the home page hosts it.
+	- *As built (10/28):*
+		- The strip shows the next five events ("Fri, Aug 14 · 10:00 PM", the title, the place) and "See all events →". It renders nothing at all when there's nothing to show or the fetch fails.
+		- RT1 hasn't landed, so it's mounted on the current home page, below the welcome card. That's OQ4's exception: **Mason, ping John-Michael in the PR** (OQ9 (l)).
+		- **Specs:** `upcoming-events-strip.spec.ts` (five rows, empty, error) and `home.spec.ts` (the home page hosts it).
+- [x] 3.10 `core/utils/page-meta.ts` (**decided OQ5**): a small meta helper over Angular's `Meta`/`Title` — `setEventPageMeta(event, canonicalUrl)` sets title, description (trimmed from the event description), canonical, `og:title` / `og:description` / `og:url`, and `og:image` (absolute scaled-photo URL when the event has a photo), plus list/calendar/series-page variants. Applied by every §3 page (replacing the bare `document.title` calls in 3.2–3.5); tags overwritten on each navigation so nothing stale lingers. Built to be adopted site-wide by RT4 (mirrored contract in the outline's RT4 blurb). **Specs:** tag set for a full event vs a photo-less event; navigating between pages overwrites stale tags.
+	- *As built (10/28):*
+		- `PageMeta` (`core/utils/page-meta.ts`) has `set(...)` for any page and `setEventPage(event, photo?)` for an event. Every §3 page uses it.
+		- It sets the title ("Leather Night — Fri, Aug 14 · CommunityFinder"), the description, the canonical address, `og:title` / `description` / `url` / `type` / `site_name`, `og:image` with a large `twitter:card` when there's a photo, and the JSON-LD script.
+		- Every navigation first clears the last page's tags, so nothing stale carries over (OQ9 (g)).
+		- **Spec:** `page-meta.spec.ts` covers an event with and without a photo, a preview with no JSON-LD, one page's tags replacing another's, a navigation clearing them, a `</script>` title kept harmless, and description trimming.
 
 ### 4. Gates
 
 - [ ] 4.1 `ng build -c local` + `ng build -c development` clean; events area lazy-chunked (initial bundle unchanged).
-- [ ] 4.2 vitest green; record the new count (grows from 22). *(It was already 27 when §2 started, and 82 after §2.)*
+	- *After §3 (10/28):* all three builds succeed, and the events pages load as their own chunk. The initial bundle grew about 12 kB, for the home strip and the header link. The production build's warning that the initial bundle is over its 500 kB budget was already there before §3: 857 kB then, 870 kB now.
+- [ ] 4.2 vitest green; record the new count (grows from 22). *(It was already 27 when §2 started, 82 after §2, and 173 after §3.)*
 - [ ] 4.3 Docker suite green for the server slice; floor per EV1 §7.2 policy.
 - [ ] 4.4 **Manual browser loop = milestone M1 (Mason + Levi):** offline first (`ng serve`, mock): browse list/tonight/weekend/calendar/series/detail with zero backend. Then dev (`ng serve -c development` against :18081): admin-enter a venue + events via §3.7's editor (or raw admin CRUD) → approve in the editor's queue → they appear on list + calendar + detail **and in the home-page strip** → devtools confirms the meta/OG tags on a detail page → download the event ICS and subscribe to a category feed in a real calendar app (Google Calendar URL-subscribe or Apple Calendar; after §1.5, so the subscription shows its name) → JSON-LD validates in Google's Rich Results test (paste the rendered detail page HTML).
 
@@ -301,8 +331,53 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- **(d) The offline demo uses made-up venues.** The fake events `ng serve` shows are at invented places: The Lantern Room, Driftwood Hall, Columbia City Social Club and Eastside Commons. The neighborhoods and street names are plausible. Using real Seattle bars would put made-up events under real businesses' names in screenshots and demos. There's also a third demo series, an ended one, so §3.5's "Ended" marker has something to show; the plan said two. *Rec: keep.*
 	- **(e) Turned-off categories, scenes and neighborhoods are hidden.** A curator can turn an entry off in the admin editor (the `enabled` box) instead of deleting it. The server's public table read returns every row, so the client drops the turned-off ones and sorts the rest by their sort order. That matches what the server's own event filters already do. *Rec: keep.*
 	- **(f) Times show as "10:00 PM".** The event pages will show "10:00 PM" and "9:30 AM", not "10 PM". The fuller form lines up in lists and is what the formatter gives by default. Dropping ":00" is a one-line change if you'd rather. It's worth deciding before §3 builds the list and detail pages on it. *Rec: keep "10:00 PM".*
+9. **§3 (the events pages) as built — twelve calls** *(added 10/28)*. Each one is already in the code and tested. "Agreed" locks all twelve, or name the ones to change. Only (a) needs follow-up work, and that work is in honuware.
+	- **(a) The editor can't empty a text field yet. The fix belongs in honuware.**
+		- **What happens.** When an edit is saved, honuware's shared update turns any blank field into "no value" (`NULL`). An event's description, location, website and cost must always hold text, even if it's blank, so the database refuses the save. Adding or changing text works. Only clearing a field fails.
+		- **For now** the editor catches it before saving and says "Description can't be emptied yet…".
+		- **The fix** is a small honuware change: the update keeps a blank as blank for columns that can't be `NULL`.
+		- *Rec: make that change with the next batch of honuware work (knottyyoga's re-pin is waiting for a batch anyway), then drop the editor's check.*
+	- **(b) The list filters in the browser.** It fetches the next 42 days once, then applies Tonight, This weekend and the category, scene and neighborhood filters itself. A filter change is instant and needs no new request. This is the plan's fetch-strategy pin. *Rec: keep. Send the filters to the server only if the list ever gets too big to fetch at once.*
+	- **(c) How times read.**
+		- "9:00 PM – 2:00 AM": an end by 6 AM the next morning reads as the same night, with no date.
+		- A later end names its day: "10:00 AM – Sun, Aug 16, 6:00 PM".
+		- With no end it's just "9:00 PM".
+		- *Rec: keep.*
+	- **(d) The calendar starts at this month.** The server only serves events from a day ago onward, so earlier months would always be empty. The previous-month button stops at the current month, and a link to an old month shows this one instead. The month is in the address (`/events/calendar?month=2026-09`), so a month can be shared. *Rec: keep.*
+	- **(e) A series' footer marker depends on its status.**
+		- The plan said to show "Ended" whenever a series isn't open. But a seasonal series isn't open either, and it hasn't ended.
+		- As built, closed shows **Ended**, moved shows **Moved** and seasonal shows **Seasonal**. Open and unverified show no marker.
+		- Only closed and moved series get the "has ended" banner and lose their subscribe link.
+		- *Rec: keep.*
+	- **(f) Photos.**
+		- A list row asks for the event's thumbnail and hides it if there's none, with no extra request.
+		- The event page asks the server first whether there's a photo. Only then does it show the photo and put it in the sharing tags, so a shared link never points at a missing image.
+		- *Rec: keep.*
+	- **(g) Page tags and search-engine data.**
+		- The canonical address and `og:url` use the address the page is being viewed at. honuware's `website_address` setting is the API server, not the site.
+		- Every navigation clears the last page's tags first.
+		- The JSON-LD adds three things to the plan's list: that the event is in person, the event's photo, and the currency (USD) on the "Free" offer.
+		- "Free" matches any capitalization.
+		- A curator's preview of an unapproved event gets no JSON-LD.
+		- *Rec: keep.*
+	- **(h) Subscribing offers two buttons.** **Subscribe** opens the feed in a calendar app such as Apple Calendar or Outlook. **Copy link** is for Google Calendar, which can only subscribe from a pasted address. A one-line hint says where to paste it. *Rec: keep.*
+	- **(i) Curators get a shortcut on the public pages.** Someone with `manage_events` sees **Edit this event** on an event page, which opens it in the editor. The editor adds no check of its own. `/admin` already requires the admin role, and the server checks `manage_events` on every save, as §3.7's note says. *Rec: keep.*
+	- **(j) The editor's review flow.**
+		- A curator's new event is saved as pending, recording who entered it. It goes public once it's approved in the queue, like every other event. That costs curators one extra click and keeps a single path to "public".
+		- Reject asks for its note in the browser's own pop-up box. EV3 owns any queue polish.
+		- *Rec: keep both.*
+	- **(k) Offline, the editor and the public pages use separate data.** In `ng serve`'s offline mode the editor works on its own copy of the demo events. Approving one there doesn't make it appear on the public pages. Against the real server they're the same data. *Rec: keep. It only affects the offline demo.*
+	- **(l) The home-page strip sits below the welcome card.** It shows the next five events and a "See all events" link, and disappears when there's nothing to show. This is OQ4's exception to editing a Stream C page, so **ping John-Michael in the PR**. *Rec: keep. RT1's restyle moves it into its own slot.*
 
 # Change Log
+
+- **10/28/2026 (v0.7)** — **§3 built (3.1–3.7, 3.9, 3.10).**
+	- vitest 173/173: 91 new tests in 15 new spec files, up from 82. It also passes with the machine set to UTC and to Tokyo time.
+	- `ng build -c local`, `-c development` and `-c production` all build. The events pages load as their own chunk (129 kB, 43 kB optimized).
+	- New: the five events pages, the event editor, the home strip, the freshness footer, the JSON-LD builder, the page-tag helper, the review call, and the offline table data for the editor.
+	- 3.8 waits for GD3. Nothing was checked against a live server, since none was running; that's §4.4.
+	- **OQ9**: twelve as-built calls awaiting "Agreed". (a) needs a honuware follow-up. OQ8 is still waiting for an answer.
+	- §2's status line records `0189a0b`.
 
 - **10/28/2026 (v0.6)** — **§2 built (2.1–2.4).**
 	- vitest 82/82: 55 new specs in 4 new files, up from 27. `ng build -c local` / `-c development` are clean, and the suite also passes with the machine set to UTC and Tokyo time.

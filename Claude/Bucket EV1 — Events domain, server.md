@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.8
+Version: 0.8.1
 tags:
 ---
 
@@ -221,7 +221,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 5. endpoints (`src/endpoints/` — model: knottyyoga `get_calendar.cpp`; PascalCase `crow::HTTPMethod` aliases; every TU = handler + `SetupRouting` + exported `Endpoints::X`; **volatile anchor in `web_app.cpp` or it 404s in Release**)
 
-*(Slice 5 built 10/28 — 5.1–5.6 green on both platforms: Windows 2058/2058, Linux docker gate 2058/2058 (floor 1700); 32 new tests. Remaining: OQ11 and the commit.)*
+*(Slice 5 built 10/28 — 5.1–5.6 green on both platforms: Windows 2058/2058, Linux docker gate 2058/2058 (floor 1700); 32 new tests. OQ11 decided 10/28 (all six kept as built). Remaining: the commit.)*
 
 - [x] 5.1 `get_upcoming_events.cpp` — `GET /api/events/upcoming?from_us&to_us&category&scene&neighborhood&venue_id&series_id` (all optional; `ParseIntParam` fallback pattern). Anonymous. Response `{"items":[…]}`. The KVT's comma-joined `category_slugs` / `scene_tag_slugs` go out as real JSON arrays, nested here at the endpoint as knottyyoga's `get_calendar.cpp` does for tags (OQ10 (f)); §5.3's slug lists do the same. **Test** (`get_upcoming_events_test.cpp`, HTTP via `handle_full` with the file-local request helper that calls `ThreadPool::GetInstance().Shutdown()` before returning): approved-only; each filter; window default + cap; find items by id, never index.
 - [x] 5.2 `get_event_detail.cpp` — `GET /api/events/<int>`. Anonymous sees `approved` (404 otherwise, to keep the URL low-information); a caller holding `manage_events` sees any status (the reviewer's preview — knottyyoga blog's author-preview pattern). **Test:** both behaviors.
@@ -343,8 +343,12 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(d) The ingest door checks only that each field has the right kind of value:** a number where a number goes, text where text goes, and a list of text for the slug lists. A wrong kind fails the batch with a 400 that says which item (`item_index`). A *missing* title, start time and so on is still the business layer's call, with its own code (`MISSING_TITLE` …, Slice 4). That 400 also carries `item_index`, plus `error_code`. Nothing is written in either case. The permission check comes first, so someone without access learns nothing from the validation messages. *Rec: keep.*
 	- **(e) A review that can't happen says why.** Approving an event that's already approved is a 400 carrying `error_code: INVALID_TRANSITION` and the event's current `status` (OQ10 (e)). The review screen can then say "already approved by someone else" and refresh. An unknown event is a 404. An `action` other than approve or reject is a 400 naming the `action` field. *Rec: keep.*
 	- **(f) The photo test, and where the photo setting lives.** §5.6 said the test should upload a venue photo through the framework's upload endpoint as an admin. Instead, the test attaches the photo directly with the framework's image helper, as knottyyoga's photo test does. The upload endpoint is honuware's and already tested there. What's new here is only *who may read* the photo. The test checks that venue and event photos load for a signed-out visitor, and that a person's photo still needs a login. To let the test check the server's real setting rather than a copy, `main.cpp`'s one-line photo setting moved into `Endpoints::RegisterAppServices`, which `main.cpp` calls. *Rec: keep both.*
+	- Mason- I'll go with your recommendations.
+	- Claude- **Decided (10/28): all six locked as built.** No code changes were needed.
 
 # Change Log
+
+- **10/28/2026 (v0.8.1)** — **OQ11 decided** (Mason went with the recommendations). All six Slice 5 calls are kept as built, with no code changes. Remaining for Slice 5: the commit.
 
 - **10/28/2026 (v0.8)** — **Slice 4 complete** (committed as `a245baf`). **Slice 5 built (5.1–5.6)**, green on Windows (2058/2058) and the Linux Docker gate (2058/2058), with 32 new tests.
 	- New: the five events endpoints, `events_json` (key-value tables to JSON, keeping text as text), `register_app_services` (the anonymous photo seam), and `EventHelper`'s detail and series reads.

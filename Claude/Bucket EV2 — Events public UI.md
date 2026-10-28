@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.5.2
+Version: 0.6
 tags:
 ---
 
@@ -53,7 +53,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 1. Server — ICS endpoints (C++, `src/endpoints/`, EV1 conventions apply: anchors, tests via `handle_full` + `ThreadPool::Shutdown()`)
 
-*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. 1.1–1.4 committed 10/28 as `44462bc`. 1.5, including OQ7's refresh hint, was built 10/28. honuware went out as `7cd3522`, and CF is re-pinned to it. The pinned build is green: Windows 2092/2092, and the strict Linux gate 2092/2092 (fresh clone, no override, floor 2058). Remaining: Mason commits CF.)*
+*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. 1.1–1.4 committed 10/28 as `44462bc`. 1.5, including OQ7's refresh hint, was built 10/28. honuware went out as `7cd3522`, and CF is re-pinned to it. The pinned build is green: Windows 2092/2092, and the strict Linux gate 2092/2092 (fresh clone, no override, floor 2058). Committed 10/28 as `a1c7b2e`. **§1 is complete.**)*
 
 - [x] 1.1 `src/business_logic/events/event_ical.{h,cpp}` — `BuildICalEventsFromPublicEvents(events, …) → std::vector<ICalEvent>` (mapping pin-downs above; venue name + address → `location`; description + event URL → `description`; `BuildEventUid(eventId, uidDomain)`). **Test:** `event_ical_test.cpp` — field mapping, 2-hour default DTEND, UID stability.
 	- *As built (10/28):*
@@ -107,15 +107,85 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- **Bump-point (10/28):**
 			1. Done: Mason pushed honuware as `7cd3522b52e38ddbb5c07476e1a0799a879e76ef`, which holds exactly the three tested files.
 			2. Done: Claude re-pinned `GIT_TAG` in `server/communityfinder_server/CMakeLists.txt` (the pin's only home) from `920f18a` to `7cd3522`. Claude also cleared the Windows override (`FETCHCONTENT_SOURCE_DIR_HONUWARE` is empty again, and `_deps/honuware-src` is at `7cd3522`). The pinned build passed: Windows 2092/2092, and the strict Linux gate 2092/2092 (no local honuware, no build volume, a fresh FetchContent clone in Release).
-			3. Remaining: Mason commits CF, which is the 10 §1.5 source files plus `CMakeLists.txt`.
+			3. Done: Mason committed CF as `a1c7b2e` "Calendar name".
 		- **knottyyoga stays on its current pin.** Mason decided on 10/28 to re-pin it later, together with more honuware changes. When it does re-pin, its feed can switch to `refreshInterval` (OQ7).
 
 ### 2. Client access layer (`ui/src/app/core/`)
 
-- [ ] 2.1 `core/types/events.types.ts` — `PublicEvent`, `EventSeries`, `Category`, `SceneTag`, `Neighborhood` interfaces mirroring EV1's wire shapes (ids + `_us` numbers + slugs, and `venue_address`, which §1 added per OQ6 (a)), plus `normalizeEvent(...)` statics (the `?? []` / number-coercion hygiene from `ServerAccessNetwork`).
-- [ ] 2.2 `core/utils/events-date.utils.ts` — `usToDate`, `formatEventTime(us)` / `formatEventDateLine(us)` (Pacific-fixed), `pacificDayKey(us)`, `tonightRangeUs(now)`, `weekendRangeUs(now)`, `monthRangeUs(year, month)`. **Spec:** `events-date.utils.spec.ts` — Tonight's 4 AM boundary, weekend edges (each weekday + mid-weekend), DST spring/fall dates, day-key correctness for a 10 PM event UTC-vs-Pacific.
-- [ ] 2.3 `CommunityAccess` gains (interface + `CommunityHttpAccess` + `CommunityMockAccess`): `getUpcomingEvents(query)` → `/api/events/upcoming` with query-string building; `getEvent(id)`; `getEventSeriesList()`; `getEventSeries(slug)`; `getCategories()` / `getSceneTags()` / `getNeighborhoods()` — HTTP impl reads the vocabularies through the framework's public generic read (`allowed_tables`, per EV1 §1.6), returns them typed + sorted by `sort_order`. **Spec:** http impl query-string cases (spy on HttpClient), mock parity.
-- [ ] 2.4 **Mock demo dataset** (`CommunityMockAccess` + shared seed module): the GD1 vocabularies verbatim; ~4 venues across neighborhoods; 2 series; ~15 events **generated relative to `Date.now()`** (a couple tonight, a weekend cluster, a past one that must not render, one pending that must not appear) so the offline demo never goes stale. This is `ng serve` mock mode's whole events experience (and the screenshot/demo dataset the SUTP suggested-additions wanted). **Spec:** mock returns only approved + future-window events.
+*(Built 10/28. 2.1–2.4 are green: vitest 82/82, up from 27 before §2, with 55 new specs in 4 new spec files. `ng build -c local` and `-c development` are both clean. The suite also passes with the machine clock set to UTC and to Tokyo time, so nothing depends on the viewer's time zone. A live check against the dev server confirmed the wire shapes the normalizers expect. Remaining: OQ8 and the commit.)*
+
+- [x] 2.1 `core/types/events.types.ts` — `PublicEvent`, `EventSeries`, `Category`, `SceneTag`, `Neighborhood` interfaces mirroring EV1's wire shapes (ids + `_us` numbers + slugs, and `venue_address`, which §1 added per OQ6 (a)), plus `normalizeEvent(...)` statics (the `?? []` / number-coercion hygiene from `ServerAccessNetwork`).
+	- *As built (10/28):*
+		- **Types:**
+			- `PublicEvent`, `UpcomingEvents` (items plus the served window), `UpcomingEventsQuery`, `EventSeries`, `EventSeriesDetail`, `Category`, `SceneTag` and `Neighborhood`.
+			- The status, origin, freshness, coverage and region values are unions.
+			- Field names are the wire's snake_case (OQ8 (a)).
+			- A curator's `status` / `review_notes` are optional fields that exist only when the server sent them.
+		- **Normalizers** (exported functions, not class statics):
+			- `normalizeEvent`, `normalizeUpcomingEvents`, `normalizeEventSeries`, `normalizeEventSeriesList` and `normalizeEventSeriesDetail`.
+			- The server's `""` for "none" (a missing end, venue, series or verification time) becomes `null`.
+			- Numbers are coerced, missing text becomes `''`, and missing slug lists become `[]`.
+		- **Vocabularies:** `dataResultsToRecords` turns the generic table read's `{ sortedColumnNames, dataTable }` into one record per row. `categoriesFromRows` / `sceneTagsFromRows` / `neighborhoodsFromRows` keep the enabled entries (Postgres `"t"`), ordered by `sort_order`, then `id` (OQ8 (e)).
+		- **`buildEventsQueryString(query)`** writes the set fields in a fixed order, encoded, and leaves out unset ones (0 counts as unset, as on the server). §3.2's subscribe link can reuse it, since the feed takes the same filter names.
+		- **The server's window pins** are exported for the calendar page: 42 / 92 / 1 days and `US_PER_DAY`.
+		- **`events.types.spec.ts`** covers a full event round-trip, `""` → null, defaults, number coercion with cost text kept as text, curator fields, the list and series unwrapping, the vocabulary rows (disabled entries dropped, order, a tie on `sort_order`, coverage, region), and the query string (empty, order, encoding).
+		- **Live check:** a dev-server run confirmed `"t"`/`"f"` booleans and the `dataTable`/`sortedColumnNames` keys from `get_table_rows`, `""` for a missing end or venue, `venue_address` on events, and 404s for an unknown event or series.
+- [x] 2.2 `core/utils/events-date.utils.ts` — `usToDate`, `formatEventTime(us)` / `formatEventDateLine(us)` (Pacific-fixed), `pacificDayKey(us)`, `tonightRangeUs(now)`, `weekendRangeUs(now)`, `monthRangeUs(year, month)`. **Spec:** `events-date.utils.spec.ts` — Tonight's 4 AM boundary, weekend edges (each weekday + mid-weekend), DST spring/fall dates, day-key correctness for a 10 PM event UTC-vs-Pacific.
+	- *As built (10/28):*
+		- **The listed functions**, plus `dateToUs`, `nowUs`, `pacificDateTime(us)`, `pacificDayOfWeek(us)` and `pacificWallClockToUs(y, m, d, h, min)`. That last one is the Pacific wall clock → `_us`, which §3.7's editor form needs too. Out-of-range days and months roll over, so "tomorrow" is `day + 1`.
+		- **How it works:**
+			- All zone math goes through `Intl.DateTimeFormat` with a fixed `America/Los_Angeles`. Nothing reads the browser's own zone.
+			- Two passes settle the UTC offset across a DST change.
+			- Months are 1–12.
+		- **Formats:**
+			- `formatEventTime` gives "10:00 PM" (OQ8 (f)).
+			- `formatEventDateLine` gives "Friday, Aug 14".
+			- `pacificDayKey` gives "2026-08-14".
+			- Intl's narrow no-break space before AM/PM is replaced with a plain space.
+		- **Tonight** runs from now to the next 4:00 AM Pacific. At 1 AM that's 4 AM today, not tomorrow (OQ8 (c)).
+		- **The weekend** is Friday 00:00 through Monday 00:00 Pacific. From Friday through Sunday it starts at now.
+		- **`events-date.utils.spec.ts`** covers:
+			- The 2026 DST dates (Mar 8 and Nov 1, checked against Windows' zone rules): midnight and 4 AM on both changeover days, a 7-hour tonight in spring and a 9-hour one in fall, and the fall-back weekend (Fri Oct 30 PDT to Mon Nov 2 PST).
+			- Tonight at 7 PM, 1:30 AM, 3:59 AM and 4:00 AM.
+			- The weekend from every weekday, inside the weekend, at Monday 00:30, and across a year end.
+			- The month range across DST and from December into January.
+			- The 10 PM Friday event that is already Saturday in UTC.
+- [x] 2.3 `CommunityAccess` gains (interface + `CommunityHttpAccess` + `CommunityMockAccess`): `getUpcomingEvents(query)` → `/api/events/upcoming` with query-string building; `getEvent(id)`; `getEventSeriesList()`; `getEventSeries(slug)`; `getCategories()` / `getSceneTags()` / `getNeighborhoods()` — HTTP impl reads the vocabularies through the framework's public generic read (`allowed_tables`, per EV1 §1.6), returns them typed + sorted by `sort_order`. **Spec:** http impl query-string cases (spy on HttpClient), mock parity.
+	- *As built (10/28):*
+		- **The interface** gains the seven methods, each commented with its route. `getEvent` and `getEventSeries` fail with a 404 `HttpErrorResponse` for what isn't public, so §3's pages can show "not found" from `status`.
+		- **`CommunityHttpAccess`:**
+			- Every reply passes through a normalizer.
+			- Requests carry `withCredentials`, so a signed-in curator's preview works.
+			- The vocabularies come from `GET /api/get_table_rows/<table>`, called with `HttpClient` directly rather than through the library's `HONUWARE_CRUD_ACCESS`. That proxy runs its calls one at a time, and public reads shouldn't queue behind sign-in traffic (OQ8 (b)).
+		- **`CommunityMockAccess`** serves §2.4's dataset by the server's rules:
+			- approved only, with the same window clamp as `ClampUpcomingWindow` (one day back, 42 by default, 92 at most, a backwards window empty)
+			- the same filters, on the effective (inherited) slugs, in start-then-id order
+			- the active series by title; any series by slug
+			- 404s for anything pending or unknown
+			- copies (`structuredClone`), so a page can't change the data
+		- **Existing specs:** `home.spec.ts` and `site-config.service.spec.ts` stub only the two methods they use, now typed `Partial<CommunityAccess>`.
+		- **`community-access.http.spec.ts`** uses `HttpTestingController` to check the exact URLs: no query, every filter, venue and series, encoded slugs. It also covers `withCredentials`, the normalized replies, a 404 passing through, and all three vocabulary tables.
+		- **`community-access.mock.spec.ts`** runs on a pinned clock and covers the window, clamp and cap, each filter including inheritance, copies, `getEvent` (past approved served; pending and unknown 404), the series list and pages, the vocabulary counts, and mock parity (see 2.4).
+- [x] 2.4 **Mock demo dataset** (`CommunityMockAccess` + shared seed module): the GD1 vocabularies verbatim; ~4 venues across neighborhoods; 2 series; ~15 events **generated relative to `Date.now()`** (a couple tonight, a weekend cluster, a past one that must not render, one pending that must not appear) so the offline demo never goes stale. This is `ng serve` mock mode's whole events experience (and the screenshot/demo dataset the SUTP suggested-additions wanted). **Spec:** mock returns only approved + future-window events.
+	- *As built (10/28):* `core/mock/events-mock-data.ts`, with `buildEventsMockData(now)`. It's pure, so specs pin the clock.
+		- **Vocabularies:** GD1's 12 categories, 11 scene tags and 25 neighborhoods, copied from the server seed (`create_app_tables.cpp`) with the same slugs, names, coverage, regions and 10-step sort order.
+		- **Venues:** four made-up ones in Capitol Hill, Ballard, Columbia City and Bellevue (OQ8 (d)).
+		- **Series:** three.
+			- Bear Happy Hour: open, weekly, bar / bear.
+			- Sober Saturday Hike: seasonal, no venue, never verified.
+			- A **closed** Drag Brunch Club. That's one more than planned, so §3.5's "Ended" marker has something to show.
+		- **Events:** 17.
+			- Two fall inside tonight's window whenever "now" is.
+			- Four make up the weekend cluster.
+			- The next three Bear Happy Hours have no tags of their own, so they inherit the series'.
+			- Two hikes have no venue and no end time.
+			- Four are spread over the coming weeks. One of them is 50 days out, past the list's 42, so it shows only on the calendar.
+			- One past event and one pending event never show.
+		- **The mix** covers free / paid / no cost, with and without an end, and one link-out scene each for sapphic and trans.
+		- **Mock parity specs:**
+			- Normalizing any mock event or series changes nothing, so the pages see identical values offline and live.
+			- Every slug a mock event uses exists in the vocabularies.
+			- From 6 PM on each day of a week, the list has two or more events tonight and nothing past or pending.
 
 ### 3. Events pages (`ui/src/app/pages/events/`, lazy `events.routes.ts`; standalone components; Material via the app's existing patterns)
 
@@ -133,7 +203,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 ### 4. Gates
 
 - [ ] 4.1 `ng build -c local` + `ng build -c development` clean; events area lazy-chunked (initial bundle unchanged).
-- [ ] 4.2 vitest green; record the new count (grows from 22).
+- [ ] 4.2 vitest green; record the new count (grows from 22). *(It was already 27 when §2 started, and 82 after §2.)*
 - [ ] 4.3 Docker suite green for the server slice; floor per EV1 §7.2 policy.
 - [ ] 4.4 **Manual browser loop = milestone M1 (Mason + Levi):** offline first (`ng serve`, mock): browse list/tonight/weekend/calendar/series/detail with zero backend. Then dev (`ng serve -c development` against :18081): admin-enter a venue + events via §3.7's editor (or raw admin CRUD) → approve in the editor's queue → they appear on list + calendar + detail **and in the home-page strip** → devtools confirms the meta/OG tags on a detail page → download the event ICS and subscribe to a category feed in a real calendar app (Google Calendar URL-subscribe or Apple Calendar; after §1.5, so the subscription shows its name) → JSON-LD validates in Google's Rich Results test (paste the rendered detail page HTML).
 
@@ -187,8 +257,22 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- The feed passes `PT1H` and no longer sends the `X-PUBLISHED-TTL` header. `Cache-Control: max-age=3600` stays.
 		- This corrects OQ6's background line: Outlook, and probably Apple Calendar, can now actually re-read the feed hourly. Google Calendar still refreshes on its own schedule.
 		- knottyyoga's feed (`get_my_ical_feed.cpp`) still sends the header. It can switch to `refreshInterval` with a one-line change when it next re-pins. That's knottyyoga's call and isn't tracked here.
+8. **§2 (the client access layer) as built — six calls** *(added 10/28)*. Each one is already in the code and tested. "Agreed" locks all six, or name the ones to change. Background: §2 is the layer between the pages (§3) and the server. It covers how event data is typed, how dates are worked out in Seattle time, how the app fetches events, and the fake data `ng serve` shows offline. None of it is visible yet; §3 builds the pages on top of it.
+	- **(a) Event fields keep the server's names.** In the client code an event's start time is `starts_at_us`, exactly as the server sends it, not a renamed `startsAtUs`. That's knottyyoga's convention and CF's existing one (`display_name` on the site info). A field reads the same in the code, in the browser's network tab and in the server's code, so there's nothing to translate. *Rec: keep.*
+	- **(b) The category, scene and neighborhood lists are fetched directly.** honuware's UI library has a shared helper for table reads, but it runs calls one at a time, queued with sign-in and admin traffic. The events pages call the same server address directly, so loading a filter bar never waits behind a login check. Nothing on the server changed. *Rec: keep.*
+	- **(c) After midnight, "Tonight" still means last night.** The spec said Tonight runs "through 4:00 AM tomorrow". Read literally, at 1 AM on Saturday that would mean through 4 AM Sunday, a whole extra day. As built, Tonight always ends at the next 4 AM. At 9 PM Friday it runs to 4 AM Saturday. At 1 AM Saturday it runs to 4 AM Saturday, three hours, which is what someone still out that night means. From 4 AM on, Tonight is the coming night. *Rec: keep.*
+	- **(d) The offline demo uses made-up venues.** The fake events `ng serve` shows are at invented places: The Lantern Room, Driftwood Hall, Columbia City Social Club and Eastside Commons. The neighborhoods and street names are plausible. Using real Seattle bars would put made-up events under real businesses' names in screenshots and demos. There's also a third demo series, an ended one, so §3.5's "Ended" marker has something to show; the plan said two. *Rec: keep.*
+	- **(e) Turned-off categories, scenes and neighborhoods are hidden.** A curator can turn an entry off in the admin editor (the `enabled` box) instead of deleting it. The server's public table read returns every row, so the client drops the turned-off ones and sorts the rest by their sort order. That matches what the server's own event filters already do. *Rec: keep.*
+	- **(f) Times show as "10:00 PM".** The event pages will show "10:00 PM" and "9:30 AM", not "10 PM". The fuller form lines up in lists and is what the formatter gives by default. Dropping ":00" is a one-line change if you'd rather. It's worth deciding before §3 builds the list and detail pages on it. *Rec: keep "10:00 PM".*
 
 # Change Log
+
+- **10/28/2026 (v0.6)** — **§2 built (2.1–2.4).**
+	- vitest 82/82: 55 new specs in 4 new files, up from 27. `ng build -c local` / `-c development` are clean, and the suite also passes with the machine set to UTC and Tokyo time.
+	- New: `core/types/events.types.ts` (types, normalizers, vocabulary rows, the query string), `core/utils/events-date.utils.ts` (Pacific dates and times, tonight, weekend, month), `core/mock/events-mock-data.ts` (the offline dataset), and `CommunityAccess`'s seven events methods in the interface, the HTTP access and the mock.
+	- Wire shapes were confirmed against the live dev server.
+	- **OQ8**: six as-built calls awaiting "Agreed".
+	- §1's status line records `a1c7b2e`, and §1 is complete.
 
 - **10/28/2026 (v0.5.2)** — **§1.5 done.**
 	- honuware was pushed as `7cd3522` "Calendar name", and CF is re-pinned from `920f18a`.

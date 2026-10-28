@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/27/2026
-Version: 0.6
+Version: 0.6.1
 tags:
 ---
 
@@ -141,7 +141,7 @@ No image columns anywhere — photos ride the framework pipeline (`table_item_ph
 
 Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueTable`/`KeyValueTableArray` at boundaries; `Add*` via `DbCrud::AddRowToTableFetchInt64PrimaryKey`; `Update*` bumps `updated_us`; SQL as file-local `constexpr std::string_view kSql*`; deterministic `ORDER BY … , id ASC` tiebreakers.
 
-*(Slice 3 built 10/27 — 3.1–3.6 green on both platforms: Windows 1998/1998, Linux docker gate 1998/1998 (floor 1700); 58 new tests. Remaining: OQ9 (five as-built calls) and the commit.)*
+*(Slice 3 built 10/27 — 3.1–3.6 green on both platforms: Windows 1998/1998, Linux docker gate 1998/1998 (floor 1700); 58 new tests. OQ9 decided (all five kept as built). Remaining: the commit.)*
 
 - [x] 3.1 `categories.{h,cpp}`, `scene_tags.{h,cpp}`, `neighborhoods.{h,cpp}` — `Add*` (tests/admin), `GetAll` (enabled, ordered by sort_order), `GetBySlug`. **Tests:** one `*_test.cpp` each (insert → fetch by slug → ordering).
 - [x] 3.2 `venues.{h,cpp}` — `AddVenue`, `GetVenue`, `GetVenuesByIds` (batch, for event-list assembly), `GetVenuesByNeighborhood`, `UpdateVenue`, `DeleteVenue`. **Test:** `venues_test.cpp`.
@@ -253,9 +253,12 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(c) "Events in a date range" means "events that start in it".** `GetEventsInRange(from, to)` returns events whose start time is at or after `from` and before `to`. An event that started before `from` and is still going isn't included. For example, with `from` at midnight, a party that started at 10pm the night before won't show. The calendar lists events by start time, and the range rule already lets `from` reach back a day, so this matches. If EV2 later wants a "happening now" view, EventHelper can move `from` earlier; the database query doesn't change. *Rec: keep.*
 	- **(d) Looking up a disabled category or tag by slug still finds it.** `GetAll` (the filter lists) skips disabled rows, but `GetBySlug` returns a row either way. So the helper layer doesn't decide what an ingest naming a retired category means; Slice 4's EventHelper does. *Rec: keep here. Slice 4 will propose that ingest ignores disabled slugs and reports them.*
 	- **(e) Recording a scan doesn't count as an edit.** `TouchLastScanned` sets `last_scanned_at_us` and leaves `updated_us` alone. A weekly scan then doesn't make every source look recently edited, and `updated_us` keeps meaning "a curator changed this source". *Rec: keep.*
+	- Mason- I'll got with your recommendation.
+	- Claude- **Decided (10/27): all five locked as built.** No code changes were needed. For (d), Slice 4's EventHelper will propose that ingest ignores disabled slugs and reports them.
 
 # Change Log
 
+- **10/27/2026 (v0.6.1)** — **OQ9 decided** (Mason went with the recommendations). All five Slice 3 calls are kept as built, with no code changes. Remaining for Slice 3: the commit.
 - **10/27/2026 (v0.6)** — **Slice 2 complete** (committed as `5858eeb`). **Slice 3 built (3.1–3.6)**, green on Windows (1998/1998) and the Linux Docker gate (1998/1998), with 58 new tests.
 	- New: the `src/sql_util/table_helpers/` layer, with one class per events-domain table (eleven), the shared `bigint_array_literal` helper for batch reads, and the five `kFreshnessStatus*` constants in `db_schema/freshness.h`.
 	- Doc: an as-built note under §3.6 and **OQ9**, five as-built calls awaiting "Agreed". GD2 §2 now points at the layer.

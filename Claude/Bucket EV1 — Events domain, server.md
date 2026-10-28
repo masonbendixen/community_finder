@@ -188,12 +188,13 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
         - keeps who reviewed it and when.
       - A major change on a pending event just updates it.
     - **The window.** `ClampUpcomingWindow(now, from, to)` is a free function, so Slice 5 can echo the window it served. It is tested without a database. Constants: `kUpcomingDefaultWindowDays` 42, `kUpcomingMaxWindowDays` 92, `kUpcomingLookBackDays` 1. A backwards request returns an empty window.
-    - **`GetUpcomingPublic`** makes 8 queries at most, however many events match:
-      1. the range query;
-      2. venues, by id;
-      3. neighborhoods (the enabled list);
-      4. series, by id;
-      5. through 8. own and series categories and scene tags.
+    - **`GetUpcomingPublic`** makes 9 queries at most, however many events match:
+      1. the clock (`now_us()`);
+      2. the range query;
+      3. venues, by id;
+      4. neighborhoods (the enabled list);
+      5. series, by id;
+      6. through 9. own and series categories and scene tags.
 
       Venue and series filters run before the lookups, so those only cover events that can still be returned. The neighborhood, category and scene filters run after the inherited sets are worked out. Start order is kept.
     - **One helper added below:** `TableHelpers::Series::GetSeriesByIds` (a batch read, ordered by id, with an empty-input early return), with a test.
@@ -301,9 +302,21 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(e) Recording a scan doesn't count as an edit.** `TouchLastScanned` sets `last_scanned_at_us` and leaves `updated_us` alone. A weekly scan then doesn't make every source look recently edited, and `updated_us` keeps meaning "a curator changed this source". *Rec: keep.*
 	- Mason- I'll got with your recommendation.
 	- Claude- **Decided (10/27): all five locked as built.** No code changes were needed. For (d), Slice 4's EventHelper will propose that ingest ignores disabled slugs and reports them.
+10. **Slice 4 as built — seven calls** *(added 10/27)*. Each is already in the code and tested. "Agreed" locks all seven, or name the ones to change. Background: an *ingest* is a batch of events from a feed (EV5's scanner, or any importer) arriving through one door. Each item is matched against what we already have by its source plus the feed's own id for it.
+	- **(a) A field the feed leaves out means "no change", not "blank it".** A feed that never mentions a description won't erase the one a curator typed in by hand. A field the feed *does* send wins, even if it's empty. So an empty category list removes the event's own categories (it goes back to using its series' categories), and an empty series name unlinks it from its series. New events get the database's defaults for anything left out. *Rec: keep. It's the only way a hand-edit survives the weekly scan.*
+	- **(b) A new event with no venue gets its source's venue.** A source like "The Cuff's own website" is tied to The Cuff, so its events happen there unless the item says otherwise. This applies only when the event is first created. On a later scan, a missing venue keeps whatever the event has. *Rec: keep.*
+	- **(c) Bad names are skipped and reported, but bad ids stop the batch.** A category, scene tag or series name we don't recognise, or one a curator has turned off, is dropped from that item. The result lists it so the scanner can log it for a curator, and the rest of the event goes in. An unknown source or venue *id* fails the whole batch instead, because that's a bug in the scanner, not something a renamed category caused. Either way the check runs before anything is written, so a failed batch leaves no half-written events. *Rec: keep. Renaming or retiring a category shouldn't stop the weekly scan.*
+	- **(d) A re-scan leaves archived events alone** and reports `archived_kept`, just as it reports `rejected_kept` for rejected ones. The spec only named the rejected case. An archived event is past and settled (EV4), so a feed still listing it shouldn't reopen it. *Rec: keep.*
+	- **(e) Reviewing an event into the state it's already in is an error.** Approving an approved event returns `INVALID_TRANSITION` (along with its current status) rather than quietly succeeding. That way two curators approving at once can't both think they did it, and the second click doesn't overwrite the first reviewer's name and notes. Archived events can't be reviewed at all; un-archiving stays a raw admin edit, as the behavior pin says. *Rec: keep.*
+	- **(f) In the public list, an event's categories and scene tags travel as one comma-separated string** (`"dance,drag"`), because the layer below the endpoints is a flat list of name/value pairs. That's knottyyoga's convention. Slice 5's endpoint will turn them into real JSON arrays before they reach the browser, as knottyyoga's calendar does for its tags. *Rec: keep, and do the array conversion in §5.1.*
+	- **(g) A turned-off neighborhood disappears from listings. A turned-off category doesn't.** Events at a venue in a disabled neighborhood show no neighborhood, and the neighborhood filter won't find them. A category or scene tag that's disabled *after* events were tagged with it still shows on those events, and still filters. Disabling only stops new feed items from using it (c). The difference comes from where each list is read. *Rec: leave as is for now. Retiring a category is rare, and a curator can remove it from the affected events. If you'd rather a disabled category vanish everywhere at once, say so; it's a small change in `GetUpcomingPublic`.*
 
 # Change Log
 
+- **10/27/2026 (v0.7)** — **Slice 3 complete** (committed as `de0a219`). **Slice 4 built (4.1–4.2)**, green on Windows (2026/2026) and the Linux Docker gate (2026/2026), with 28 new tests.
+	- New: `src/business_logic/events/`, with `EventHelper` (ingest, review, public upcoming list), `ClampUpcomingWindow`, and the public key-value-table conversion. Also `Series::GetSeriesByIds` in table_helpers.
+	- Fix: `now_us()` turned out to read the wall clock, not the transaction's start time. CLAUDE.md, four test comments and the §3.6 note are corrected. No behavior changed.
+	- Doc: an as-built note under §4.2 and **OQ10**, seven as-built calls awaiting "Agreed".
 - **10/27/2026 (v0.6.1)** — **OQ9 decided** (Mason went with the recommendations). All five Slice 3 calls are kept as built, with no code changes. Remaining for Slice 3: the commit.
 - **10/27/2026 (v0.6)** — **Slice 2 complete** (committed as `5858eeb`). **Slice 3 built (3.1–3.6)**, green on Windows (1998/1998) and the Linux Docker gate (1998/1998), with 58 new tests.
 	- New: the `src/sql_util/table_helpers/` layer, with one class per events-domain table (eleven), the shared `bigint_array_literal` helper for batch reads, and the five `kFreshnessStatus*` constants in `db_schema/freshness.h`.

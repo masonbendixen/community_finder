@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.5
+Version: 0.5.1
 tags:
 ---
 
@@ -53,7 +53,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 1. Server — ICS endpoints (C++, `src/endpoints/`, EV1 conventions apply: anchors, tests via `handle_full` + `ThreadPool::Shutdown()`)
 
-*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. 1.1–1.4 committed 10/28 as `44462bc`. 1.5 was built 10/28 against the local honuware tree and is green: Windows 2090/2090, the CF Linux gate 2090/2090 (floor 2058), honuware's Linux gate 1902/1902. Remaining for 1.5: OQ7, then the bump-point.)*
+*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. 1.1–1.4 committed 10/28 as `44462bc`. 1.5, including OQ7's refresh hint, was built 10/28 against the local honuware tree and is green: Windows 2092/2092, the CF Linux gate 2092/2092 (floor 2058), honuware's Linux gate 1904/1904. Remaining for 1.5: the bump-point.)*
 
 - [x] 1.1 `src/business_logic/events/event_ical.{h,cpp}` — `BuildICalEventsFromPublicEvents(events, …) → std::vector<ICalEvent>` (mapping pin-downs above; venue name + address → `location`; description + event URL → `description`; `BuildEventUid(eventId, uidDomain)`). **Test:** `event_ical_test.cpp` — field mapping, 2-hour default DTEND, UID stability.
 	- *As built (10/28):*
@@ -67,7 +67,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- **Tests:**
 			- `event_ical_test` (8): every field, the 2-hour default, the location fallbacks, the description's links, UID stability (an edited event keeps its UID and a different event gets another), the page URL, list order, and a pass through honuware's generator checking the escaped LOCATION, DESCRIPTION and UTC DTSTART/DTEND lines.
 			- `event_helper_test` (+1): `FormatVenueAddressTest`. The test world's The Cuff now has an address, and the existing venue test checks it.
-- [x] 1.2 `src/endpoints/get_events_ics_feed.cpp` — `GET /api/events/feed.ics?category&scene&neighborhood&series_id` (all optional; `series_id` decided in OQ2 — it just passes through to EV1's upcoming query), anonymous. Reuses `EventHelper::GetUpcomingPublic` with the feed window, then `GenerateICalendar(vector, App::AppICalConfig())`. Headers per the knottyyoga feed: `Content-Type: text/calendar; charset=utf-8`, `X-PUBLISHED-TTL: PT1H`, `Cache-Control: max-age=3600`. **Test:** `get_events_ics_feed_test.cpp` — 200 + `BEGIN:VCALENDAR`; approved-only; category filter includes/excludes; pending never appears.
+- [x] 1.2 `src/endpoints/get_events_ics_feed.cpp` — `GET /api/events/feed.ics?category&scene&neighborhood&series_id` (all optional; `series_id` decided in OQ2 — it just passes through to EV1's upcoming query), anonymous. Reuses `EventHelper::GetUpcomingPublic` with the feed window, then `GenerateICalendar(vector, App::AppICalConfig())`. Headers per the knottyyoga feed: `Content-Type: text/calendar; charset=utf-8`, `X-PUBLISHED-TTL: PT1H`, `Cache-Control: max-age=3600` *(superseded by OQ7: the hourly hint moved into the file with §1.5, and the `X-PUBLISHED-TTL` header is gone)*. **Test:** `get_events_ics_feed_test.cpp` — 200 + `BEGIN:VCALENDAR`; approved-only; category filter includes/excludes; pending never appears.
 	- *As built (10/28):*
 		- **The window lives in `EventHelper::GetFeedEvents(tx, filters)`**, which sets now − 1 day → now + 60 days (`kFeedLookBackDays`, `kFeedWindowDays`) and calls `GetUpcomingPublic` (OQ6 (d)). "Now" comes from the database, and endpoints hold no SQL. Two `static_assert`s keep the feed inside the list's clamp (one-day look-back, 92-day cap), so a later change to either can't silently shorten the feed.
 		- **The endpoint** reads the four filters with the same parsing as `/api/events/upcoming`. It looks up the site address (`website_address_login`) for the page links and serves the knottyyoga headers. When nothing matches, it serves a valid empty calendar.
@@ -86,20 +86,25 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 			- When it's set, `GenerateICalendar` writes `X-WR-CALNAME:` as escaped text, right after `METHOD:PUBLISH`, ahead of any event.
 			- When it's empty, nothing is written, so existing callers are unchanged. That includes knottyyoga's two-field config.
 			- Tests (+2): `EmitsCalendarNameWhenSet` checks the escaping, the line's place in the header, and that an empty calendar is named too. `OmitsCalendarNameWhenEmpty`.
+			- **The refresh hint (OQ7):**
+				- `ICalConfig` also gains `refreshInterval`, an RFC 5545 duration such as `PT1H`.
+				- When it's set, the generator writes `REFRESH-INTERVAL;VALUE=DURATION:` (RFC 7986) and `X-PUBLISHED-TTL:` (the form Outlook reads) after the name, ahead of any event. Empty writes neither.
+				- Tests (+2): `EmitsRefreshIntervalWhenSet` and `OmitsRefreshIntervalWhenEmpty`.
 		- **CF:**
 			- The brand is `App::kICalCalendarBrand = "CommunityFinder"`, beside the PRODID in `app_ical_config.h`.
 			- `EventHelper::GetFeedFilterNames(tx, filters)` turns the filters into display names: category, scene, neighborhood, then the series' title. A value that names nothing is shown as given.
 			- `Events::BuildFeedCalendarName(brand, names)` builds the name.
-			- The feed copies `App::AppICalConfig()` and sets the name.
-			- The one-event download names no calendar, since it goes into the person's own calendar.
+			- The feed copies `App::AppICalConfig()` and sets the name and the refresh interval (`kFeedRefreshInterval = "PT1H"`, matching its `Cache-Control: max-age=3600`).
+			- The feed no longer sends the `X-PUBLISHED-TTL` HTTP header (OQ7). `Cache-Control` stays.
+			- The one-event download names no calendar, since it goes into the person's own calendar, and asks for no refresh, since it's read once.
 		- **Wording settled:** "CommunityFinder events" with no filter, "CommunityFinder: Drag events" with one, and "CommunityFinder: Drag, Capitol Hill events" with several. Each filter shows its display name as curators entered it.
 		- **CF tests (+4):**
 			- `event_ical_test` +2: `FeedCalendarNameListsTheFilters`, `NamedFeedCarriesTheCalendarName`.
 			- `event_helper_test` +1: `FeedFilterNamesAreDisplayNamesInQueryOrder`.
-			- `get_events_ics_feed_test` +1: `CalendarIsNamedForItsFilters`.
-			- `get_event_ics_test` also checks that the download carries no name.
-		- **Gates:** Windows 2090/2090 and the CF Linux gate 2090/2090 (floor 2058), both built against the local honuware tree, plus honuware's own Linux gate at 1902/1902 (floor 1700). For this, Mason's Windows `x64-Debug` build points at the local tree (`FETCHCONTENT_SOURCE_DIR_HONUWARE`), and the re-pin clears it.
-		- **Remaining (bump-point):** OQ7 first, since it may add to the honuware change. Then:
+			- `get_events_ics_feed_test` +1: `CalendarIsNamedForItsFilters`. `ServesApprovedEventsAsACalendar` now checks both refresh lines in the file and that there's no `X-PUBLISHED-TTL` header.
+			- `get_event_ics_test` also checks that the download carries no name and no refresh lines.
+		- **Gates:** Windows 2092/2092 and the CF Linux gate 2092/2092 (floor 2058), both built against the local honuware tree, plus honuware's own Linux gate at 1904/1904 (floor 1700). That's 8 new tests: honuware +4, CF +4. For this, Mason's Windows `x64-Debug` build points at the local tree (`FETCHCONTENT_SOURCE_DIR_HONUWARE`), and the re-pin clears it.
+		- **Remaining (bump-point):** OQ7 is decided and built. Then:
 			1. Mason commits and pushes honuware.
 			2. Claude re-pins `GIT_TAG`, clears the Windows override, and verifies the pinned build on both platforms.
 			3. Mason commits CF.
@@ -176,9 +181,19 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- **The fix.** It belongs in the same honuware change as §1.5. `ICalConfig` gains an optional refresh interval, written as both lines, and the feed passes `PT1H`. Doing it before you push honuware keeps it to one re-pin. knottyyoga's feed has the same gap. It would get the fix with a one-line change whenever it next re-pins.
 	- *Rec: do it now, in the §1.5 honuware change. Also drop the HTTP header that does nothing, and keep `Cache-Control`. If you'd rather not, push honuware as is, and this becomes a later follow-up with its own re-pin.*
 	- Mason- Let's do it now.
+	- Claude- Decided and built (10/28), as recommended, in the §1.5 honuware change:
+		- honuware `ICalConfig::refreshInterval` writes both refresh lines into the file.
+		- The feed passes `PT1H` and no longer sends the `X-PUBLISHED-TTL` header. `Cache-Control: max-age=3600` stays.
+		- This corrects OQ6's background line: Outlook, and probably Apple Calendar, can now actually re-read the feed hourly. Google Calendar still refreshes on its own schedule.
+		- knottyyoga's feed (`get_my_ical_feed.cpp`) still sends the header. It can switch to `refreshInterval` with a one-line change when it next re-pins. That's knottyyoga's call and isn't tracked here.
 
 # Change Log
 
+- **10/28/2026 (v0.5.1)** — **OQ7 decided ("do it now") and built** into the §1.5 honuware change.
+	- `ICalConfig::refreshInterval` writes `REFRESH-INTERVAL` and `X-PUBLISHED-TTL` into the file.
+	- The feed passes `PT1H` and drops the HTTP header that did nothing.
+	- Tests: honuware +2 and CF assertions. Windows 2092/2092, CF Linux 2092/2092, honuware Linux 1904/1904.
+	- 1.5 now waits only on the bump-point.
 - **10/28/2026 (v0.5)** — **§1.5 built** against the local honuware tree.
 	- honuware `ICalConfig::calendarName` → `X-WR-CALNAME`.
 	- CF names the feed from its filters' display names: "CommunityFinder: Drag events".

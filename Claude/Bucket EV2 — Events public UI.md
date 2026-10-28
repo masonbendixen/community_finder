@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.4.1
+Version: 0.5
 tags:
 ---
 
@@ -53,7 +53,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 1. Server — ICS endpoints (C++, `src/endpoints/`, EV1 conventions apply: anchors, tests via `handle_full` + `ThreadPool::Shutdown()`)
 
-*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. Remaining: the commit. 1.5 is a separate cross-repo follow-up, due before §4.4.)*
+*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. 1.1–1.4 committed 10/28 as `44462bc`. 1.5 was built 10/28 against the local honuware tree and is green: Windows 2090/2090, the CF Linux gate 2090/2090 (floor 2058), honuware's Linux gate 1902/1902. Remaining for 1.5: OQ7, then the bump-point.)*
 
 - [x] 1.1 `src/business_logic/events/event_ical.{h,cpp}` — `BuildICalEventsFromPublicEvents(events, …) → std::vector<ICalEvent>` (mapping pin-downs above; venue name + address → `location`; description + event URL → `description`; `BuildEventUid(eventId, uidDomain)`). **Test:** `event_ical_test.cpp` — field mapping, 2-hour default DTEND, UID stability.
 	- *As built (10/28):*
@@ -80,6 +80,29 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- *Done 10/28:* the two anchors (`GetEventICal`, `GetEventsICalFeed`), plus CMakeLists entries in `src/endpoints/` and `src/business_logic/events/`. The Linux gate builds Release, which is where a missing anchor would show. It ran 2084 tests (floor 2058, unchanged until bucket exit per EV1 §7.2), and every ICS route answered.
 	- *Found while testing:* the test suite's secrets helper starts out holding CF's own default settings, so `website_address_login` is already `http://localhost:4201/` in every test. A test that needs the link absent has to clear it.
 - [ ] 1.5 **Calendar name (follow-up from OQ6 (e); cross-repo; not part of the §1 commit; do before §4.4).** honuware's `ICalConfig` gains an optional calendar name, and `GenerateICalendar` writes it as `X-WR-CALNAME` when it's set. The feed then passes a name that reflects its filters, for example "CommunityFinder: bear events", or "CommunityFinder events" with no filter. Settle the exact wording when it's built. Bump-point flow: Mason pushes honuware, Claude re-pins and verifies the pinned build, Mason commits. **Tests:** honuware's generator test covers the line, both present and absent. `get_events_ics_feed_test` checks the name on a filtered feed and an unfiltered one.
+	- *As built (10/28), against the local honuware tree; waiting on the bump-point:*
+		- **honuware** (`components/foundation/util/ical_generator.{h,cpp}`):
+			- `ICalConfig` gains `calendarName`.
+			- When it's set, `GenerateICalendar` writes `X-WR-CALNAME:` as escaped text, right after `METHOD:PUBLISH`, ahead of any event.
+			- When it's empty, nothing is written, so existing callers are unchanged. That includes knottyyoga's two-field config.
+			- Tests (+2): `EmitsCalendarNameWhenSet` checks the escaping, the line's place in the header, and that an empty calendar is named too. `OmitsCalendarNameWhenEmpty`.
+		- **CF:**
+			- The brand is `App::kICalCalendarBrand = "CommunityFinder"`, beside the PRODID in `app_ical_config.h`.
+			- `EventHelper::GetFeedFilterNames(tx, filters)` turns the filters into display names: category, scene, neighborhood, then the series' title. A value that names nothing is shown as given.
+			- `Events::BuildFeedCalendarName(brand, names)` builds the name.
+			- The feed copies `App::AppICalConfig()` and sets the name.
+			- The one-event download names no calendar, since it goes into the person's own calendar.
+		- **Wording settled:** "CommunityFinder events" with no filter, "CommunityFinder: Drag events" with one, and "CommunityFinder: Drag, Capitol Hill events" with several. Each filter shows its display name as curators entered it.
+		- **CF tests (+4):**
+			- `event_ical_test` +2: `FeedCalendarNameListsTheFilters`, `NamedFeedCarriesTheCalendarName`.
+			- `event_helper_test` +1: `FeedFilterNamesAreDisplayNamesInQueryOrder`.
+			- `get_events_ics_feed_test` +1: `CalendarIsNamedForItsFilters`.
+			- `get_event_ics_test` also checks that the download carries no name.
+		- **Gates:** Windows 2090/2090 and the CF Linux gate 2090/2090 (floor 2058), both built against the local honuware tree, plus honuware's own Linux gate at 1902/1902 (floor 1700). For this, Mason's Windows `x64-Debug` build points at the local tree (`FETCHCONTENT_SOURCE_DIR_HONUWARE`), and the re-pin clears it.
+		- **Remaining (bump-point):** OQ7 first, since it may add to the honuware change. Then:
+			1. Mason commits and pushes honuware.
+			2. Claude re-pins `GIT_TAG`, clears the Windows override, and verifies the pinned build on both platforms.
+			3. Mason commits CF.
 
 ### 2. Client access layer (`ui/src/app/core/`)
 
@@ -143,8 +166,24 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- (c): §3.4 now hides Add to calendar for a curator's pending preview, with a spec.
 		- (d): a note in [[Bucket GD3 — Guide public UI]] §3.4 says the feed takes no `venue_id` yet, so a "subscribe to this venue" link there means asking for the one-line server change.
 		- (e): logged as work item **§1.5** (the honuware calendar name plus a re-pin), due before §4.4. §4.4 points to it.
+7. **The feed's "check back every hour" hint is in the wrong place** *(added 10/28, found while building §1.5; please answer before pushing honuware)*.
+	- **What's wrong.** OQ6's background said a subscriber's calendar app re-reads the feed every hour. The feed asks for that with `X-PUBLISHED-TTL: PT1H`, copied from knottyyoga's feed, which sends it as an HTTP header. As far as I know, calendar apps only look for that hint inside the calendar file itself, not in the HTTP headers. So the header does nothing, and each app falls back to its own schedule.
+	- **The correct form.** Inside the file there are two spellings:
+		- `REFRESH-INTERVAL;VALUE=DURATION:PT1H` is the standard one (RFC 7986).
+		- `X-PUBLISHED-TTL:PT1H` is the older one, which Outlook reads.
+		- Feeds commonly write both.
+	- **What it can't fix.** Google Calendar ignores both and refreshes subscriptions on its own timetable, which people report as anywhere from several hours to a day. No feed can change that.
+	- **The fix.** It belongs in the same honuware change as §1.5. `ICalConfig` gains an optional refresh interval, written as both lines, and the feed passes `PT1H`. Doing it before you push honuware keeps it to one re-pin. knottyyoga's feed has the same gap. It would get the fix with a one-line change whenever it next re-pins.
+	- *Rec: do it now, in the §1.5 honuware change. Also drop the HTTP header that does nothing, and keep `Cache-Control`. If you'd rather not, push honuware as is, and this becomes a later follow-up with its own re-pin.*
 
 # Change Log
+
+- **10/28/2026 (v0.5)** — **§1.5 built** against the local honuware tree.
+	- honuware `ICalConfig::calendarName` → `X-WR-CALNAME`.
+	- CF names the feed from its filters' display names: "CommunityFinder: Drag events".
+	- Tests: +6 (honuware +2, CF +4). Windows 2090/2090, CF Linux 2090/2090, honuware Linux 1902/1902.
+	- Waiting on OQ7, new and found while building: the hourly-refresh hint is sent as an HTTP header that calendar apps don't read. The rec is to fix it inside the file in the same honuware change, before the push and re-pin.
+	- §1's status line records `44462bc`.
 
 - **10/28/2026 (v0.4.1)** — **OQ6 decided: all five §1 calls kept**, and §1 (1.1–1.4) is ready to commit. Folded in: new **§1.5**, the honuware calendar name (`X-WR-CALNAME`), a cross-repo follow-up due before §4.4, which now points to it; §3.4 hides Add to calendar for a pending preview (+ spec); §2.1 names `venue_address`. The production site address rides on [[Setting up the project]] OQ9. A `venue_id` feed-filter note was mirrored into GD3 §3.4.
 

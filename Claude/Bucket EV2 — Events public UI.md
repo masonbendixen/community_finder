@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.7
+Version: 0.8
 tags:
 ---
 
@@ -112,7 +112,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 2. Client access layer (`ui/src/app/core/`)
 
-*(Built 10/28. 2.1–2.4 are green: vitest 82/82, up from 27 before §2, with 55 new specs in 4 new spec files. `ng build -c local` and `-c development` are both clean. The suite also passes with the machine clock set to UTC and to Tokyo time, so nothing depends on the viewer's time zone. A live check against the dev server confirmed the wire shapes the normalizers expect. Committed 10/28 as `0189a0b`. Remaining: OQ8.)*
+*(Built 10/28. 2.1–2.4 are green: vitest 82/82, up from 27 before §2, with 55 new specs in 4 new spec files. `ng build -c local` and `-c development` are both clean. The suite also passes with the machine clock set to UTC and to Tokyo time, so nothing depends on the viewer's time zone. A live check against the dev server confirmed the wire shapes the normalizers expect. Committed 10/28 as `0189a0b`. OQ8 decided 10/28: all six calls kept. **§2 is complete.**)*
 
 - [x] 2.1 `core/types/events.types.ts` — `PublicEvent`, `EventSeries`, `Category`, `SceneTag`, `Neighborhood` interfaces mirroring EV1's wire shapes (ids + `_us` numbers + slugs, and `venue_address`, which §1 added per OQ6 (a)), plus `normalizeEvent(...)` statics (the `?? []` / number-coercion hygiene from `ServerAccessNetwork`).
 	- *As built (10/28):*
@@ -189,7 +189,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 3. Events pages (`ui/src/app/pages/events/`, lazy `events.routes.ts`; standalone components; Material via the app's existing patterns)
 
-*(Built 10/28. 3.1–3.7, 3.9 and 3.10 are green: vitest 173/173, up from 82 after §2, with 91 new tests in 15 new spec files. The suite also passes with the machine clock set to UTC and to Tokyo time. `ng build -c local`, `-c development` and `-c production` all build, and the events pages load as their own chunk (129 kB, 43 kB optimized). 3.8 waits for GD3. Nothing was checked against a live server, since none was running; that's §4.4's manual loop. Remaining: OQ8, OQ9 and the commit.)*
+*(Built 10/28. 3.1–3.7, 3.9 and 3.10 are green: vitest 173/173, up from 82 after §2, with 91 new tests in 15 new spec files. The suite also passes with the machine clock set to UTC and to Tokyo time. `ng build -c local`, `-c development` and `-c production` all build, and the events pages load as their own chunk (129 kB, 43 kB optimized). 3.8 waits for GD3. Nothing was checked against a live server, since none was running; that's §4.4's manual loop. OQ9 decided 10/28: all twelve calls kept, with (a)'s honuware fix done now rather than later. That fix is built against the local honuware tree, and the editor's stopgap is gone. Remaining: Mason pushes honuware, Claude re-pins CF and checks the pinned build, then Mason commits §3 with the re-pin.)*
 
 - [x] 3.1 Route scaffolding — `app.routes.ts` one-liner: `{ path: 'events', loadChildren: … }`; child routes: `''` (list), `calendar`, `series`, `series/:slug`, `:id` (**`:id` last** — the knottyyoga route-ordering hazard). Header gains the "Events" nav link (one-line shared-file edit, both logged-in and logged-out states).
 	- *As built (10/28):* `pages/events/events.routes.ts` is lazy-loaded from `app.routes.ts`, with `:id` last and a comment saying why. The header's **Events** link sits beside the site name, so it shows whether or not anyone is signed in. `header.spec.ts` checks it.
@@ -246,7 +246,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 			- Venue and series pickers.
 			- Category and scene checkboxes. Left empty on a series event, the event keeps the series' tags.
 		- **Saving:** a new event is saved as pending, recording who entered it (OQ9 (j)). An edit sends only what changed. Tag changes add and delete only the rows for the boxes shown.
-		- **One known gap:** emptying the description, location, website or cost can't be saved yet. The form says so instead of failing (OQ9 (a)).
+		- **Emptying a text field** (the description, location, website or cost) saves as a blank. Until 10/28 the server couldn't store that, and the form refused the save. honuware's update now keeps a blank for a text column that can't be `NULL`, so the form's check is gone (OQ9 (a)).
 		- **Offline:** the mock's table store now holds the events tables (`core/mock/events-crud-mock.ts`), and the demo admin has `manage_events` (OQ9 (k)).
 		- **Specs:**
 			- `manage-events-form.spec.ts`: Seattle time to instants in summer and winter, both 2026 clock-change weekends, next-morning and month-end endings, a multi-day event, the error messages, loading a row, the insert and edit rows, the blocked blanks, the tag changes.
@@ -332,6 +332,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- **(e) Turned-off categories, scenes and neighborhoods are hidden.** A curator can turn an entry off in the admin editor (the `enabled` box) instead of deleting it. The server's public table read returns every row, so the client drops the turned-off ones and sorts the rest by their sort order. That matches what the server's own event filters already do. *Rec: keep.*
 	- **(f) Times show as "10:00 PM".** The event pages will show "10:00 PM" and "9:30 AM", not "10 PM". The fuller form lines up in lists and is what the formatter gives by default. Dropping ":00" is a one-line change if you'd rather. It's worth deciding before §3 builds the list and detail pages on it. *Rec: keep "10:00 PM".*
 	- Mason- I'll go with your recommendations.
+	- Claude- Decided (10/28): all six are kept as built, and nothing changes. §2 is complete.
 9. **§3 (the events pages) as built — twelve calls** *(added 10/28)*. Each one is already in the code and tested. "Agreed" locks all twelve, or name the ones to change. Only (a) needs follow-up work, and that work is in honuware.
 	- **(a) The editor can't empty a text field yet. The fix belongs in honuware.**
 		- **What happens.** When an edit is saved, honuware's shared update turns any blank field into "no value" (`NULL`). An event's description, location, website and cost must always hold text, even if it's blank, so the database refuses the save. Adding or changing text works. Only clearing a field fails.
@@ -370,8 +371,19 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- **(k) Offline, the editor and the public pages use separate data.** In `ng serve`'s offline mode the editor works on its own copy of the demo events. Approving one there doesn't make it appear on the public pages. Against the real server they're the same data. *Rec: keep. It only affects the offline demo.*
 	- **(l) The home-page strip sits below the welcome card.** It shows the next five events and a "See all events" link, and disappears when there's nothing to show. This is OQ4's exception to editing a Stream C page, so **ping John-Michael in the PR**. *Rec: keep. RT1's restyle moves it into its own slot.*
 	- Mason- I'll go with your recommendations except let's make the honuware change now.
+	- Claude- Decided (10/28): (b)–(l) are kept as built. (a)'s honuware change is built now:
+		- **honuware:** `DatabaseRESTHelper::UpdateTableValue` still turns a blank into `NULL`, except for a text column that can't be `NULL`. That column keeps the blank, since a blank is the only way to clear it. Number and date columns are unchanged: a blank can't be cast to them, so it still becomes `NULL`.
+		- **honuware test:** new `UpdateTableValueEmptyStringKeptForNotNullText`. It clears `people.last_name` (a required text column) and `locked_until` (an optional number) in one save. The name ends up blank and the number ends up `NULL`. The existing blank-to-`NULL` test still passes.
+		- **CF:** the editor's "can't be emptied yet" check is gone, and its two specs now check that an emptied field saves as a blank.
+		- **Who else it affects:** only saves through the generic update (`/api/update_item`, the admin editor) that clear a required text column. Those always failed before, so nothing that worked changes. No honuware or knottyyoga test relied on the old failure. knottyyoga gets this whenever it next re-pins.
+		- **Order:** the CF editor change needs the new honuware. Commit §3 together with the re-pin, so the editor never offers a save the pinned server refuses.
 
 # Change Log
+
+- **10/28/2026 (v0.8)** — **OQ8 and OQ9 decided.**
+	- OQ8: all six §2 calls kept. §2 is complete.
+	- OQ9: (b)–(l) kept. (a) was done now: honuware's update keeps a blank for a required text column, with a new honuware test, and the editor's stopgap check is removed.
+	- §3.7's note is updated, and §3's status line lists what's left: the honuware push, the CF re-pin, and the commit.
 
 - **10/28/2026 (v0.7)** — **§3 built (3.1–3.7, 3.9, 3.10).**
 	- vitest 173/173: 91 new tests in 15 new spec files, up from 82. It also passes with the machine set to UTC and to Tokyo time.

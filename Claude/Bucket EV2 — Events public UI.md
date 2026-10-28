@@ -175,6 +175,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- **What it can't fix.** Google Calendar ignores both and refreshes subscriptions on its own timetable, which people report as anywhere from several hours to a day. No feed can change that.
 	- **The fix.** It belongs in the same honuware change as §1.5. `ICalConfig` gains an optional refresh interval, written as both lines, and the feed passes `PT1H`. Doing it before you push honuware keeps it to one re-pin. knottyyoga's feed has the same gap. It would get the fix with a one-line change whenever it next re-pins.
 	- *Rec: do it now, in the §1.5 honuware change. Also drop the HTTP header that does nothing, and keep `Cache-Control`. If you'd rather not, push honuware as is, and this becomes a later follow-up with its own re-pin.*
+	- Mason- Let's do it now.
 
 # Change Log
 

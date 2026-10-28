@@ -331,6 +331,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- **(d) The offline demo uses made-up venues.** The fake events `ng serve` shows are at invented places: The Lantern Room, Driftwood Hall, Columbia City Social Club and Eastside Commons. The neighborhoods and street names are plausible. Using real Seattle bars would put made-up events under real businesses' names in screenshots and demos. There's also a third demo series, an ended one, so §3.5's "Ended" marker has something to show; the plan said two. *Rec: keep.*
 	- **(e) Turned-off categories, scenes and neighborhoods are hidden.** A curator can turn an entry off in the admin editor (the `enabled` box) instead of deleting it. The server's public table read returns every row, so the client drops the turned-off ones and sorts the rest by their sort order. That matches what the server's own event filters already do. *Rec: keep.*
 	- **(f) Times show as "10:00 PM".** The event pages will show "10:00 PM" and "9:30 AM", not "10 PM". The fuller form lines up in lists and is what the formatter gives by default. Dropping ":00" is a one-line change if you'd rather. It's worth deciding before §3 builds the list and detail pages on it. *Rec: keep "10:00 PM".*
+	- Mason- I'll go with your recommendations.
 9. **§3 (the events pages) as built — twelve calls** *(added 10/28)*. Each one is already in the code and tested. "Agreed" locks all twelve, or name the ones to change. Only (a) needs follow-up work, and that work is in honuware.
 	- **(a) The editor can't empty a text field yet. The fix belongs in honuware.**
 		- **What happens.** When an edit is saved, honuware's shared update turns any blank field into "no value" (`NULL`). An event's description, location, website and cost must always hold text, even if it's blank, so the database refuses the save. Adding or changing text works. Only clearing a field fails.
@@ -368,6 +369,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- *Rec: keep both.*
 	- **(k) Offline, the editor and the public pages use separate data.** In `ng serve`'s offline mode the editor works on its own copy of the demo events. Approving one there doesn't make it appear on the public pages. Against the real server they're the same data. *Rec: keep. It only affects the offline demo.*
 	- **(l) The home-page strip sits below the welcome card.** It shows the next five events and a "See all events" link, and disappears when there's nothing to show. This is OQ4's exception to editing a Stream C page, so **ping John-Michael in the PR**. *Rec: keep. RT1's restyle moves it into its own slot.*
+	- Mason- I'll go with your recommendations except let's make the honuware change now.
 
 # Change Log
 

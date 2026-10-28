@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.9
+Version: 0.9.1
 tags:
 ---
 
@@ -254,7 +254,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 6. test_helper simulation commands (`src/test_helper/commands/` — the SUTP Q10 standing convention)
 
-*(Slice 6 built 10/28 — 6.1 green on both platforms: Windows 2068/2068, Linux docker gate 2068/2068 (floor 1700); 10 new tests. The test_helper exe also builds on Linux, and on Windows `help` and `list-upcoming` ran against the dev database. Remaining: OQ12 and the commit.)*
+*(Slice 6 built 10/28 — 6.1 green on both platforms: Windows 2068/2068, Linux docker gate 2068/2068 (floor 1700); 10 new tests. The test_helper exe also builds on Linux, and on Windows `help` and `list-upcoming` ran against the dev database. OQ12 decided 10/28 (all five kept as built). Remaining: the commit.)*
 
 - [x] 6.1 `events_commands.{h,cpp}`: `create-venue <name>` · `create-event <title> --starts-in <hours> [--venue <id>] [--status pending|approved] [--past]` · `ingest-demo` (a canned 6-item batch exercising created/updated/reverted) · `list-upcoming`. Registered in the command registry; each command prints ids it created.
   - *As built (10/28):*
@@ -388,9 +388,11 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(d) Two small additions the spec didn't list.** `create-venue` takes an optional `--neighborhood=<slug>`, and `list-upcoming` takes the same category, scene and neighborhood filters as the endpoint. Without these, the neighborhood filter and series inheritance couldn't be checked from the helper. *Rec: keep.*
 	- **(e) The commands are tested.** The test_helper is its own program, and no test has ever run any of its code. Phase 16 of the VS 2026 doc notes the same gap. So its command parser and the events commands now also build into the test suite, and each command runs against the test database (10 new tests). The REPL, dashboard and startup code stay out. Times print in UTC, not Seattle time, because the helper has no time-zone support. *Rec: keep both.*
 	- Mason- I'll go with your recommendations
+	- Claude- **Decided (10/28): all five locked as built.** No code changes were needed.
 
 # Change Log
 
+- **10/28/2026 (v0.9.1)** — **OQ12 decided** (Mason went with the recommendations). All five Slice 6 calls are kept as built, with no code changes. Remaining for Slice 6: the commit.
 - **10/28/2026 (v0.9)** — **Slice 5 complete** (committed as `b57ce19`). **Slice 6 built (6.1)**, green on Windows (2068/2068) and the Linux Docker gate (2068/2068), with 10 new tests. The test_helper exe builds on both platforms. On Windows, `help` and `list-upcoming` ran against the dev database.
 	- New: `src/test_helper/commands/events_commands.{h,cpp}` (`create-venue`, `create-event`, `ingest-demo`, `list-upcoming`), quote support in the REPL parser, one-shot flags in `main.cpp`, and the parser and commands built into the test bag.
 	- Doc: an as-built note under §6.1, the exact commands under §7.4, and **OQ12**, five as-built calls awaiting "Agreed".

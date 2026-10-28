@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 10/27/2026
-Version: 0.7
+Last Updated: 10/28/2026
+Version: 0.7.1
 tags:
 ---
 
@@ -165,7 +165,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 4. business_logic (`src/business_logic/events/` — model: knottyyoga `class_schedule_helper.h`: request/result structs, error-code strings, no exceptions)
 
-*(Slice 4 built 10/27 — 4.1–4.2 green on both platforms: Windows 2026/2026, Linux docker gate 2026/2026 (floor 1700); 28 new tests. **OQ10** lists the calls made while building it. Remaining: OQ10, then the commit.)*
+*(Slice 4 built 10/27 — 4.1–4.2 green on both platforms: Windows 2026/2026, Linux docker gate 2026/2026 (floor 1700); 28 new tests. OQ10 decided 10/28 (all seven kept as built). Remaining: the commit.)*
 
 - [x] 4.1 `event_helper.{h,cpp}` — `EventHelper(DatabaseHelper)` owning the table helpers it needs.
   - `IngestEvents(Transaction&, const std::vector<IngestItem>&) → IngestResult` implementing the upsert pin-down (per-item outcome: `created` / `updated` / `unchanged` / `reverted_to_pending` / `rejected_kept`; batch is one transaction).
@@ -221,7 +221,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 5. endpoints (`src/endpoints/` — model: knottyyoga `get_calendar.cpp`; PascalCase `crow::HTTPMethod` aliases; every TU = handler + `SetupRouting` + exported `Endpoints::X`; **volatile anchor in `web_app.cpp` or it 404s in Release**)
 
-- [ ] 5.1 `get_upcoming_events.cpp` — `GET /api/events/upcoming?from_us&to_us&category&scene&neighborhood&venue_id&series_id` (all optional; `ParseIntParam` fallback pattern). Anonymous. Response `{"items":[…]}`. **Test** (`get_upcoming_events_test.cpp`, HTTP via `handle_full` with the file-local request helper that calls `ThreadPool::GetInstance().Shutdown()` before returning): approved-only; each filter; window default + cap; find items by id, never index.
+- [ ] 5.1 `get_upcoming_events.cpp` — `GET /api/events/upcoming?from_us&to_us&category&scene&neighborhood&venue_id&series_id` (all optional; `ParseIntParam` fallback pattern). Anonymous. Response `{"items":[…]}`. The KVT's comma-joined `category_slugs` / `scene_tag_slugs` go out as real JSON arrays, nested here at the endpoint as knottyyoga's `get_calendar.cpp` does for tags (OQ10 (f)); §5.3's slug lists do the same. **Test** (`get_upcoming_events_test.cpp`, HTTP via `handle_full` with the file-local request helper that calls `ThreadPool::GetInstance().Shutdown()` before returning): approved-only; each filter; window default + cap; find items by id, never index.
 - [ ] 5.2 `get_event_detail.cpp` — `GET /api/events/<int>`. Anonymous sees `approved` (404 otherwise, to keep the URL low-information); a caller holding `manage_events` sees any status (the reviewer's preview — knottyyoga blog's author-preview pattern). **Test:** both behaviors.
 - [ ] 5.3 `get_event_series.cpp` — `GET /api/event_series` (active list, each with its own category/scene-tag slugs) and `GET /api/event_series/<string>` (by slug: series fields + its category/scene-tag slugs + its upcoming approved instances). Separate top-level path avoids the `/api/events/<int>` route ambiguity. **Test:** incl. series slugs present in both shapes.
 - [ ] 5.4 `admin_ingest_events.cpp` — `POST /api/admin/ingest_events`, `endpointAuthHelper.RequirePermission(manage_events)`; body `{"items":[{source_id, external_key, title, starts_at_us, ends_at_us?, description?, url?, cost_text?, location_text?, venue_id?, series_slug?, category_slugs?[], scene_tag_slugs?[]}]}`; response per-item outcomes + counts. This is the scanner's (EV5) and any feed importer's single door. **Test:** ingest twice over HTTP → second pass all `unchanged`; anonymous → 401, logged-in-without-permission → 403 (grant the positive case via `EndpointTestHelper::GrantPermissionToPerson(tx, personId, "manage_events")`); malformed item → 400 `ValidationError` with the item index.
@@ -310,9 +310,12 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(e) Reviewing an event into the state it's already in is an error.** Approving an approved event returns `INVALID_TRANSITION` (along with its current status) rather than quietly succeeding. That way two curators approving at once can't both think they did it, and the second click doesn't overwrite the first reviewer's name and notes. Archived events can't be reviewed at all; un-archiving stays a raw admin edit, as the behavior pin says. *Rec: keep.*
 	- **(f) In the public list, an event's categories and scene tags travel as one comma-separated string** (`"dance,drag"`), because the layer below the endpoints is a flat list of name/value pairs. That's knottyyoga's convention. Slice 5's endpoint will turn them into real JSON arrays before they reach the browser, as knottyyoga's calendar does for its tags. *Rec: keep, and do the array conversion in §5.1.*
 	- **(g) A turned-off neighborhood disappears from listings. A turned-off category doesn't.** Events at a venue in a disabled neighborhood show no neighborhood, and the neighborhood filter won't find them. A category or scene tag that's disabled *after* events were tagged with it still shows on those events, and still filters. Disabling only stops new feed items from using it (c). The difference comes from where each list is read. *Rec: leave as is for now. Retiring a category is rare, and a curator can remove it from the affected events. If you'd rather a disabled category vanish everywhere at once, say so; it's a small change in `GetUpcomingPublic`.*
+	- Mason- Agreed
+	- Claude- **Decided (10/28): all seven locked as built.** No code changes were needed. (f)'s array conversion is now noted on §5.1, and it applies to §5.3's slug lists too.
 
 # Change Log
 
+- **10/28/2026 (v0.7.1)** — **OQ10 decided** (Mason: "Agreed"). All seven Slice 4 calls are kept as built, with no code changes. §5.1 now carries OQ10 (f)'s JSON-array note. Remaining for Slice 4: the commit.
 - **10/27/2026 (v0.7)** — **Slice 3 complete** (committed as `de0a219`). **Slice 4 built (4.1–4.2)**, green on Windows (2026/2026) and the Linux Docker gate (2026/2026), with 28 new tests.
 	- New: `src/business_logic/events/`, with `EventHelper` (ingest, review, public upcoming list), `ClampUpcomingWindow`, and the public key-value-table conversion. Also `Series::GetSeriesByIds` in table_helpers.
 	- Fix: `now_us()` turned out to read the wall clock, not the transaction's start time. CLAUDE.md, four test comments and the §3.6 note are corrected. No behavior changed.

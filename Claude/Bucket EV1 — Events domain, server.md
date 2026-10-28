@@ -254,7 +254,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 6. test_helper simulation commands (`src/test_helper/commands/` — the SUTP Q10 standing convention)
 
-*(Slice 6 built 10/28 — 6.1 green on both platforms: Windows 2068/2068, Linux docker gate 2068/2068 (floor 1700); 10 new tests. The test_helper exe also builds on Linux, and on Windows `help` and `list-upcoming` ran against the dev database. OQ12 decided 10/28 (all five kept as built). Remaining: the commit.)*
+*(Slice 6 built 10/28 — 6.1 green on both platforms: Windows 2068/2068, Linux docker gate 2068/2068 (floor 1700); 10 new tests. The test_helper exe also builds on Linux, and on Windows `help` and `list-upcoming` ran against the dev database. OQ12 decided 10/28 (all five kept as built). **Complete — committed 10/28 as `0210b37`.**)*
 
 - [x] 6.1 `events_commands.{h,cpp}`: `create-venue <name>` · `create-event <title> --starts-in <hours> [--venue <id>] [--status pending|approved] [--past]` · `ingest-demo` (a canned 6-item batch exercising created/updated/reverted) · `list-upcoming`. Registered in the command registry; each command prints ids it created.
   - *As built (10/28):*
@@ -295,6 +295,16 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 		5. `ingest-demo` reports 6 unchanged (the idempotency check).
 		6. `ingest-demo --changed` reports 3 unchanged, 2 updated and 1 `reverted_to_pending`. That one is Leather Night, now pending with the re-scan note.
 	- These write to the dev database. The demo events are prefixed "Demo:", and the admin editor's delete clears them.
+	- *test_helper half passed 10/28.* Claude ran it at Mason's request, using the Windows x64-Debug server and test_helper against the dev database `communityfinder`, with env from `launch_defaults.local.json`. The venue and event were named "Demo: The Cuff" and "Demo: Bear Night" so all the test data carries the prefix.
+		1. `create-venue` made venue 1 (capitol-hill).
+		2. `create-event --status=approved` made event 6. Its reviewer and creator are person 1, with the note "approved by test_helper".
+		3. `list-upcoming` and `curl /api/events/upcoming` both showed it, and so did `?neighborhood=capitol-hill`. `GET /api/events/6` returned it.
+		4. `ingest-demo --approve` created events 7–12, all approved, under "test_helper demo feed" (source 3). Geek Trivia reported `not-a-category` as ignored.
+		5. A plain re-run reported 6 unchanged.
+		6. `--changed` reported 3 unchanged, 2 updated (Bear Happy Hour, Sober Social & Games) and 1 `reverted_to_pending` (Leather Night, event 9, with note "date/venue changed by re-scan").
+		- Afterwards, `curl /api/events/upcoming` served 6 events: Bear Night and five demo events, with Leather Night gone. `?category=bar` returned only Bear Happy Hour, and `?scene=sober` only the retitled Sober Social. Anonymous `GET /api/events/9` was a 404. A psql check found only these rows: 7 events, 1 source and 1 venue, all "Demo:".
+		- Side effect: the server's first start after the reseed encrypted the 55 plaintext seeded secrets with the dev key. That's the normal, idempotent startup migration.
+		- **Still open (Mason):** the admin-editor half. Enter a venue and event in `/admin/tables`, approve one (Leather Night, event 9, is waiting as pending), and check `curl /api/events/upcoming` shows it. Then tick this box.
 
 # Open Questions
 

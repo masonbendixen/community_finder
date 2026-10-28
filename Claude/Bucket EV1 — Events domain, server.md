@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.8.1
+Version: 0.9
 tags:
 ---
 
@@ -221,7 +221,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 5. endpoints (`src/endpoints/` — model: knottyyoga `get_calendar.cpp`; PascalCase `crow::HTTPMethod` aliases; every TU = handler + `SetupRouting` + exported `Endpoints::X`; **volatile anchor in `web_app.cpp` or it 404s in Release**)
 
-*(Slice 5 built 10/28 — 5.1–5.6 green on both platforms: Windows 2058/2058, Linux docker gate 2058/2058 (floor 1700); 32 new tests. OQ11 decided 10/28 (all six kept as built). Remaining: the commit.)*
+*(Slice 5 built 10/28 — 5.1–5.6 green on both platforms: Windows 2058/2058, Linux docker gate 2058/2058 (floor 1700); 32 new tests. OQ11 decided 10/28 (all six kept as built). **Complete — committed 10/28 as `b57ce19`.**)*
 
 - [x] 5.1 `get_upcoming_events.cpp` — `GET /api/events/upcoming?from_us&to_us&category&scene&neighborhood&venue_id&series_id` (all optional; `ParseIntParam` fallback pattern). Anonymous. Response `{"items":[…]}`. The KVT's comma-joined `category_slugs` / `scene_tag_slugs` go out as real JSON arrays, nested here at the endpoint as knottyyoga's `get_calendar.cpp` does for tags (OQ10 (f)); §5.3's slug lists do the same. **Test** (`get_upcoming_events_test.cpp`, HTTP via `handle_full` with the file-local request helper that calls `ThreadPool::GetInstance().Shutdown()` before returning): approved-only; each filter; window default + cap; find items by id, never index.
 - [x] 5.2 `get_event_detail.cpp` — `GET /api/events/<int>`. Anonymous sees `approved` (404 otherwise, to keep the URL low-information); a caller holding `manage_events` sees any status (the reviewer's preview — knottyyoga blog's author-preview pattern). **Test:** both behaviors.
@@ -254,7 +254,30 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 6. test_helper simulation commands (`src/test_helper/commands/` — the SUTP Q10 standing convention)
 
-- [ ] 6.1 `events_commands.{h,cpp}`: `create-venue <name>` · `create-event <title> --starts-in <hours> [--venue <id>] [--status pending|approved] [--past]` · `ingest-demo` (a canned 6-item batch exercising created/updated/reverted) · `list-upcoming`. Registered in the command registry; each command prints ids it created.
+*(Slice 6 built 10/28 — 6.1 green on both platforms: Windows 2068/2068, Linux docker gate 2068/2068 (floor 1700); 10 new tests. The test_helper exe also builds on Linux, and on Windows `help` and `list-upcoming` ran against the dev database. Remaining: OQ12 and the commit.)*
+
+- [x] 6.1 `events_commands.{h,cpp}`: `create-venue <name>` · `create-event <title> --starts-in <hours> [--venue <id>] [--status pending|approved] [--past]` · `ingest-demo` (a canned 6-item batch exercising created/updated/reverted) · `list-upcoming`. Registered in the command registry; each command prints ids it created.
+  - *As built (10/28):*
+    - **Commands** (category "Events", alias in brackets). Flags are `--key=value` (OQ12 (a)):
+      - `create-venue [cv] --name="The Cuff" [--neighborhood=capitol-hill]`
+      - `create-event [ce] --title="Bear Night" --starts_in_hours=5 [--venue_id=N] [--status=pending|approved] [--past]`
+      - `ingest-demo [demo] [--changed] [--approve]` (OQ12 (b))
+      - `list-upcoming [lu] [--category=…] [--scene=…] [--neighborhood=…]`
+    - **What each does.**
+      - `create-event` makes a hand-entered event: no feed, origin `manual`, created by the logged-in person. `--status=approved` goes through `EventHelper::ReviewEvent`, so the review fields are stamped (OQ12 (c)).
+      - `ingest-demo` files its six events under an ICS source named "test_helper demo feed". It creates that source the first time and reuses it after. Each run prints a table of key, event id, outcome, status and ignored slugs, then the counts.
+      - `list-upcoming` is `GetUpcomingPublic`, so it shows exactly what `/api/events/upcoming` serves.
+    - **Wiring.**
+      - `RegisterEventsCommands` is called from `RegisterAllCommands`.
+      - `main.cpp` has a one-shot absl flag for each new argument. For example: `communityfinder_test_helper --command=create-event --title="Bear Night" --starts_in_hours=5 --status=approved`.
+      - The REPL's `ParseCommandLine` now honors double quotes, so a value can contain spaces.
+    - **Tests (10 new).** `command_registry.cpp` and the events commands also build into `communityfinder_test_cases` (OQ12 (e)):
+      - `command_registry_test` (4): quoted values, bare flags, an empty quoted value, a blank line.
+      - `events_commands_test` (6): each command is registered with its alias; `ingest-demo` twice leaves everything unchanged, and `--changed` makes one event go back to pending and two stay approved with their edits; approving needs a logged-in person; `create-event` timing, approval and `--past`; bad input is refused with nothing written; `create-venue` with a neighborhood, then an event at that venue.
+      - The tests check what ends up in the database, not the printed text.
+    - **Windows gotchas.**
+      - `<windows.h>` (from `console_colors.h`) defines `CreateEvent` as a macro, so the command functions are named `RunCreateEvent` and so on.
+      - In a gtest `TEST` body, a free function named `Run` is hidden by the inherited `testing::Test::Run`, so the test helper is `RunCommand`.
 
 ### 7. Gates (per slice and at bucket exit)
 
@@ -264,6 +287,14 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- *Slice 1 portion passed 10/27* (Claude ran it at Mason's request with the Windows x64-Debug `communityfinder_database_helper.exe`, env from `launch_defaults.local.json`): exit 0; psql shows 12 categories, 11 scene tags (3 `link_out`: `qtpoc`, `sapphic`, `trans`), 25 neighborhoods across all 5 regions, 0 venues. All three CHECK constraints are present, as is the `venues.neighborhood_id` FK. All four tables are in `allowed_tables`, `admin_top_level_tables`, friendly names and display templates. `mail_app_password` is seeded. The `manage_events` and events-table items wait for Slice 2, so this box stays open until bucket exit.
 	- *Slice 2 portion passed 10/27* (same exe and env, re-run on the Slice 2 working tree): exit 0. The seven new tables are present and empty. All the CHECK constraints (source kind, both volatility tiers, series status, event origin and status) and UNIQUE constraints (series slug, `events_source_id_external_key_key`, the four assignment pairs) are present, along with the three `events` indexes. Every FK is `ON DELETE CASCADE`, including the two person FKs (OQ8 (e)). *(Those two were dropped after this check, per OQ8. That change is DDL only and doesn't touch the seed. The schema test pins it, and the next `--recreate_database` will show it.)* `manage_events` (not pricing-eligible) is granted to `admin`, and `admin_table_permissions` maps it to all 11 events-domain tables. All 11 are in `admin_top_level_tables` with friendly names and display templates, and the 4 assignment tables are also in `admin_nested_tables`. `photo_support_tables` = events, people, venues. `allowed_tables` = categories, neighborhoods, permission_implications, scene_tags, venues, so none of the event pipeline is public. Column data info has starts/ends as `date`, and the reviewer, creator and timestamp columns are read-only. A rolled-back insert test accepted two hand-entered events (pending, manual, NULL key). It rejected status `published`, source kind `rss`, and a second insert of the same feed item. The new source defaulted to `weekly`. **Everything §7.3 specifies now passes, so the box is checked.** Re-run it if a later slice changes the seed.
 - [ ] 7.4 **Manual loop (Mason or Levi, Windows or Linux):** enter a venue + event via the admin CRUD editor (`/admin/tables`; if the generic date control fights you on times-of-day, use the `create-event` test_helper command — the bespoke event editor arrives in EV2 per OQ2) → `POST /api/admin/review_event` approve (or edit status via CRUD) → `curl /api/events/upcoming` shows it; re-run `ingest-demo` → idempotent.
+	- *The test_helper half, as built (Slice 6).* In the REPL (`communityfinder_test_helper --repl`), which logs you in automatically:
+		1. `create-venue --name="The Cuff" --neighborhood=capitol-hill` prints the venue id.
+		2. `create-event --title="Bear Night" --starts_in_hours=5 --venue_id=<id> --status=approved` prints the event id.
+		3. `list-upcoming`, or `curl http://localhost:18081/api/events/upcoming`, shows it.
+		4. `ingest-demo --approve` reports 6 created, all approved.
+		5. `ingest-demo` reports 6 unchanged (the idempotency check).
+		6. `ingest-demo --changed` reports 3 unchanged, 2 updated and 1 `reverted_to_pending`. That one is Leather Night, now pending with the re-scan note.
+	- These write to the dev database. The demo events are prefixed "Demo:", and the admin editor's delete clears them.
 
 # Open Questions
 
@@ -345,9 +376,23 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(f) The photo test, and where the photo setting lives.** §5.6 said the test should upload a venue photo through the framework's upload endpoint as an admin. Instead, the test attaches the photo directly with the framework's image helper, as knottyyoga's photo test does. The upload endpoint is honuware's and already tested there. What's new here is only *who may read* the photo. The test checks that venue and event photos load for a signed-out visitor, and that a person's photo still needs a login. To let the test check the server's real setting rather than a copy, `main.cpp`'s one-line photo setting moved into `Endpoints::RegisterAppServices`, which `main.cpp` calls. *Rec: keep both.*
 	- Mason- I'll go with your recommendations.
 	- Claude- **Decided (10/28): all six locked as built.** No code changes were needed.
+12. **Slice 6 as built — five calls** *(added 10/28)*. Each is already in the code and tested. "Agreed" locks all five, or name the ones to change. Background: the test_helper is the developer command tool (`communityfinder_test_helper`). It has a dashboard, a REPL where you type commands, and a one-shot mode (`--command=…`).
+	- **(a) Every value is a named flag.** The spec wrote `create-venue <name>` and `--starts-in <hours>`. As built, every value is given as `--key=value`: `create-venue --name="The Cuff"` and `create-event --title="Bear Night" --starts_in_hours=5`. There are two reasons. The REPL only understands `--key=value`. And one-shot mode's flags can't contain hyphens, so the names use underscores to stay the same in both modes. The REPL used to cut a value off at its first space. Quotes now keep a value with spaces together. *Rec: keep.*
+	- **(b) `ingest-demo` has two switches.** The spec asked for one canned batch that shows events being created, updated and sent back to review. §7.4 also asks for re-running it to change nothing. One fixed batch can't do both, so:
+		- a plain `ingest-demo` always sends the same six events;
+		- `ingest-demo --changed` sends them with three edits: a new description, a new title, and a start an hour later;
+		- `--approve` (on either) approves whatever is still pending, so the "back to review" case has an approved event to act on.
+
+		The start times count from next Monday, so the batch is identical every time it runs within a week. The anchor moves at Monday 00:00 UTC, which is Sunday at 4 or 5pm in Seattle. A run just after that sees every date move and reports updates. *Rec: keep.*
+	- **(c) Approving through the helper records you as the reviewer.** `create-event --status=approved` and `ingest-demo --approve` go through the same approval step as the review endpoint, so the reviewer and time are stamped. That means someone must be logged in. The helper logs in as you when it starts; if it can't, these refuse rather than record a nobody. `create-event` also records you as the creator. *Rec: keep.*
+	- **(d) Two small additions the spec didn't list.** `create-venue` takes an optional `--neighborhood=<slug>`, and `list-upcoming` takes the same category, scene and neighborhood filters as the endpoint. Without these, the neighborhood filter and series inheritance couldn't be checked from the helper. *Rec: keep.*
+	- **(e) The commands are tested.** The test_helper is its own program, and no test has ever run any of its code. Phase 16 of the VS 2026 doc notes the same gap. So its command parser and the events commands now also build into the test suite, and each command runs against the test database (10 new tests). The REPL, dashboard and startup code stay out. Times print in UTC, not Seattle time, because the helper has no time-zone support. *Rec: keep both.*
 
 # Change Log
 
+- **10/28/2026 (v0.9)** — **Slice 5 complete** (committed as `b57ce19`). **Slice 6 built (6.1)**, green on Windows (2068/2068) and the Linux Docker gate (2068/2068), with 10 new tests. The test_helper exe builds on both platforms. On Windows, `help` and `list-upcoming` ran against the dev database.
+	- New: `src/test_helper/commands/events_commands.{h,cpp}` (`create-venue`, `create-event`, `ingest-demo`, `list-upcoming`), quote support in the REPL parser, one-shot flags in `main.cpp`, and the parser and commands built into the test bag.
+	- Doc: an as-built note under §6.1, the exact commands under §7.4, and **OQ12**, five as-built calls awaiting "Agreed".
 - **10/28/2026 (v0.8.1)** — **OQ11 decided** (Mason went with the recommendations). All six Slice 5 calls are kept as built, with no code changes. Remaining for Slice 5: the commit.
 
 - **10/28/2026 (v0.8)** — **Slice 4 complete** (committed as `a245baf`). **Slice 5 built (5.1–5.6)**, green on Windows (2058/2058) and the Linux Docker gate (2058/2058), with 32 new tests.

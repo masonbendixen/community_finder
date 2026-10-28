@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/27/2026
-Version: 0.6.1
+Version: 0.7
 tags:
 ---
 
@@ -141,7 +141,7 @@ No image columns anywhere — photos ride the framework pipeline (`table_item_ph
 
 Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueTable`/`KeyValueTableArray` at boundaries; `Add*` via `DbCrud::AddRowToTableFetchInt64PrimaryKey`; `Update*` bumps `updated_us`; SQL as file-local `constexpr std::string_view kSql*`; deterministic `ORDER BY … , id ASC` tiebreakers.
 
-*(Slice 3 built 10/27 — 3.1–3.6 green on both platforms: Windows 1998/1998, Linux docker gate 1998/1998 (floor 1700); 58 new tests. OQ9 decided (all five kept as built). Remaining: the commit.)*
+*(Slice 3 built 10/27 — 3.1–3.6 green on both platforms: Windows 1998/1998, Linux docker gate 1998/1998 (floor 1700); 58 new tests. OQ9 decided (all five kept as built). **Complete — committed 10/27 as `de0a219`.**)*
 
 - [x] 3.1 `categories.{h,cpp}`, `scene_tags.{h,cpp}`, `neighborhoods.{h,cpp}` — `Add*` (tests/admin), `GetAll` (enabled, ordered by sort_order), `GetBySlug`. **Tests:** one `*_test.cpp` each (insert → fetch by slug → ordering).
 - [x] 3.2 `venues.{h,cpp}` — `AddVenue`, `GetVenue`, `GetVenuesByIds` (batch, for event-list assembly), `GetVenuesByNeighborhood`, `UpdateVenue`, `DeleteVenue`. **Test:** `venues_test.cpp`.
@@ -158,19 +158,65 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
     - **`db_schema/freshness.h`** gained the five `kFreshnessStatus*` value constants beside the SQL list (`GetActiveSeries` and the tests use them). GD2 can use them too.
     - **Tests:** 58 across 12 `*_test.cpp` files.
       - Every helper has add/get, a not-found case, ordering with tiebreaks, and update.
-      - **Bump tests** insert with `updated_us = 0`. `now_us()` is fixed for a whole transaction, so a `>=` check would pass without a bump.
+      - **Bump tests** insert with `updated_us = 0`, because an insert and the update after it can land in the same microsecond. *(Corrected in Slice 4: this note first said `now_us()` is fixed for the whole transaction. It isn't. It reads the wall clock (`clock_timestamp()`). The tests were right; only the reason was wrong.)*
       - Each unique violation (slugs, the four pairs, `(source_id, external_key)`) and the `kind` CHECK is the last statement of its test, because the violation aborts the transaction.
       - `events_test` covers both §3.5 behaviors: a duplicate `(source_id, external_key)` throws, and hand-entered events don't collide, whether they have no source or a source with no key.
       - `venues_test` pins the cascade behavior: deleting a venue deletes its events.
 
 ### 4. business_logic (`src/business_logic/events/` — model: knottyyoga `class_schedule_helper.h`: request/result structs, error-code strings, no exceptions)
 
-- [ ] 4.1 `event_helper.{h,cpp}` — `EventHelper(DatabaseHelper)` owning the table helpers it needs.
+*(Slice 4 built 10/27 — 4.1–4.2 green on both platforms: Windows 2026/2026, Linux docker gate 2026/2026 (floor 1700); 28 new tests. **OQ10** lists the calls made while building it. Remaining: OQ10, then the commit.)*
+
+- [x] 4.1 `event_helper.{h,cpp}` — `EventHelper(DatabaseHelper)` owning the table helpers it needs.
   - `IngestEvents(Transaction&, const std::vector<IngestItem>&) → IngestResult` implementing the upsert pin-down (per-item outcome: `created` / `updated` / `unchanged` / `reverted_to_pending` / `rejected_kept`; batch is one transaction).
   - `ReviewEvent(Transaction&, eventId, ReviewAction, reviewerPersonId, notes) → ReviewResult` (transition validation per the pin-down; stamps the quartet with `now_us()`).
   - `GetUpcomingPublic(Transaction&, const UpcomingQuery&) → std::vector<PublicEvent>` — clamps the range, filters approved, resolves venue (batch), **effective** category + scene-tag slugs (own-else-series, per the inheritance pin), series title; optional filters: category slug, scene slug, neighborhood slug, venue_id, series_id — category/scene filters match against the effective sets.
   - **Tests** (`event_helper_test.cpp`): re-ingesting an identical batch → all `unchanged` (idempotency) · minor change updates silently, status untouched · date change on an approved event → `pending` + note · rejected events stay rejected on re-ingest · review transitions (incl. invalid ones → error codes) · visibility: pending/rejected/archived never in `GetUpcomingPublic` · range clamp caps at 92 days · filters by category/scene/neighborhood · **inheritance:** an instance with no assignments of its own matches its series' category/scene filters and carries the series' slugs; an instance with its own category assignments overrides them (a series-only category no longer matches it, while its scene tags still inherit).
-- [ ] 4.2 `events_key_value_table.{h,cpp}` — domain→wire: `PublicEventToKeyValueTable` (id, title, description, starts_at_us, ends_at_us, venue_id, venue_name, neighborhood slug, location_text, url, cost_text, effective category + scene-tag slugs, series_id, series_slug, series_title, origin; **never** the reviewer quartet on public shapes), plus array forms. **Test:** field-presence + redaction of review fields.
+- [x] 4.2 `events_key_value_table.{h,cpp}` — domain→wire: `PublicEventToKeyValueTable` (id, title, description, starts_at_us, ends_at_us, venue_id, venue_name, neighborhood slug, location_text, url, cost_text, effective category + scene-tag slugs, series_id, series_slug, series_title, origin; **never** the reviewer quartet on public shapes), plus array forms. **Test:** field-presence + redaction of review fields.
+  - *As built (10/27):*
+    - **Files.** `src/business_logic/events/` holds `event_helper.{h,cpp}`, `events_key_value_table.{h,cpp}`, their two tests and a `CMakeLists.txt` (house `PRIVATE`/`PUBLIC` split). It is wired in with `add_subdirectory(events)` in `business_logic/CMakeLists.txt`. Namespace `Events`.
+    - **Shapes.** `IngestItem` uses `std::optional` for every optional field, because "absent" and "empty" mean different things (OQ10 (a)). Every result has `ok` and `errorCode`. `IngestResult` adds `errorItemIndex` plus one `IngestItemResult` per item: the event id, the outcome, and any slugs that were ignored. `PublicEvent` has no review or author fields, so a public response can't leak them.
+    - **Error codes.** Ingest: `SOURCE_NOT_FOUND`, `MISSING_EXTERNAL_KEY`, `MISSING_TITLE`, `MISSING_START`, `END_BEFORE_START`, `VENUE_NOT_FOUND`. Review: `EVENT_NOT_FOUND`, `INVALID_TRANSITION`.
+    - **Ingest outcomes.** The spec's five, plus `archived_kept` (OQ10 (d)).
+    - **Ingest runs in two passes.** The first checks every item and looks up its slugs. The second writes. One bad item fails the batch before anything is written, and `errorItemIndex` says which.
+    - **Ingest writes.**
+      - Every change goes through `UpdateEvent`, so a change that only touches categories or scene tags still bumps `updated_us`.
+      - Each item's own assignments are adjusted by difference: only the ones that changed are added or removed.
+      - A major change on an approved event:
+        - sets status `pending`;
+        - sets the note "date/venue changed by re-scan";
+        - keeps who reviewed it and when.
+      - A major change on a pending event just updates it.
+    - **The window.** `ClampUpcomingWindow(now, from, to)` is a free function, so Slice 5 can echo the window it served. It is tested without a database. Constants: `kUpcomingDefaultWindowDays` 42, `kUpcomingMaxWindowDays` 92, `kUpcomingLookBackDays` 1. A backwards request returns an empty window.
+    - **`GetUpcomingPublic`** makes 8 queries at most, however many events match:
+      1. the range query;
+      2. venues, by id;
+      3. neighborhoods (the enabled list);
+      4. series, by id;
+      5. through 8. own and series categories and scene tags.
+
+      Venue and series filters run before the lookups, so those only cover events that can still be returned. The neighborhood, category and scene filters run after the inherited sets are worked out. Start order is kept.
+    - **One helper added below:** `TableHelpers::Series::GetSeriesByIds` (a batch read, ordered by id, with an empty-input early return), with a test.
+    - **Key-value table.**
+      - The 17 public fields only.
+      - A missing end, venue or series is an empty string, so the client reads it as null.
+      - Slug lists are comma-joined (OQ10 (f)).
+    - **Tests (28 new):**
+      - `event_helper_test` (19). It covers every spec'd case plus:
+        - venue changes;
+        - a major change on a pending event;
+        - archived events;
+        - "absent keeps a curator's edit";
+        - stated-empty values clearing;
+        - ignored and reported slugs;
+        - all-or-nothing batches;
+        - one case per ingest error code;
+        - review of archived and unknown events;
+        - venue, neighborhood and series resolution.
+      - `ClampUpcomingWindowTest` (4).
+      - `events_key_value_table_test` (4): every field, the redaction list, empty strings for missing values, array order.
+      - `series_test` (+1).
+    - **Found while testing:** `now_us()` is `clock_timestamp()`, the wall clock, not the transaction start. So a `now_us()` stamp is at or after one read earlier in the same transaction, never equal to it. CLAUDE.md's testing bullet and four table-helper test comments that said otherwise are corrected.
 
 ### 5. endpoints (`src/endpoints/` — model: knottyyoga `get_calendar.cpp`; PascalCase `crow::HTTPMethod` aliases; every TU = handler + `SetupRouting` + exported `Endpoints::X`; **volatile anchor in `web_app.cpp` or it 404s in Release**)
 

@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.9.1
+Version: 0.10
 tags:
 ---
 
@@ -281,8 +281,13 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 7. Gates (per slice and at bucket exit)
 
-- [ ] 7.1 **Docker suite green per slice** (`server/docker/build_and_test.sh`), Linux, against the pinned honuware SHA (no co-dev override expected — this bucket is CF-only).
-- [ ] 7.2 **Raise the test-count floor** in `build_and_test.sh` at bucket exit to (new actual − ~10) — the floor is the Release dead-strip alarm; leaving it at the old value defeats it.
+*(Bucket-exit gates run 10/28. 7.1–7.3 passed. 7.4's test_helper half passed, and its admin-editor half is Mason's. Remaining: that half and the commit of the floor change.)*
+
+- [x] 7.1 **Docker suite green per slice** (`server/docker/build_and_test.sh`), Linux, against the pinned honuware SHA (no co-dev override expected — this bucket is CF-only).
+	- *Per slice:* every slice above records its gate run. Each was green on both platforms.
+	- *Bucket exit, 10/28 (on `0210b37` plus the 7.2 floor change).* This was a strictly pinned run. Earlier gates pointed at the local honuware checkout, which sits at the pinned SHA. This one had no `HONUWARE_SRC_DIR`, so FetchContent cloned `920f18ae…` from GitHub. There was no build-cache volume either, so everything built from scratch in Release. Result: `tests executed: 2068 (floor: 2058)`, `[communityfinder] OK`, 2068/2068 passed. Windows x64-Debug passed 2068/2068 on the same tree.
+- [x] 7.2 **Raise the test-count floor** in `build_and_test.sh` at bucket exit to (new actual − ~10) — the floor is the Release dead-strip alarm; leaving it at the old value defeats it.
+	- *Done 10/28:* `MIN_EXPECTED_TESTS` went from 1700 to **2058** (actual 2068 − 10). The header comment records the bucket-exit count. 7.1's exit run is the proof: it printed `(floor: 2058)` and passed. *Not yet committed (Mason).*
 - [x] 7.3 **Live seed gate (Mason):** `--recreate_database` (destructive-gated) exits 0; psql spot-check: 12 categories / 11 scene tags / 25 neighborhoods, `manage_events` granted to Administrator, events tables in the admin metadata + `allowed_tables` as specced. (The suite never runs the seed — this live pass is the only seed gate.)
 	- *Slice 1 portion passed 10/27* (Claude ran it at Mason's request with the Windows x64-Debug `communityfinder_database_helper.exe`, env from `launch_defaults.local.json`): exit 0; psql shows 12 categories, 11 scene tags (3 `link_out`: `qtpoc`, `sapphic`, `trans`), 25 neighborhoods across all 5 regions, 0 venues. All three CHECK constraints are present, as is the `venues.neighborhood_id` FK. All four tables are in `allowed_tables`, `admin_top_level_tables`, friendly names and display templates. `mail_app_password` is seeded. The `manage_events` and events-table items wait for Slice 2, so this box stays open until bucket exit.
 	- *Slice 2 portion passed 10/27* (same exe and env, re-run on the Slice 2 working tree): exit 0. The seven new tables are present and empty. All the CHECK constraints (source kind, both volatility tiers, series status, event origin and status) and UNIQUE constraints (series slug, `events_source_id_external_key_key`, the four assignment pairs) are present, along with the three `events` indexes. Every FK is `ON DELETE CASCADE`, including the two person FKs (OQ8 (e)). *(Those two were dropped after this check, per OQ8. That change is DDL only and doesn't touch the seed. The schema test pins it, and the next `--recreate_database` will show it.)* `manage_events` (not pricing-eligible) is granted to `admin`, and `admin_table_permissions` maps it to all 11 events-domain tables. All 11 are in `admin_top_level_tables` with friendly names and display templates, and the 4 assignment tables are also in `admin_nested_tables`. `photo_support_tables` = events, people, venues. `allowed_tables` = categories, neighborhoods, permission_implications, scene_tags, venues, so none of the event pipeline is public. Column data info has starts/ends as `date`, and the reviewer, creator and timestamp columns are read-only. A rolled-back insert test accepted two hand-entered events (pending, manual, NULL key). It rejected status `published`, source kind `rss`, and a second insert of the same feed item. The new source defaulted to `weekly`. **Everything §7.3 specifies now passes, so the box is checked.** Re-run it if a later slice changes the seed.
@@ -402,6 +407,10 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 # Change Log
 
+- **10/28/2026 (v0.10)** — **Slice 6 complete** (committed as `0210b37`). **Bucket-exit gates (§7) run.**
+	- 7.1 passed: a strictly pinned Linux Release gate (fresh FetchContent clone of `920f18ae…`, no override, no build cache) ran 2068/2068 against the new floor. Windows passed 2068/2068.
+	- 7.2 done: the floor went from 1700 to 2058 in `server/docker/build_and_test.sh`. That change is uncommitted.
+	- 7.4's test_helper half passed against the dev database. It left 7 "Demo:" events, the demo feed and one "Demo:" venue there. The admin-editor half is left for Mason, so 7.4 stays open.
 - **10/28/2026 (v0.9.1)** — **OQ12 decided** (Mason went with the recommendations). All five Slice 6 calls are kept as built, with no code changes. Remaining for Slice 6: the commit.
 - **10/28/2026 (v0.9)** — **Slice 5 complete** (committed as `b57ce19`). **Slice 6 built (6.1)**, green on Windows (2068/2068) and the Linux Docker gate (2068/2068), with 10 new tests. The test_helper exe builds on both platforms. On Windows, `help` and `list-upcoming` ran against the dev database.
 	- New: `src/test_helper/commands/events_commands.{h,cpp}` (`create-venue`, `create-event`, `ingest-demo`, `list-upcoming`), quote support in the REPL parser, one-shot flags in `main.cpp`, and the parser and commands built into the test bag.

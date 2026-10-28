@@ -73,6 +73,11 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 2. table_helpers (`src/sql_util/table_helpers/` — EV1 §3 conventions)
 
+*Since EV1 Slice 3 (10/27), this layer exists. Add GD2's files to `src/sql_util/table_helpers/CMakeLists.txt`, alphabetized, as one-line additions. Models to copy, all in that folder:*
+- *Single-table helpers: `venues.{h,cpp}` and `series.{h,cpp}`. `GetActiveSeries` is the freshness-status filter, with statuses passed as parameters from `db_schema/freshness.h`'s new `kFreshnessStatus*` constants.*
+- *Junction helpers: the four EV1 assignment helpers. Batch `GetForXs(ids)` reads bind one `= ANY($1::bigint[])` parameter via the shared `BigintArrayLiteral`, and each row carries the joined tag's `scene_tag_slug`.*
+- *Tests: insert with `updated_us = 0` so the bump is observable, and make any constraint violation the test's last statement, because it aborts the transaction.*
+
 - [ ] 2.1 `venue_profiles.{h,cpp}` — `AddProfile`, `GetProfile(id)`, `GetProfileByVenueId`, `GetProfileBySlug`, `GetProfiles`, `UpdateProfile`. **Test** incl. the 1:1 uniqueness violation.
 - [ ] 2.2 `organizations.{h,cpp}` — `AddOrganization`, `GetOrganization(id)`, `GetOrganizationBySlug`, `GetOrganizationsByKind`, `GetOrganizationsByNeighborhood`, `GetOrganizations(includeClosed)`, `UpdateOrganization`. **Test.**
 - [ ] 2.3 `places.{h,cpp}`, `service_listings.{h,cpp}` — same shape (`GetServiceListingsByKind` for services). **Tests.**

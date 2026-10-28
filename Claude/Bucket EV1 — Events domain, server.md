@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/27/2026
-Version: 0.5.2
+Version: 0.6
 tags:
 ---
 
@@ -110,7 +110,7 @@ No image columns anywhere — photos ride the framework pipeline (`table_item_ph
 
 ### 2. Slice 2 — db_schema: events core
 
-*(Slice 2 built 10/27 — 2.1–2.6 green on both platforms: Windows 1940/1940, Linux docker gate 1940/1940 (floor 1700). Live seed check passed 10/27 (see §7.3's note). OQ8 decided and (e) carried out (the person columns are plain ids, not FKs). Remaining: the commit.)*
+*(Slice 2 built 10/27 — 2.1–2.6 green on both platforms: Windows 1940/1940, Linux docker gate 1940/1940 (floor 1700). Live seed check passed 10/27 (see §7.3's note). OQ8 decided and (e) carried out (the person columns are plain ids, not FKs). **Complete — committed 10/27 as `5858eeb`.**)*
 
 - [x] 2.1 `src/db_schema/event_sources.{h,cpp}`.
 - [x] 2.2 `src/db_schema/series.{h,cpp}`.
@@ -141,12 +141,27 @@ No image columns anywhere — photos ride the framework pipeline (`table_item_ph
 
 Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueTable`/`KeyValueTableArray` at boundaries; `Add*` via `DbCrud::AddRowToTableFetchInt64PrimaryKey`; `Update*` bumps `updated_us`; SQL as file-local `constexpr std::string_view kSql*`; deterministic `ORDER BY … , id ASC` tiebreakers.
 
-- [ ] 3.1 `categories.{h,cpp}`, `scene_tags.{h,cpp}`, `neighborhoods.{h,cpp}` — `Add*` (tests/admin), `GetAll` (enabled, ordered by sort_order), `GetBySlug`. **Tests:** one `*_test.cpp` each (insert → fetch by slug → ordering).
-- [ ] 3.2 `venues.{h,cpp}` — `AddVenue`, `GetVenue`, `GetVenuesByIds` (batch, for event-list assembly), `GetVenuesByNeighborhood`, `UpdateVenue`, `DeleteVenue`. **Test:** `venues_test.cpp`.
-- [ ] 3.3 `event_sources.{h,cpp}` — `AddSource`, `GetSource`, `GetEnabledSources`, `UpdateSource`, `TouchLastScanned(id, nowUs)`. **Test.**
-- [ ] 3.4 `series.{h,cpp}` — `AddSeries`, `GetSeries`, `GetSeriesBySlug`, `GetActiveSeries`, `UpdateSeries`. **Test.**
-- [ ] 3.5 `events.{h,cpp}` — `AddEvent`, `GetEvent`, `GetEventBySourceAndExternalKey`, `GetEventsInRange(fromUs, toUs, status)` (single-table, `(status, starts_at_us)`-index-shaped), `GetEventsBySeries`, `GetPendingEvents`, `UpdateEvent`. **Test:** `events_test.cpp` — incl. the unique-constraint violation path and NULL-source manual events not colliding.
-- [ ] 3.6 `event_category_assignments.{h,cpp}` + `event_scene_tag_assignments.{h,cpp}` — `Assign`, `Remove`, `GetForEvent`, `GetForEvents(ids)` (batch), `GetEventIdsForCategory` / `GetEventIdsForSceneTag` — plus `series_category_assignments.{h,cpp}` + `series_scene_tag_assignments.{h,cpp}` — `Assign`, `Remove`, `GetForSeries`, `GetForSeriesIds(ids)` (batch, for effective-set resolution). **Tests** (incl. the unique-pair violations).
+*(Slice 3 built 10/27 — 3.1–3.6 green on both platforms: Windows 1998/1998, Linux docker gate 1998/1998 (floor 1700); 58 new tests. Remaining: OQ9 (five as-built calls) and the commit.)*
+
+- [x] 3.1 `categories.{h,cpp}`, `scene_tags.{h,cpp}`, `neighborhoods.{h,cpp}` — `Add*` (tests/admin), `GetAll` (enabled, ordered by sort_order), `GetBySlug`. **Tests:** one `*_test.cpp` each (insert → fetch by slug → ordering).
+- [x] 3.2 `venues.{h,cpp}` — `AddVenue`, `GetVenue`, `GetVenuesByIds` (batch, for event-list assembly), `GetVenuesByNeighborhood`, `UpdateVenue`, `DeleteVenue`. **Test:** `venues_test.cpp`.
+- [x] 3.3 `event_sources.{h,cpp}` — `AddSource`, `GetSource`, `GetEnabledSources`, `UpdateSource`, `TouchLastScanned(id, nowUs)`. **Test.**
+- [x] 3.4 `series.{h,cpp}` — `AddSeries`, `GetSeries`, `GetSeriesBySlug`, `GetActiveSeries`, `UpdateSeries`. **Test.**
+- [x] 3.5 `events.{h,cpp}` — `AddEvent`, `GetEvent`, `GetEventBySourceAndExternalKey`, `GetEventsInRange(fromUs, toUs, status)` (single-table, `(status, starts_at_us)`-index-shaped), `GetEventsBySeries`, `GetPendingEvents`, `UpdateEvent`. **Test:** `events_test.cpp` — incl. the unique-constraint violation path and NULL-source manual events not colliding.
+- [x] 3.6 `event_category_assignments.{h,cpp}` + `event_scene_tag_assignments.{h,cpp}` — `Assign`, `Remove`, `GetForEvent`, `GetForEvents(ids)` (batch), `GetEventIdsForCategory` / `GetEventIdsForSceneTag` — plus `series_category_assignments.{h,cpp}` + `series_scene_tag_assignments.{h,cpp}` — `Assign`, `Remove`, `GetForSeries`, `GetForSeriesIds(ids)` (batch, for effective-set resolution). **Tests** (incl. the unique-pair violations).
+  - *As built (10/27):*
+    - **Layer and model.** `src/sql_util/table_helpers/` now exists, wired in with `add_subdirectory(sql_util/table_helpers)` and the house `PRIVATE` / `PUBLIC` source split. It has one class per table in namespace `TableHelpers`, in knottyyoga's `class_schedule_slots` shape. No file or class name collides with honuware's helpers under the same include prefix.
+    - **Writes.** `Add*` / `Assign` go through `DbCrud::AddRowToTableFetchInt64PrimaryKey`. `Update*` sets `updated_us = now_us()`, and `"NULL"` is an allowed value, so an update can clear a nullable column (knottyyoga's idiom).
+    - **Reads.** SQL lives in file-local `kSql*` constants with `…, id ASC` tiebreakers. Status names are passed as parameters from the schema constants, never spelled in the SQL.
+    - **Batch reads** (`GetVenuesByIds`, `GetForEvents`, `GetForSeriesIds`) bind one `= ANY($1::bigint[])` parameter, built by the new shared `bigint_array_literal.{h,cpp}` (knottyyoga's co-instructors pattern). Empty input returns empty without a query.
+    - **Assignment reads join their vocabulary.** Each row carries `category_slug` or `scene_tag_slug`, ordered by the vocabulary's `sort_order` (OQ9 (b)).
+    - **`db_schema/freshness.h`** gained the five `kFreshnessStatus*` value constants beside the SQL list (`GetActiveSeries` and the tests use them). GD2 can use them too.
+    - **Tests:** 58 across 12 `*_test.cpp` files.
+      - Every helper has add/get, a not-found case, ordering with tiebreaks, and update.
+      - **Bump tests** insert with `updated_us = 0`. `now_us()` is fixed for a whole transaction, so a `>=` check would pass without a bump.
+      - Each unique violation (slugs, the four pairs, `(source_id, external_key)`) and the `kind` CHECK is the last statement of its test, because the violation aborts the transaction.
+      - `events_test` covers both §3.5 behaviors: a duplicate `(source_id, external_key)` throws, and hand-entered events don't collide, whether they have no source or a source with no key.
+      - `venues_test` pins the cascade behavior: deleting a venue deletes its events.
 
 ### 4. business_logic (`src/business_logic/events/` — model: knottyyoga `class_schedule_helper.h`: request/result structs, error-code strings, no exceptions)
 
@@ -232,9 +247,19 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 		*Rec: (2) now.* It's a two-line schema change, and there is no real data yet. Record (3) as a honuware ledger item in case the names are missed.
 		- Mason- Agreed. All this sounds good to me.
 		- Claude- **Decided (10/27): (a)–(d) locked; (e) option (2) carried out.** `events.created_by_person_id` and `reviewed_by_person_id` are now plain nullable BIGINTs with no link to `people`. Deleting an account leaves its events alone, and the admin editor shows the person's id. `EventsCarryTheReviewWorkflowNotTheFreshnessColumns` now asserts that neither column is a foreign key. Option (3) is recorded as honuware ledger item **H11** in [[Setting up the project]]. When it lands, the two links can come back as `SET NULL`. Windows 1940/1940 and Linux 1940/1940 after the change.
+9. **Slice 3 as built — five calls** *(added 10/27)*. Each is already in the code. "Agreed" locks all five, or name the ones to change.
+	- **(a) What "active series" means.** The spec names `GetActiveSeries` (the series index EV2 lists) without defining "active". As built, it means every status except `closed` and `moved`. `seasonal` series (dormant off-season) and `unverified` ones (listed but not yet checked, per GD1 §5) stay in the index. A closed series still has its own page; it only drops off the list. *Rec: keep.*
+	- **(b) Category and scene-tag reads return slugs.** The four assignment helpers' reads also look up each category's or tag's slug and return it on the row (`category_slug` / `scene_tag_slug`), in the vocabulary's display order. The public payload and the filters both work in slugs, so EventHelper doesn't need a second lookup. *Rec: keep.*
+	- **(c) "Events in a date range" means "events that start in it".** `GetEventsInRange(from, to)` returns events whose start time is at or after `from` and before `to`. An event that started before `from` and is still going isn't included. For example, with `from` at midnight, a party that started at 10pm the night before won't show. The calendar lists events by start time, and the range rule already lets `from` reach back a day, so this matches. If EV2 later wants a "happening now" view, EventHelper can move `from` earlier; the database query doesn't change. *Rec: keep.*
+	- **(d) Looking up a disabled category or tag by slug still finds it.** `GetAll` (the filter lists) skips disabled rows, but `GetBySlug` returns a row either way. So the helper layer doesn't decide what an ingest naming a retired category means; Slice 4's EventHelper does. *Rec: keep here. Slice 4 will propose that ingest ignores disabled slugs and reports them.*
+	- **(e) Recording a scan doesn't count as an edit.** `TouchLastScanned` sets `last_scanned_at_us` and leaves `updated_us` alone. A weekly scan then doesn't make every source look recently edited, and `updated_us` keeps meaning "a curator changed this source". *Rec: keep.*
 
 # Change Log
 
+- **10/27/2026 (v0.6)** — **Slice 2 complete** (committed as `5858eeb`). **Slice 3 built (3.1–3.6)**, green on Windows (1998/1998) and the Linux Docker gate (1998/1998), with 58 new tests.
+	- New: the `src/sql_util/table_helpers/` layer, with one class per events-domain table (eleven), the shared `bigint_array_literal` helper for batch reads, and the five `kFreshnessStatus*` constants in `db_schema/freshness.h`.
+	- Doc: an as-built note under §3.6 and **OQ9**, five as-built calls awaiting "Agreed". GD2 §2 now points at the layer.
+	- Remaining for Slice 3: OQ9 and the commit.
 - **10/27/2026 (v0.5.2)** — **OQ8 decided** (Mason: "Agreed"). (a)–(d) are locked, and (e) option (2) is carried out: `events.created_by_person_id` and `reviewed_by_person_id` are plain nullable ids, not FKs. The change is in `db_schema/events.{h,cpp}`, and the schema test now asserts they are not FKs. Green on Windows (1940/1940) and the Linux Docker gate (1940/1940). The schema line, the "Slice 2 as built" note and §7.3's note are updated. Option (3) is now honuware ledger item **H11**. Remaining for Slice 2: the commit.
 - **10/27/2026 (v0.5.1)** — The §7.3 live seed check passed for Slice 2 on a fresh `--recreate_database` of the dev database. It covered the new tables, constraints and indexes, the `manage_events` grant and table mapping, the admin, nested and photo rows, and nothing from the event pipeline in `allowed_tables`. A rolled-back insert test also confirmed the defaults and that the constraints reject bad rows. Note added under §7.3, and **7.3 checked**. Remaining for Slice 2: OQ8 and the commit.
 - **10/27/2026 (v0.5)** — **Slice 1 complete** (1.7 checked: merged as `43b8437`). **Slice 2 built (2.1–2.6)**, green on Windows (1940/1940) and the Linux Docker gate (1940/1940).

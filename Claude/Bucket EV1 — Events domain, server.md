@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.7.1
+Version: 0.8
 tags:
 ---
 
@@ -165,7 +165,7 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 4. business_logic (`src/business_logic/events/` — model: knottyyoga `class_schedule_helper.h`: request/result structs, error-code strings, no exceptions)
 
-*(Slice 4 built 10/27 — 4.1–4.2 green on both platforms: Windows 2026/2026, Linux docker gate 2026/2026 (floor 1700); 28 new tests. OQ10 decided 10/28 (all seven kept as built). Remaining: the commit.)*
+*(Slice 4 complete — committed as `a245baf` (10/28). Built 10/27: 4.1–4.2 green on both platforms, Windows 2026/2026 and Linux docker gate 2026/2026 (floor 1700), with 28 new tests. OQ10 decided 10/28 (all seven kept as built).)*
 
 - [x] 4.1 `event_helper.{h,cpp}` — `EventHelper(DatabaseHelper)` owning the table helpers it needs.
   - `IngestEvents(Transaction&, const std::vector<IngestItem>&) → IngestResult` implementing the upsert pin-down (per-item outcome: `created` / `updated` / `unchanged` / `reverted_to_pending` / `rejected_kept`; batch is one transaction).
@@ -221,12 +221,36 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 
 ### 5. endpoints (`src/endpoints/` — model: knottyyoga `get_calendar.cpp`; PascalCase `crow::HTTPMethod` aliases; every TU = handler + `SetupRouting` + exported `Endpoints::X`; **volatile anchor in `web_app.cpp` or it 404s in Release**)
 
-- [ ] 5.1 `get_upcoming_events.cpp` — `GET /api/events/upcoming?from_us&to_us&category&scene&neighborhood&venue_id&series_id` (all optional; `ParseIntParam` fallback pattern). Anonymous. Response `{"items":[…]}`. The KVT's comma-joined `category_slugs` / `scene_tag_slugs` go out as real JSON arrays, nested here at the endpoint as knottyyoga's `get_calendar.cpp` does for tags (OQ10 (f)); §5.3's slug lists do the same. **Test** (`get_upcoming_events_test.cpp`, HTTP via `handle_full` with the file-local request helper that calls `ThreadPool::GetInstance().Shutdown()` before returning): approved-only; each filter; window default + cap; find items by id, never index.
-- [ ] 5.2 `get_event_detail.cpp` — `GET /api/events/<int>`. Anonymous sees `approved` (404 otherwise, to keep the URL low-information); a caller holding `manage_events` sees any status (the reviewer's preview — knottyyoga blog's author-preview pattern). **Test:** both behaviors.
-- [ ] 5.3 `get_event_series.cpp` — `GET /api/event_series` (active list, each with its own category/scene-tag slugs) and `GET /api/event_series/<string>` (by slug: series fields + its category/scene-tag slugs + its upcoming approved instances). Separate top-level path avoids the `/api/events/<int>` route ambiguity. **Test:** incl. series slugs present in both shapes.
-- [ ] 5.4 `admin_ingest_events.cpp` — `POST /api/admin/ingest_events`, `endpointAuthHelper.RequirePermission(manage_events)`; body `{"items":[{source_id, external_key, title, starts_at_us, ends_at_us?, description?, url?, cost_text?, location_text?, venue_id?, series_slug?, category_slugs?[], scene_tag_slugs?[]}]}`; response per-item outcomes + counts. This is the scanner's (EV5) and any feed importer's single door. **Test:** ingest twice over HTTP → second pass all `unchanged`; anonymous → 401, logged-in-without-permission → 403 (grant the positive case via `EndpointTestHelper::GrantPermissionToPerson(tx, personId, "manage_events")`); malformed item → 400 `ValidationError` with the item index.
-- [ ] 5.5 `admin_review_event.cpp` — `POST /api/admin/review_event/<int>` body `{"action":"approve"|"reject","notes":…}`, `RequirePermission(manage_events)`. **Test:** approve → appears in `/api/events/upcoming`; reject → doesn't; quartet stamped; bad transition → 400 with error code.
-- [ ] 5.6 Shared-file one-liners (alphabetized, own-stream lines only): volatile anchors for the five TUs in `endpoints/web_app.cpp`; sources added to the CMakeLists lists; `main.cpp` registers **`PublicPhotoTables` = {events, venues}** via `WebApp::SetService` (anonymous `get_scaled_photo` for event/venue images — the seam CF deliberately left unwired in Phase 2). **Test:** `get_scaled_photo` on a venue photo succeeds anonymously (extend the seed/HTTP tests; upload via the framework endpoint as an admin first). *Pin note: anonymous photo **reads** (this seam) exist at the pinned honuware SHA `3b1c3dc`; photo **uploads by non-admin curators** would need `RequireTableWriteAccess`, which exists only at honuware HEAD `c258a8c` — admin uploads work today, and a re-pin is a separate cross-repo bump-point if curator uploads are ever wanted.*
+*(Slice 5 built 10/28 — 5.1–5.6 green on both platforms: Windows 2058/2058, Linux docker gate 2058/2058 (floor 1700); 32 new tests. Remaining: OQ11 and the commit.)*
+
+- [x] 5.1 `get_upcoming_events.cpp` — `GET /api/events/upcoming?from_us&to_us&category&scene&neighborhood&venue_id&series_id` (all optional; `ParseIntParam` fallback pattern). Anonymous. Response `{"items":[…]}`. The KVT's comma-joined `category_slugs` / `scene_tag_slugs` go out as real JSON arrays, nested here at the endpoint as knottyyoga's `get_calendar.cpp` does for tags (OQ10 (f)); §5.3's slug lists do the same. **Test** (`get_upcoming_events_test.cpp`, HTTP via `handle_full` with the file-local request helper that calls `ThreadPool::GetInstance().Shutdown()` before returning): approved-only; each filter; window default + cap; find items by id, never index.
+- [x] 5.2 `get_event_detail.cpp` — `GET /api/events/<int>`. Anonymous sees `approved` (404 otherwise, to keep the URL low-information); a caller holding `manage_events` sees any status (the reviewer's preview — knottyyoga blog's author-preview pattern). **Test:** both behaviors.
+- [x] 5.3 `get_event_series.cpp` — `GET /api/event_series` (active list, each with its own category/scene-tag slugs) and `GET /api/event_series/<string>` (by slug: series fields + its category/scene-tag slugs + its upcoming approved instances). Separate top-level path avoids the `/api/events/<int>` route ambiguity. **Test:** incl. series slugs present in both shapes.
+- [x] 5.4 `admin_ingest_events.cpp` — `POST /api/admin/ingest_events`, `endpointAuthHelper.RequirePermission(manage_events)`; body `{"items":[{source_id, external_key, title, starts_at_us, ends_at_us?, description?, url?, cost_text?, location_text?, venue_id?, series_slug?, category_slugs?[], scene_tag_slugs?[]}]}`; response per-item outcomes + counts. This is the scanner's (EV5) and any feed importer's single door. **Test:** ingest twice over HTTP → second pass all `unchanged`; anonymous → 401, logged-in-without-permission → 403 (grant the positive case via `EndpointTestHelper::GrantPermissionToPerson(tx, personId, "manage_events")`); malformed item → 400 `ValidationError` with the item index.
+- [x] 5.5 `admin_review_event.cpp` — `POST /api/admin/review_event/<int>` body `{"action":"approve"|"reject","notes":…}`, `RequirePermission(manage_events)`. **Test:** approve → appears in `/api/events/upcoming`; reject → doesn't; quartet stamped; bad transition → 400 with error code.
+- [x] 5.6 Shared-file one-liners (alphabetized, own-stream lines only): volatile anchors for the five TUs in `endpoints/web_app.cpp`; sources added to the CMakeLists lists; `main.cpp` registers **`PublicPhotoTables` = {events, venues}** via `WebApp::SetService` (anonymous `get_scaled_photo` for event/venue images — the seam CF deliberately left unwired in Phase 2). **Test:** `get_scaled_photo` on a venue photo succeeds anonymously (extend the seed/HTTP tests; upload via the framework endpoint as an admin first). *Pin note: anonymous photo **reads** (this seam) exist at the pinned honuware SHA `3b1c3dc`; photo **uploads by non-admin curators** would need `RequireTableWriteAccess`, which exists only at honuware HEAD `c258a8c` — admin uploads work today, and a re-pin is a separate cross-repo bump-point if curator uploads are ever wanted.*
+  - *As built (10/28):*
+    - **Routes.** All anonymous unless noted:
+      - `GET /api/events/upcoming` → `{"items", "from_us", "to_us"}` (OQ11 (a)).
+      - `GET /api/events/<int>` → the event object. A `manage_events` holder also gets `status` and `review_notes` (OQ11 (b)).
+      - `GET /api/event_series` → `{"items"}`.
+      - `GET /api/event_series/<string>` → `{"series", "upcoming"}` (OQ11 (c)).
+      - `POST /api/admin/ingest_events` and `POST /api/admin/review_event/<int>`, both behind `RequirePermission(manage_events)`, which is checked before the body is read.
+    - **Files.** One TU per route family: `get_upcoming_events`, `get_event_detail`, `get_event_series` (both series routes; one anchor pulls in the whole TU), `admin_ingest_events`, `admin_review_event`. Five volatile anchors in `web_app.cpp`.
+    - **`events_json.{h,cpp}`** turns the key-value tables into JSON for all three read endpoints. The slug lists become real arrays (OQ10 (f)). *Found while building:* the framework's converter turns any all-digit value into a number, so a cost of "10" or a title like "1999" would have reached the browser as a number. The free-text fields are put back as strings.
+    - **business_logic additions.** `GetUpcomingPublic` now returns `UpcomingEvents` (the clamped window plus the events) instead of a bare list, so the endpoint can echo the window. New on `EventHelper`: `GetEventDetail`, `GetActiveSeries`, `GetSeriesDetail`. They share its batched lookups, factored into private `AssemblePublicEvents` / `AssemblePublicSeries`. New in the KVT layer: `PublicSeriesToKeyValueTable` (13 fields).
+    - **Photos.** `main.cpp`'s setting moved into `Endpoints::RegisterAppServices(webApp)` (`register_app_services.{h,cpp}`), so the test checks the same setup the server runs (OQ11 (f)).
+    - **Tests (32 new):**
+      - One test file per endpoint, sharing plain helpers in `events_endpoint_test_support.{h,cpp}` (not a fixture):
+        - `get_upcoming_events_test` (4)
+        - `get_event_detail_test` (3)
+        - `get_event_series_test` (3)
+        - `admin_ingest_events_test` (6)
+        - `admin_review_event_test` (5)
+      - Also `events_json_test` (4), `register_app_services_test` (2), `event_helper_test` (+3) and `events_key_value_table_test` (+2).
+      - Results are compared as id sets, never by position.
+      - The 403 tests first grant `manage_events` to another user, so the permission exists and the caller simply lacks it.
+    - **Windows gotcha.** In `register_app_services_test.cpp`, the boost gil/jpeg headers must come *after* the app headers. Otherwise libjpeg defines `INT32` before `<windows.h>` does, and MSVC fails with C2371.
 
 ### 6. test_helper simulation commands (`src/test_helper/commands/` — the SUTP Q10 standing convention)
 
@@ -312,9 +336,19 @@ Convention: ctor takes `DatabaseHelper`; methods take `Transaction&`; `KeyValueT
 	- **(g) A turned-off neighborhood disappears from listings. A turned-off category doesn't.** Events at a venue in a disabled neighborhood show no neighborhood, and the neighborhood filter won't find them. A category or scene tag that's disabled *after* events were tagged with it still shows on those events, and still filters. Disabling only stops new feed items from using it (c). The difference comes from where each list is read. *Rec: leave as is for now. Retiring a category is rare, and a curator can remove it from the affected events. If you'd rather a disabled category vanish everywhere at once, say so; it's a small change in `GetUpcomingPublic`.*
 	- Mason- Agreed
 	- Claude- **Decided (10/28): all seven locked as built.** No code changes were needed. (f)'s array conversion is now noted on §5.1, and it applies to §5.3's slug lists too.
+11. **Slice 5 as built — six calls** *(added 10/28)*. Each is already in the code and tested. "Agreed" locks all six, or name the ones to change.
+	- **(a) The upcoming list says which dates it covers.** The response is `{"items": […], "from_us": …, "to_us": …}`, not just `{"items": […]}` as the spec said. The server trims what it's asked for: no start date means "now", no end date means six weeks out, and anything over 92 days is cut to 92. So a page that asks for a whole year gets three months back. It needs the real end date to say "showing through Jan 28" or to know where the next page starts. *Rec: keep.*
+	- **(b) On an event's page, "hidden" looks the same as "doesn't exist".** A pending or rejected event is "not found" (404) for everyone without `manage_events`, including someone who is signed in. They don't get "not allowed" (403), because that would tell them the event exists. A curator holding `manage_events` sees any event, plus two extra fields, `status` and `review_notes`, so the preview can say "pending". Who reviewed it and when stay out of the response. *Rec: keep.*
+	- **(c) A series page is one call:** `{"series": {…}, "upcoming": […]}`. `upcoming` is the series' approved events over the default six weeks. A closed series still has its page, with an empty `upcoming` list (OQ9 (a)). Each series shows its `status` and `last_verified_at_us`, so the page can say "seasonal" or "last checked in May". It doesn't show `volatility_tier`, which only tells the verifier (EV5) how often to re-check. *Rec: keep.*
+	- **(d) The ingest door checks only that each field has the right kind of value:** a number where a number goes, text where text goes, and a list of text for the slug lists. A wrong kind fails the batch with a 400 that says which item (`item_index`). A *missing* title, start time and so on is still the business layer's call, with its own code (`MISSING_TITLE` …, Slice 4). That 400 also carries `item_index`, plus `error_code`. Nothing is written in either case. The permission check comes first, so someone without access learns nothing from the validation messages. *Rec: keep.*
+	- **(e) A review that can't happen says why.** Approving an event that's already approved is a 400 carrying `error_code: INVALID_TRANSITION` and the event's current `status` (OQ10 (e)). The review screen can then say "already approved by someone else" and refresh. An unknown event is a 404. An `action` other than approve or reject is a 400 naming the `action` field. *Rec: keep.*
+	- **(f) The photo test, and where the photo setting lives.** §5.6 said the test should upload a venue photo through the framework's upload endpoint as an admin. Instead, the test attaches the photo directly with the framework's image helper, as knottyyoga's photo test does. The upload endpoint is honuware's and already tested there. What's new here is only *who may read* the photo. The test checks that venue and event photos load for a signed-out visitor, and that a person's photo still needs a login. To let the test check the server's real setting rather than a copy, `main.cpp`'s one-line photo setting moved into `Endpoints::RegisterAppServices`, which `main.cpp` calls. *Rec: keep both.*
 
 # Change Log
 
+- **10/28/2026 (v0.8)** — **Slice 4 complete** (committed as `a245baf`). **Slice 5 built (5.1–5.6)**, green on Windows (2058/2058) and the Linux Docker gate (2058/2058), with 32 new tests.
+	- New: the five events endpoints, `events_json` (key-value tables to JSON, keeping text as text), `register_app_services` (the anonymous photo seam), and `EventHelper`'s detail and series reads.
+	- Doc: an as-built note under §5.6 and **OQ11**, six as-built calls awaiting "Agreed".
 - **10/28/2026 (v0.7.1)** — **OQ10 decided** (Mason: "Agreed"). All seven Slice 4 calls are kept as built, with no code changes. §5.1 now carries OQ10 (f)'s JSON-array note. Remaining for Slice 4: the commit.
 - **10/27/2026 (v0.7)** — **Slice 3 complete** (committed as `de0a219`). **Slice 4 built (4.1–4.2)**, green on Windows (2026/2026) and the Linux Docker gate (2026/2026), with 28 new tests.
 	- New: `src/business_logic/events/`, with `EventHelper` (ingest, review, public upcoming list), `ClampUpcomingWindow`, and the public key-value-table conversion. Also `Series::GetSeriesByIds` in table_helpers.

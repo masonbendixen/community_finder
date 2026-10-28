@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/28/2026
-Version: 0.5.1
+Version: 0.5.2
 tags:
 ---
 
@@ -53,7 +53,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 1. Server — ICS endpoints (C++, `src/endpoints/`, EV1 conventions apply: anchors, tests via `handle_full` + `ThreadPool::Shutdown()`)
 
-*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. 1.1–1.4 committed 10/28 as `44462bc`. 1.5, including OQ7's refresh hint, was built 10/28 against the local honuware tree and is green: Windows 2092/2092, the CF Linux gate 2092/2092 (floor 2058), honuware's Linux gate 1904/1904. Remaining for 1.5: the bump-point.)*
+*(Built 10/28. 1.1–1.4 are green on both platforms: Windows 2084/2084, and the Linux docker gate 2084/2084 against the 2058 floor. That's 16 new tests. OQ6 decided 10/28: all five calls kept. 1.1–1.4 committed 10/28 as `44462bc`. 1.5, including OQ7's refresh hint, was built 10/28. honuware went out as `7cd3522`, and CF is re-pinned to it. The pinned build is green: Windows 2092/2092, and the strict Linux gate 2092/2092 (fresh clone, no override, floor 2058). Remaining: Mason commits CF.)*
 
 - [x] 1.1 `src/business_logic/events/event_ical.{h,cpp}` — `BuildICalEventsFromPublicEvents(events, …) → std::vector<ICalEvent>` (mapping pin-downs above; venue name + address → `location`; description + event URL → `description`; `BuildEventUid(eventId, uidDomain)`). **Test:** `event_ical_test.cpp` — field mapping, 2-hour default DTEND, UID stability.
 	- *As built (10/28):*
@@ -79,8 +79,8 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 - [x] 1.4 Shared-file one-liners: volatile anchors ×2 TUs in `web_app.cpp`; CMakeLists source additions. **Gate:** docker suite green; floor unchanged or raised.
 	- *Done 10/28:* the two anchors (`GetEventICal`, `GetEventsICalFeed`), plus CMakeLists entries in `src/endpoints/` and `src/business_logic/events/`. The Linux gate builds Release, which is where a missing anchor would show. It ran 2084 tests (floor 2058, unchanged until bucket exit per EV1 §7.2), and every ICS route answered.
 	- *Found while testing:* the test suite's secrets helper starts out holding CF's own default settings, so `website_address_login` is already `http://localhost:4201/` in every test. A test that needs the link absent has to clear it.
-- [ ] 1.5 **Calendar name (follow-up from OQ6 (e); cross-repo; not part of the §1 commit; do before §4.4).** honuware's `ICalConfig` gains an optional calendar name, and `GenerateICalendar` writes it as `X-WR-CALNAME` when it's set. The feed then passes a name that reflects its filters, for example "CommunityFinder: bear events", or "CommunityFinder events" with no filter. Settle the exact wording when it's built. Bump-point flow: Mason pushes honuware, Claude re-pins and verifies the pinned build, Mason commits. **Tests:** honuware's generator test covers the line, both present and absent. `get_events_ics_feed_test` checks the name on a filtered feed and an unfiltered one.
-	- *As built (10/28), against the local honuware tree; waiting on the bump-point:*
+- [x] 1.5 **Calendar name (follow-up from OQ6 (e); cross-repo; not part of the §1 commit; do before §4.4).** honuware's `ICalConfig` gains an optional calendar name, and `GenerateICalendar` writes it as `X-WR-CALNAME` when it's set. The feed then passes a name that reflects its filters, for example "CommunityFinder: bear events", or "CommunityFinder events" with no filter. Settle the exact wording when it's built. Bump-point flow: Mason pushes honuware, Claude re-pins and verifies the pinned build, Mason commits. **Tests:** honuware's generator test covers the line, both present and absent. `get_events_ics_feed_test` checks the name on a filtered feed and an unfiltered one.
+	- *As built (10/28). Built against the local honuware tree, then re-pinned to honuware `7cd3522` "Calendar name":*
 		- **honuware** (`components/foundation/util/ical_generator.{h,cpp}`):
 			- `ICalConfig` gains `calendarName`.
 			- When it's set, `GenerateICalendar` writes `X-WR-CALNAME:` as escaped text, right after `METHOD:PUBLISH`, ahead of any event.
@@ -104,10 +104,11 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 			- `get_events_ics_feed_test` +1: `CalendarIsNamedForItsFilters`. `ServesApprovedEventsAsACalendar` now checks both refresh lines in the file and that there's no `X-PUBLISHED-TTL` header.
 			- `get_event_ics_test` also checks that the download carries no name and no refresh lines.
 		- **Gates:** Windows 2092/2092 and the CF Linux gate 2092/2092 (floor 2058), both built against the local honuware tree, plus honuware's own Linux gate at 1904/1904 (floor 1700). That's 8 new tests: honuware +4, CF +4. For this, Mason's Windows `x64-Debug` build points at the local tree (`FETCHCONTENT_SOURCE_DIR_HONUWARE`), and the re-pin clears it.
-		- **Remaining (bump-point):** OQ7 is decided and built. Then:
-			1. Mason commits and pushes honuware.
-			2. Claude re-pins `GIT_TAG`, clears the Windows override, and verifies the pinned build on both platforms.
-			3. Mason commits CF.
+		- **Bump-point (10/28):**
+			1. Done: Mason pushed honuware as `7cd3522b52e38ddbb5c07476e1a0799a879e76ef`, which holds exactly the three tested files.
+			2. Done: Claude re-pinned `GIT_TAG` in `server/communityfinder_server/CMakeLists.txt` (the pin's only home) from `920f18a` to `7cd3522`. Claude also cleared the Windows override (`FETCHCONTENT_SOURCE_DIR_HONUWARE` is empty again, and `_deps/honuware-src` is at `7cd3522`). The pinned build passed: Windows 2092/2092, and the strict Linux gate 2092/2092 (no local honuware, no build volume, a fresh FetchContent clone in Release).
+			3. Remaining: Mason commits CF, which is the 10 §1.5 source files plus `CMakeLists.txt`.
+		- **knottyyoga stays on its current pin.** Mason decided on 10/28 to re-pin it later, together with more honuware changes. When it does re-pin, its feed can switch to `refreshInterval` (OQ7).
 
 ### 2. Client access layer (`ui/src/app/core/`)
 
@@ -189,6 +190,12 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 # Change Log
 
+- **10/28/2026 (v0.5.2)** — **§1.5 done.**
+	- honuware was pushed as `7cd3522` "Calendar name", and CF is re-pinned from `920f18a`.
+	- The pinned build is green: Windows 2092/2092, and the strict Linux gate 2092/2092 (fresh clone, floor 2058).
+	- The Windows build no longer points at the local tree.
+	- knottyyoga's re-pin is deferred until there are more honuware changes.
+	- Remaining: Mason commits CF.
 - **10/28/2026 (v0.5.1)** — **OQ7 decided ("do it now") and built** into the §1.5 honuware change.
 	- `ICalConfig::refreshInterval` writes `REFRESH-INTERVAL` and `X-PUBLISHED-TTL` into the file.
 	- The feed passes `PT1H` and drops the HTTP header that did nothing.

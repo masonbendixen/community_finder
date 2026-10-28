@@ -189,7 +189,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 3. Events pages (`ui/src/app/pages/events/`, lazy `events.routes.ts`; standalone components; Material via the app's existing patterns)
 
-*(Built 10/28. 3.1–3.7, 3.9 and 3.10 are green: vitest 173/173, up from 82 after §2, with 91 new tests in 15 new spec files. The suite also passes with the machine clock set to UTC and to Tokyo time. `ng build -c local`, `-c development` and `-c production` all build, and the events pages load as their own chunk (129 kB, 43 kB optimized). 3.8 waits for GD3. Nothing was checked against a live server, since none was running; that's §4.4's manual loop. OQ9 decided 10/28: all twelve calls kept, with (a)'s honuware fix done now rather than later. That fix is built against the local honuware tree, and the editor's stopgap is gone. Remaining: Mason pushes honuware, Claude re-pins CF and checks the pinned build, then Mason commits §3 with the re-pin.)*
+*(Built 10/28. 3.1–3.7, 3.9 and 3.10 are green: vitest 173/173, up from 82 after §2, with 91 new tests in 15 new spec files. The suite also passes with the machine clock set to UTC and to Tokyo time. `ng build -c local`, `-c development` and `-c production` all build, and the events pages load as their own chunk (129 kB, 43 kB optimized). 3.8 waits for GD3. Nothing was checked against a live server, since none was running; that's §4.4's manual loop. OQ9 decided 10/28: all twelve calls kept, with (a)'s honuware fix done now rather than later. That fix is built against the local honuware tree, and the editor's stopgap is gone. It's green on Windows 2093/2093, the CF Linux gate 2093/2093 (floor 2058) and honuware's Linux gate 1905/1905, with one new test. vitest stays 173. Remaining: Mason pushes honuware, Claude re-pins CF and checks the pinned build, then Mason commits §3 with the re-pin.)*
 
 - [x] 3.1 Route scaffolding — `app.routes.ts` one-liner: `{ path: 'events', loadChildren: … }`; child routes: `''` (list), `calendar`, `series`, `series/:slug`, `:id` (**`:id` last** — the knottyyoga route-ordering hazard). Header gains the "Events" nav link (one-line shared-file edit, both logged-in and logged-out states).
 	- *As built (10/28):* `pages/events/events.routes.ts` is lazy-loaded from `app.routes.ts`, with `:id` last and a comment saying why. The header's **Events** link sits beside the site name, so it shows whether or not anyone is signed in. `header.spec.ts` checks it.
@@ -382,7 +382,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 - **10/28/2026 (v0.8)** — **OQ8 and OQ9 decided.**
 	- OQ8: all six §2 calls kept. §2 is complete.
-	- OQ9: (b)–(l) kept. (a) was done now: honuware's update keeps a blank for a required text column, with a new honuware test, and the editor's stopgap check is removed.
+	- OQ9: (b)–(l) kept. (a) was done now: honuware's update keeps a blank for a required text column, with a new honuware test, and the editor's stopgap check is removed. Windows 2093/2093, CF Linux 2093/2093, honuware Linux 1905/1905.
 	- §3.7's note is updated, and §3's status line lists what's left: the honuware push, the CF re-pin, and the commit.
 
 - **10/28/2026 (v0.7)** — **§3 built (3.1–3.7, 3.9, 3.10).**

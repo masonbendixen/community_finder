@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.4.1
+Version: 0.5
 tags:
 ---
 
@@ -112,12 +112,36 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 - *Junction helpers: the four EV1 assignment helpers. Batch `GetForXs(ids)` reads bind one `= ANY($1::bigint[])` parameter via the shared `BigintArrayLiteral`, and each row carries the joined tag's `scene_tag_slug`.*
 - *Tests: insert with `updated_us = 0` so the bump is observable, and make any constraint violation the test's last statement, because it aborts the transaction.*
 
-- [ ] 2.1 `venue_profiles.{h,cpp}` — `AddProfile`, `GetProfile(id)`, `GetProfileByVenueId`, `GetProfileBySlug`, `GetProfiles`, `UpdateProfile`. **Test** incl. the 1:1 uniqueness violation.
-- [ ] 2.2 `organizations.{h,cpp}` — `AddOrganization`, `GetOrganization(id)`, `GetOrganizationBySlug`, `GetOrganizationsByKind`, `GetOrganizationsByNeighborhood`, `GetOrganizations(includeClosed)`, `UpdateOrganization`. **Test.**
-- [ ] 2.3 `places.{h,cpp}`, `service_listings.{h,cpp}` — same shape (`GetServiceListingsByKind` for services). **Tests.**
-- [ ] 2.4 `guide_pages.{h,cpp}` — `AddPage`, `GetPage(id)`, `GetPageBySlug` (any state), `GetPublishedPageBySlug`, `GetPublishedPagesBySection` (title/slug/verified fields only — list shape), `UpdatePage`. The publish predicate lives in the SQL here (knottyyoga `blog_posts` model). **Test:** draft / future-dated / published visibility matrix.
-- [ ] 2.5 The four junction helpers — `Assign`, `Remove`, `GetForX`, `GetForXs(ids)` (batch), `GetXIdsForSceneTag`. **Tests** (one representative + the unique-pair violation).
-- [ ] 2.6 `guide_links.{h,cpp}` — `AddLink`, `GetLinksForVenueProfile/Organization/Place/SceneTag`, `DeleteLink`. **Test** incl. the exactly-one-parent CHECK rejection.
+*(Built 10/29 on top of the uncommitted §1. 2.1–2.6 are green: Windows 2160/2160 and Linux LINUX_PENDING (floor 2083), with 53 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `db_schema/freshness.h` gained the five cadence names. OQ10 has four as-built calls awaiting "Agreed".)*
+
+- [x] 2.1 `venue_profiles.{h,cpp}` — `AddProfile`, `GetProfile(id)`, `GetProfileByVenueId`, `GetProfileBySlug`, `GetProfiles`, `UpdateProfile`. **Test** incl. the 1:1 uniqueness violation.
+	- *As built (10/29):* as listed. `GetProfiles` is ordered by slug, since a profile has no name of its own. A profile has no status either, so a closed venue's profile is in the list too; that's what the graveyard reads.
+	- **Tests** (6): add and read by id, venue and slug, with the defaults; misses are empty; the slug order; an update bumps `updated_us` and can clear a column; a second profile for the same venue throws; a duplicate slug throws.
+- [x] 2.2 `organizations.{h,cpp}` — `AddOrganization`, `GetOrganization(id)`, `GetOrganizationBySlug`, `GetOrganizationsByKind`, `GetOrganizationsByNeighborhood`, `GetOrganizations(includeClosed)`, `UpdateOrganization`. **Test.**
+	- *As built (10/29):* as listed, ordered by name. Leaving out closed rows also leaves out moved ones (OQ10 (a)). The kind and neighborhood reads return every status (OQ10 (b)).
+	- **Tests** (7): add and read, with the freshness defaults; misses; the kind filter; the neighborhood filter (countywide groups are in none); the closed and moved filter both ways; the update; a duplicate slug throws.
+- [x] 2.3 `places.{h,cpp}`, `service_listings.{h,cpp}` — same shape (`GetServiceListingsByKind` for services). **Tests.**
+	- *As built (10/29):* both have the organizations shape: by id, slug, kind and neighborhood, the full list with or without closed rows, and the update.
+	- Per OQ9 (a), a service listing created with Health Care unchecked and no cadence of its own re-checks annually. Updates never change the cadence (OQ10 (c)).
+	- **Tests** (8 each): the organizations set. Places adds Denny Blaine as an 18+ place set to monthly, as data, and the quarterly default. Services adds the cadence rule: health stays semiannual, everyday goes annual, and a cadence passed in wins.
+- [x] 2.4 `guide_pages.{h,cpp}` — `AddPage`, `GetPage(id)`, `GetPageBySlug` (any state), `GetPublishedPageBySlug`, `GetPublishedPagesBySection` (title/slug/verified fields only — list shape), `UpdatePage`. The publish predicate lives in the SQL here (knottyyoga `blog_posts` model). **Test:** draft / future-dated / published visibility matrix.
+	- *As built (10/29):* as listed. The publish rule is spelled out in both published reads, as in knottyyoga's blog. The section list is ordered by title and has no body (OQ10 (d)).
+	- Per OQ9 (a), a new page with no cadence of its own gets monthly in the adult section and semiannual in health; others keep the annual default.
+	- **Tests** (7):
+		- A new page is a draft with no publish time: the preview read finds it and the public read doesn't.
+		- Misses are empty.
+		- **The visibility matrix:** only "not a draft + publish time + time arrived" is public. A dated draft, an undated non-draft and a future-dated page each stay private, and the preview path still finds all three.
+		- The section list's shape and order.
+		- The section cadence rule.
+		- Publishing by update: clear Draft and set the time.
+		- A duplicate slug throws across sections.
+- [x] 2.5 The four junction helpers — `Assign`, `Remove`, `GetForX`, `GetForXs(ids)` (batch), `GetXIdsForSceneTag`. **Tests** (one representative + the unique-pair violation).
+	- *As built (10/29):* EV1's event-assignment shape for all four: `GetForVenueProfile` / `GetForVenueProfiles` / `GetVenueProfileIdsForSceneTag`, and likewise for organizations, places and guide pages. Every row carries `scene_tag_slug`. The page tags say nothing about publish state; callers filter pages through `GuidePages`.
+	- **Tests:** venue profiles is the representative (5: display order, the batch, ids for a tag, remove, the duplicate pair). The other three get one round trip through all five methods plus the duplicate pair (2 each), 11 in all.
+- [x] 2.6 `guide_links.{h,cpp}` — `AddLink`, `GetLinksForVenueProfile/Organization/Place/SceneTag`, `DeleteLink`. **Test** incl. the exactly-one-parent CHECK rejection.
+	- *As built (10/29):* as listed, ordered by sort order and then id. There's no update method: links are edited in the admin editor.
+	- **Tests** (6): each parent gets only its own links; the sort order; delete removes only that link; no parent throws; two parents throws; a platform outside GD1's list throws.
+- *`CMakeLists.txt`:* the 30 new files, alphabetized, in both lists.
 
 ### 3. business_logic (`src/business_logic/guide/`)
 
@@ -213,8 +237,15 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 		- **(e) done now:** EV1's four Enabled boxes (categories, scene tags, neighborhoods, event sources) start checked too. A new catch-all test makes every checkbox's starting state match its column's default, for any future column as well.
 		- **(f) logged for later:** the dropdown switch is a do-first item in GD4's blurb in [[Initial Project Implementation Outline]] (v0.4.3), so it happens before registry entry begins.
 		- (a)–(d) need no further work. §2's helpers will apply (a)'s section and service cadence rules when they create rows.
+10. **§2 as built — four calls the plan didn't spell out.** *(Added 10/29.)* Each is built as recommended, so "Agreed" covers all four. Answer per letter if you want any changed.
+	- **(a) "Leave out closed" also leaves out moved.** The full organization, place and service lists can drop closed rows. They drop `moved` rows too, the same way EV1's series index does, because GD1 treats a moved listing as retired and pointing at its successor. Seasonal and unverified rows stay in. *Rec: keep. The graveyard reads closed rows on purpose, so nothing disappears from the site.*
+	- **(b) The kind and neighborhood lookups return every status.** "Organizations of this kind" and "places in this neighborhood" include closed ones, as EV1's venues-by-neighborhood does. §3's `GuideHelper` decides what each page shows, so the directory hides closed rows and the graveyard shows them, using the same lookups. *Rec: keep. The alternative puts the same filter in two layers.*
+	- **(c) The cadence rules apply only when a row is created.** A service listing's cadence follows its Health Care box when the listing is created. Unchecking the box later doesn't change the cadence, and moving a guide page to another section doesn't either. An editor who changes one should change the other. The admin hints state the rule but don't spell out that step. *Rec: keep. Silently overwriting a cadence someone chose would be worse than leaving it.*
+	- **(d) A section's page list is alphabetical.** The list GD3's section indexes use is ordered by title, not newest first like knottyyoga's blog, since the guide is a reference rather than a feed. Besides the title, slug and freshness fields the plan named, each entry also carries the 18+ flag (so GD3 can mark gated pages) and the publish time. *Rec: keep.*
 
 # Change Log
+
+- **10/29/2026 (v0.5)** — **§2 (table_helpers) built.** 2.1–2.6 are marked complete with as-built notes: ten helper classes (30 files) and 53 new tests. Windows is 2160/2160 and Linux LINUX_PENDING (floor 2083). `db_schema/freshness.h` gained the five cadence names. **OQ10 added:** four as-built calls awaiting "Agreed".
 
 - **10/29/2026 (v0.4.1)** — **OQ9 decided** (all six agreed). (e)'s EV1 follow-up is done: EV1's four Enabled boxes start checked, and a catch-all test covers every checkbox (14 new tests in §1; Windows and Linux both 2107/2107). (f) went to GD4's blurb in the outline. **6.2's live seed passed** after §1: every spot-check is green (details under 6.2). 6.2 stays open for a re-run at bucket exit if the seed changes.
 - **10/29/2026 (v0.4)** — **§1 (db_schema) built.** 1.1–1.9 are marked complete with as-built notes. The ten tables are in the schema, the creation order, and the seed: admin metadata, `manage_guide`, and photo rows. There are 13 new tests; Windows and Linux are both 2106/2106 (floor 2083). Not yet live-seeded (6.2). **OQ9 added:** six as-built calls awaiting "Agreed".

@@ -145,7 +145,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 3. business_logic (`src/business_logic/guide/`)
 
-*(Built 10/29 on top of the uncommitted §1–§2. 3.1–3.2 are green: Windows 2190/2190 and Linux LINUX_PENDING (floor 2083), with 30 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `business_logic/CMakeLists.txt` gained `add_subdirectory(guide)`. OQ11 has six as-built calls; (b) needs your call.)*
+*(Built 10/29 on top of the uncommitted §1–§2. 3.1–3.2 are green: Windows 2190/2190 and Linux 2190/2190 (floor 2083), with 30 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `business_logic/CMakeLists.txt` gained `add_subdirectory(guide)`. OQ11 has six as-built calls; (b) needs your call.)*
 
 - [x] 3.1 `guide_helper.{h,cpp}` — `GuideHelper(DatabaseHelper)`:
   - `GetSceneOverview` (scene tags + per-scene entity counts + coverage posture), `GetSceneDetail(slug)` (open venues joined with profiles, orgs, places, the scene's links, the intro page by slug convention).
@@ -267,7 +267,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 # Change Log
 
-- **10/29/2026 (v0.6)** — **§3 (business_logic) built.** 3.1–3.2 are marked complete with as-built notes: `GuideHelper`, the KeyValueTable conversions, and 30 new tests. Windows 2190/2190 and Linux LINUX_PENDING (floor 2083). There's no schema or seed change. **OQ11 added:** six as-built calls. (b), an 18+ checkbox for organizations, needs Mason's call.
+- **10/29/2026 (v0.6)** — **§3 (business_logic) built.** 3.1–3.2 are marked complete with as-built notes: `GuideHelper`, the KeyValueTable conversions, and 30 new tests. Windows and Linux are both 2190/2190 (floor 2083). There's no schema or seed change. **OQ11 added:** six as-built calls. (b), an 18+ checkbox for organizations, needs Mason's call.
 
 - **10/29/2026 (v0.5.1)** — **OQ10 decided** (all four agreed, no changes). §2 is ready for Mason to commit.
 - **10/29/2026 (v0.5)** — **§2 (table_helpers) built.** 2.1–2.6 are marked complete with as-built notes: ten helper classes (30 files) and 53 new tests. Windows and Linux are both 2160/2160 (floor 2083). `db_schema/freshness.h` gained the five cadence names. **OQ10 added:** four as-built calls awaiting "Agreed".

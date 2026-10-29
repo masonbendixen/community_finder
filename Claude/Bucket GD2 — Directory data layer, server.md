@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.4
+Version: 0.4.1
 tags:
 ---
 
@@ -61,7 +61,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 1. db_schema (`src/db_schema/`, one pair per table — model: knottyyoga `class_schedules.{h,cpp}`)
 
-*(Built 10/29 on `9792dc0` plus the uncommitted EV2 4.3 floor change. 1.1–1.9 are green: Windows 2106/2106 and Linux 2106/2106 (floor 2083), with 13 new tests. The test harness builds all ten tables at startup, so the DDL is valid on Postgres, including `num_nonnulls`. Not yet checked with a live `--recreate_database`; that's 6.2, Mason's. OQ9 has six as-built calls awaiting "Agreed".)*
+*(Built 10/29 on `9792dc0` plus the uncommitted EV2 4.3 floor change. 1.1–1.9 are green: Windows 2107/2107 and Linux 2107/2107 (floor 2083), with 14 new tests. The test harness builds all ten tables at startup, so the DDL is valid on Postgres, including `num_nonnulls`. The live seed passed 10/29; see 6.2. OQ9's six calls were agreed, and (e)'s EV1 follow-up is done.)*
 
 - [x] 1.1 `venue_profiles.{h,cpp}` — incl. the unique `venue_id` (satellite 1:1).
 	- *As built (10/29):* the columns as pinned. `venue_id` is a required FK with its own UNIQUE; `slug` is required and unique. `crowd_vibe` defaults to blank; `price_band` and `closure_note` are empty (`NULL`) until there's something to say. `adult` defaults false; the tier defaults to `quarterly`. No `name` or `status`.
@@ -92,17 +92,18 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 		- Display templates are as pinned, plus `{venue_profile_id} — {scene_tag_id}` (and its siblings) for the assignment tables and `{label}` for links.
 		- The four assignment tables and `guide_links` are nested as pinned, plus `venue_profiles` under `venues` (OQ9 (d)).
 	- **Seed changes:**
-		- A data-info row can now carry extra settings: the box height, and a checkbox's starting state (OQ9 (e)).
+		- A data-info row can now carry extra settings: the box height, and a checkbox's starting state (OQ9 (e)). Per (e), EV1's four Enabled boxes got the same starting state.
 		- Permission setup is one shared `AddAppPermission` that both `manage_events` and `manage_guide` use. EV1's grant is unchanged, and its tests still pass.
 	- **`manage_guide`:** granted to Administrator by name and mapped to `kManageGuideTables`, the ten plus `venues`. `venues` now has two permission rows (OQ3).
 	- **Photos and public reads:** photo rows for organizations, places, and guide pages. `allowed_tables` is unchanged.
-	- **Tests** (`create_app_tables_test.cpp`, 6 new):
+	- **Tests** (`create_app_tables_test.cpp`, 7 new):
 		- A catch-all: every column of every app table, EV1's included, has a friendly name, and every non-id column has data info, so a future column can't ship unlabeled.
+		- A second catch-all: every app checkbox starts the way its column defaults. Exactly six default to checked: EV1's four Enabled, Draft, and Health Care.
 		- The `manage_guide` grant and its table map.
 		- The guide is off the public list.
 		- Photo rows exist for the three and are absent for profiles and services.
 		- The nesting.
-		- The editor settings: templates, the tall body, the checked-by-default boxes, and the date pickers.
+		- The editor settings: templates, the tall body, and the date pickers.
 
 ### 2. table_helpers (`src/sql_util/table_helpers/` — EV1 §3 conventions)
 
@@ -153,6 +154,17 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 - [ ] 6.1 Docker suite green per slice; **raise the floor** (EV1 §7.2 policy — both `build_and_test.sh` and CI once PL1 lands).
 - [ ] 6.2 **Live seed gate (Mason):** `--recreate_database` exit 0; psql spot-check: `manage_guide` granted; ten tables in admin metadata; guide tables absent from `allowed_tables`; photo support rows.
+	- *Passed 10/29 after §1 (Claude ran it on Mason's go-ahead; the dev database was rebuilt):*
+		- `--recreate_database` exited 0.
+		- The ten tables exist, all empty.
+		- `manage_guide` is granted to admin and maps to 11 tables; `venues` carries both `manage_events` and `manage_guide`.
+		- All ten tables have a top-level registration, a table name, a display template, and labels on every column. The six nested tables are nested.
+		- No guide table is on `allowed_tables`.
+		- Photo support covers organizations, places, and guide pages, plus venues, events, and the framework's people.
+		- Exactly six checkboxes start checked.
+		- All 16 guide CHECK constraints are in the live catalog, and `venue_id` is UNIQUE.
+		- EV1's vocabularies are still 12 / 11 / 25.
+	- Left open for the bucket exit: re-run it then if §2–§5 change the seed (4.10's photo-table line is in `main.cpp`, not the seed).
 - [ ] 6.3 **Manual loop:** via the admin CRUD editor create a venue (Stream A's table) + its profile + scene tags + a link → `curl /api/guide/venues/<slug>` shows the joined shape with freshness fields → set the venue `status='closed'` + a closure note → it appears in `/api/guide/graveyard` → create a draft page, confirm 404, publish (draft=false + publish_at_us) → 200.
 
 # Open Questions
@@ -197,9 +209,14 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(e) Checkboxes that start checked now look checked.** In the admin editor's "new row" form, a checkbox whose database default is true used to show unchecked. The row still saved as true if you left it alone, because an untouched box is left out of the insert. So the box showed the opposite of what would happen. The guide's two such boxes, Draft and Health Care, now start checked. EV1 has four such boxes that still show unchecked, all named Enabled: categories, scene tags, neighborhoods, and event sources. *Rec: give EV1's four the same one-line setting now, as a tiny separate change outside GD2's slice (it touches EV1's rows). It's cosmetic, so it can also wait.*
 	- **(f) Fixed lists are typed, not picked.** Kinds, sections, status, and cadence are text fields whose hints list the allowed values, and the database rejects a typo. This matches EV1. The honuware admin editor can show these as dropdowns instead (knottyyoga uses this). Changing to dropdowns is purely seed rows, with no schema change. *Rec: keep text for now, and switch both buckets' lists to dropdowns in one small later slice, before GD4b's content entry starts, since that's when people start typing these by hand.*
 	  - Mason- All of these sound good.
+	- Claude- Decided (10/29) — all six stand as built.
+		- **(e) done now:** EV1's four Enabled boxes (categories, scene tags, neighborhoods, event sources) start checked too. A new catch-all test makes every checkbox's starting state match its column's default, for any future column as well.
+		- **(f) logged for later:** the dropdown switch is a do-first item in GD4's blurb in [[Initial Project Implementation Outline]] (v0.4.3), so it happens before registry entry begins.
+		- (a)–(d) need no further work. §2's helpers will apply (a)'s section and service cadence rules when they create rows.
 
 # Change Log
 
+- **10/29/2026 (v0.4.1)** — **OQ9 decided** (all six agreed). (e)'s EV1 follow-up is done: EV1's four Enabled boxes start checked, and a catch-all test covers every checkbox (14 new tests in §1; Windows and Linux both 2107/2107). (f) went to GD4's blurb in the outline. **6.2's live seed passed** after §1: every spot-check is green (details under 6.2). 6.2 stays open for a re-run at bucket exit if the seed changes.
 - **10/29/2026 (v0.4)** — **§1 (db_schema) built.** 1.1–1.9 are marked complete with as-built notes. The ten tables are in the schema, the creation order, and the seed: admin metadata, `manage_guide`, and photo rows. There are 13 new tests; Windows and Linux are both 2106/2106 (floor 2083). Not yet live-seeded (6.2). **OQ9 added:** six as-built calls awaiting "Agreed".
 - **10/26/2026 (v0.3)** — **All eight open questions are now closed.** OQ5 decided — markdown with sanitizer-filtered HTML and plain relative links, no shortcodes; new "Page body format" behavior pin (server impact: none); the same-origin-link directive went to [[Bucket GD3 — Guide public UI]] §2.6/§3.9 · OQ8 decided — no early `guide_pages` slice; Mason builds EV1 first, and GD2 starts in plan order once EV1 Slice 1 merges (Needs line updated).
 - **10/26/2026 (v0.2)** — Mason's OQ answers folded in: **OQ1–4, OQ6, OQ7 decided** as recommended — the body already matched every outcome, so no work-item changes · **OQ5 answered** (embedded HTML passes through Angular's sanitizer allow-list; site links are plain relative markdown links into GD3's routes; custom `marked` extensions are possible but not recommended at MVP) — awaiting "Agreed" · **OQ8 added** — start the EV1-independent `guide_pages` slice now? · Fixed a rendering break: `price_band`'s `$`–`$$$` was being parsed by Obsidian as LaTeX math; now inline code.

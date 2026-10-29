@@ -4,7 +4,7 @@ Category: Claude
 Status: Active
 Authors: Mason Bendixen
 Last Updated: 10/29/2026
-Version: 0.4.2
+Version: 0.4.3
 tags:
 ---
 # Overview
@@ -44,6 +44,7 @@ Five tracks. Sizes: **S** ≈ 1–2 working sessions · **M** ≈ a focused week
 - **GD2 — Directory data layer, server.** Organizations, places, and guide entries with scene-tag assignments, freshness columns surfaced in payloads, closure-graveyard status handling, `manage_guide` permission, public read endpoints by scene/neighborhood/type, admin CRUD metadata. **Venue guide data lands in a satellite `venue_profiles` table keyed to EV1's `venues`** — Stream B never edits Stream A's files (see Interface Contracts). *M · needs GD1 + the venues contract.*
 - **GD3 — Guide public UI.** Scene landing pages, venue/org profile pages, neighborhood pages, "Verified {date}" + closed-marker rendering, 18+ interstitial, link-out cards, guide-article rendering for editorial pages. *M · needs GD2.*
 - **GD4 — Seed registries load.** The Appendix inventories entered as real data via admin CRUD: ~40 event sources (Wave 1 slice), then venues + orgs + health registries (Wave 2 slice). Content-ops, not code; every entry gets a fresh verification pass on entry. *M, split by stream: event sources ride Stream A, directory registries ride Stream B · needs EV1 / GD2.*
+  - **Do first (GD2 OQ9 (f), 10/29): dropdowns for the fixed lists.** Before entry starts, switch the admin editor's fixed-value fields, EV1's and GD2's, from typed text to dropdowns. These are the kinds, sections, statuses, and cadences. The database already rejects a typo, but a dropdown saves the round trip. It's a small seed-only slice using honuware's admin enums (knottyyoga's pattern), with no schema change.
 - **GD5 — Nightlife & scenes content.** Venue crowd profiles, scene landings (bears/leather/jocks/sober/elders/geeks/BIPOC), the closure graveyard, "where this scene talks" links. The durable low-volatility editorial core. *M · needs GD3 + GD4.*
 - **GD6 — Health & everyday services content.** The corrected 2026 facts (Lifelong→Bailey-Boushay, SCS closed, Kelley-Ross One-Step, PrEP DAP numbers) + affirming-services editorial. Semi-annual refresh tier. *S · needs GD3.*
 - **GD7 — New to Seattle.** Neighborhood rundowns (incl. the Eastside as first-class), transit/traffic honesty, first-90-days checklist, moving-because-of-your-state lane with trans-rail link-outs. *M · needs GD3.*
@@ -261,6 +262,7 @@ Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can revie
 
 # Change Log
 
+- **10/29/2026 (v0.4.3)** — GD2 OQ9 (f) logged a **do-first item in GD4's blurb:** before registry entry begins, switch the admin editor's fixed-value fields (EV1's and GD2's) to dropdowns.
 - **10/29/2026 (v0.4.2)** — EV2 OQ10 logged a **pre-launch bundle-size pass** in RT4's blurb: the 870 kB production initial bundle (500 kB budget) and the offline demo data every build carries. The future RT4 bucket doc inherits it.
 
 - **8/14/2026 (v0.4.1)** — Two cross-stream contracts recorded out of EV2's answered OQ round (both order-independent per Mason): the **home-page events strip** ships with EV2 whichever of EV2/RT1 lands first (RT1 blurb annotated — direct mount vs slot mount), and **event pages land full SEO/OG metadata** with EV2 whichever of EV2/RT4 lands first (RT4 blurb annotated — shared `page-meta` helper adopted site-wide, prerender caveat noted). The future RT1/RT4 bucket docs inherit both. EV1's and EV2's open questions are now all closed (EV1 v0.3, EV2 v0.3).

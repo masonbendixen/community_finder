@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.7
+Version: 0.7.1
 tags:
 ---
 
@@ -35,7 +35,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 ## Schema (per GD1 §4's field matrix; every table gets `created_us`; mutable tables get `updated_us`; every CHECK enum uses GD1's values verbatim)
 
 - **`venue_profiles`** — `venue_id` (FK → `venues.id`, **`AddUniqueConstraint` → 1:1 satellite**), `slug` (unique — the guide's URL identity for a venue; `venues` deliberately has no slug), `crowd_vibe` (the editorial heart: which crowd, what vibe, when to go), `price_band` (nullable free text, `$` – `$$$`), `adult` (bool, default false — drives the 18+ gate), `closure_note` (nullable — "Closed 2021, lease lost; owners opened X" for graveyard entries), `last_verified_at_us` (nullable), `volatility_tier` (default `'quarterly'`). No `status` and no `name` — `venues.status`/`venues.name` are authoritative (Stream A's freshness applies there; the profile's own `last_verified_at_us` tracks the *guide facts*, per GD1 §4).
-- **`organizations`** — `name`, `slug` (unique), `org_kind` (CHECK: `sports-league` · `chorus-performance` · `club-hobby` · `recovery` · `faith` · `professional` · `community-support` · `social-meetup`), `description`, `url`, `meeting_cadence_text` ("Mondays 6:30 PM, Cal Anderson"), `neighborhood_id` (nullable FK), `status` (GD1 enum, default `'open'`), `closure_note` (nullable), `last_verified_at_us`, `volatility_tier` (default `'annual'`).
+- **`organizations`** — `name`, `slug` (unique), `org_kind` (CHECK: `sports-league` · `chorus-performance` · `club-hobby` · `recovery` · `faith` · `professional` · `community-support` · `social-meetup`), `description`, `url`, `meeting_cadence_text` ("Mondays 6:30 PM, Cal Anderson"), `neighborhood_id` (nullable FK), `adult` (bool, default false — added per OQ11 (b)), `status` (GD1 enum, default `'open'`), `closure_note` (nullable), `last_verified_at_us`, `volatility_tier` (default `'annual'`).
 - **`places`** — `name`, `slug` (unique), `place_kind` (CHECK: `park-beach` · `landmark` · `historical`), `description`, `address_text`, `neighborhood_id` (nullable FK), `adult` (bool), `status`, `last_verified_at_us`, `volatility_tier` (default `'quarterly'`; Denny Blaine runs `'monthly'` while litigation is live — a data value, not schema).
 - **`service_listings`** — `name`, `slug` (unique), `service_kind` (CHECK: `sti-testing` · `prep` · `hiv-care` · `primary-care` · `mental-health` · `gender-affirming` · `dental` · `everyday-service`), `description`, `url`, `phone`, `address_text`, `neighborhood_id` (nullable FK), `is_health` (bool — the MHMDA rendering flag: when CM2 arrives, recommendations on `is_health` rows render as unattributed aggregates only), `status`, `last_verified_at_us`, `volatility_tier` (default `'semiannual'`).
 - **`guide_pages`** — `slug` (unique), `title`, `section` (CHECK: `scenes` · `health` · `services` · `new-to-seattle` · `freeze` · `new-to` · `adult`), `body_markdown`, `adult` (bool), **`draft` (bool, default true) + `publish_at_us` (nullable)** — the knottyyoga blog publish predicate: **public ⇔ `NOT draft AND publish_at_us IS NOT NULL AND publish_at_us <= now_us()`** — plus `status` (GD1 enum; `'unverified'` = facts need a check) and `last_verified_at_us`, `volatility_tier` (default per section: `adult` → `'monthly'`, `health` → `'semiannual'`, else `'annual'`).
@@ -67,6 +67,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- *As built (10/29):* the columns as pinned. `venue_id` is a required FK with its own UNIQUE; `slug` is required and unique. `crowd_vibe` defaults to blank; `price_band` and `closure_note` are empty (`NULL`) until there's something to say. `adult` defaults false; the tier defaults to `quarterly`. No `name` or `status`.
 - [x] 1.2 `organizations.{h,cpp}`.
 	- *As built (10/29):* as pinned. `org_kind` is required, with no default, and checked against GD1's eight kinds. The freshness columns default to `open` and `annual`.
+	- *Follow-up (10/29, OQ11 (b)):* an `adult` checkbox (label "18+", starts unchecked) after `neighborhood_id`, as places have. It flows through `GuideOrganization`, the KeyValueTable, and the org endpoints' JSON as a real true/false. Tests: the column list, its false default, and the helper's stored default; the field through `GuideHelper`, the KeyValueTable (13 keys) and the JSON (13 keys); and the org page's `adult` over HTTP. The admin catch-alls cover its label and starting state with no new test.
 - [x] 1.3 `places.{h,cpp}`.
 	- *As built (10/29):* as pinned. `place_kind` is required and checked against GD1's three kinds; `adult` defaults false; the tier defaults to `quarterly`. A place in the news, like Denny Blaine, is set to `monthly` as data.
 - [x] 1.4 `service_listings.{h,cpp}`.
@@ -145,7 +146,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 3. business_logic (`src/business_logic/guide/`)
 
-*(Built 10/29 on top of the uncommitted §1–§2. 3.1–3.2 are green: Windows 2190/2190 and Linux 2190/2190 (floor 2083), with 30 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `business_logic/CMakeLists.txt` gained `add_subdirectory(guide)`. OQ11 has six as-built calls; (b) needs your call.)*
+*(Built 10/29 on top of the uncommitted §1–§2. 3.1–3.2 are green: Windows 2190/2190 and Linux 2190/2190 (floor 2083), with 30 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `business_logic/CMakeLists.txt` gained `add_subdirectory(guide)`. OQ11's six as-built calls were agreed; (b) added `adult` to organizations, see 1.2's follow-up.)*
 
 - [x] 3.1 `guide_helper.{h,cpp}` — `GuideHelper(DatabaseHelper)`:
   - `GetSceneOverview` (scene tags + per-scene entity counts + coverage posture), `GetSceneDetail(slug)` (open venues joined with profiles, orgs, places, the scene's links, the intro page by slug convention).
@@ -172,7 +173,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 4. endpoints (`src/endpoints/`, all anonymous GETs under `/api/guide/*` — EV1 §5 conventions: PascalCase methods, volatile anchors, `handle_full` tests with `ThreadPool::Shutdown()`)
 
-*(Built 10/29. 4.1–4.10 are green: Windows 2218/2218 and Linux 2218/2218 (floor 2083), with 28 new tests. No schema or seed change, so no live seed re-run is needed. All 14 routes are built, in 8 files instead of the 14 listed (OQ12 (a)). OQ12 has five as-built calls, and "Agreed" covers them all. OQ11 is still open. If OQ11 (b) is agreed, the org endpoints pick up `adult` with a one-word change in `guide_json.cpp` and no route change.)*
+*(Built 10/29. 4.1–4.10 are green: Windows 2218/2218 and Linux 2218/2218 (floor 2083), with 28 new tests. No schema or seed change, so no live seed re-run is needed. All 14 routes are built, in 8 files instead of the 14 listed (OQ12 (a)). OQ12's five as-built calls were agreed. Per OQ11 (b), organizations now carry `adult` too (see 1.2's follow-up); that added no tests, only checks to existing ones, so the count stays 2218.)*
 
 **The routes, and what each returns** (OQ12 (b) has the shapes):
 
@@ -237,7 +238,8 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 		- Exactly six checkboxes start checked.
 		- All 16 guide CHECK constraints are in the live catalog, and `venue_id` is UNIQUE.
 		- EV1's vocabularies are still 12 / 11 / 25.
-	- Left open for the bucket exit: re-run it then if §2–§5 change the seed (4.10's photo-table line is in `main.cpp`, not the seed).
+	- Left open for the bucket exit: re-run it then if §2–§5 change the seed (4.10's photo-table line is in `register_app_services.cpp`, not the seed).
+	- **Re-run needed:** OQ11 (b) added `organizations.adult` and its two admin label rows (10/29), so the dev database is one column behind until the next `--recreate_database`. The extra spot-check: `organizations` has `adult`, its label is "18+", and it starts unchecked.
 - [ ] 6.3 **Manual loop:** via the admin CRUD editor create a venue (Stream A's table) + its profile + scene tags + a link → `curl /api/guide/venues/<slug>` shows the joined shape with freshness fields → set the venue `status='closed'` + a closure note → it appears in `/api/guide/graveyard` → create a draft page, confirm 404, publish (draft=false + publish_at_us) → 200.
 
 # Open Questions
@@ -301,6 +303,10 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(e) Lists are filtered in the server, not in the query.** Each directory, scene page and neighborhood page loads every active listing in a fixed handful of queries, then filters them. That keeps a scene's count on the scenes grid equal to what its page actually lists. It's fine at a city guide's size (hundreds of listings). If it ever reaches thousands, §2's per-tag lookups are ready to swap in. *Rec: keep.*
 	- **(f) The graveyard lists only closed venues and organizations.** Moved ones aren't in the graveyard or the directories, because GD1 treats a moved listing as pointing to its new home rather than gone. Their own pages still load by slug. Places aren't in the graveyard, since the plan names venues and orgs only. *Rec: keep.*
 	- Mason- I'll go with your recommendations.
+	- Claude- Decided (10/29) — all six as recommended.
+		- **(b) done:** organizations have an `adult` checkbox ("18+", starts unchecked), carried through to the org endpoints. See 1.2's follow-up. GD1's field matrix and its OQ4 note it too. The schema changed, so 6.2's live seed needs a re-run (see the change log).
+		- **(c) done:** the `include_closed=true` catch is on GD3's resolver line ([[Bucket GD3 — Guide public UI]], "Venue-page identity").
+		- (a), (d), (e) and (f) stand as built.
 12. **§4 as built — five calls the plan didn't spell out.** *(Added 10/29.)* Each is built as recommended, so "Agreed" covers all five. Answer per letter if you want any changed.
 	- **(a) One file per kind of listing, not one per route.** The plan listed 14 endpoint files, a separate list file and detail file for each kind. They're built as 8: each file holds a kind's list and its detail page, the way EV1's series endpoints already do. All 14 routes are there. File names spell out "organizations" (the house rule against abbreviations), but the web address stays `/api/guide/orgs`, matching GD3's `/guide/orgs/<slug>` pages. *Rec: keep. It's fewer files with nothing lost, and each needs one anchor instead of two.*
 	- **(b) What each response looks like.** Lists come back as `{"items": […]}`, like EV1's. Detail pages bundle their parts under names: a venue page is `{"venue": {…}, "links": […]}`, and scene and neighborhood pages add their lists plus `intro_page` or `rundown_page`, which is null until one is written. A guide page comes back as the page itself, the way an event does. The table under §4 lists every route. GD3's access layer (its §1.1) reads these shapes. *Rec: keep.*
@@ -308,8 +314,11 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(d) A draft page's photo is public.** §4.10 lets signed-out visitors see organization, place and guide-page photos. That switch works per table, not per row, so anyone who guesses a draft page's number can see its photo. The page's text stays hidden. *Rec: keep, and don't put anything sensitive in a draft page's photo before it's published. Alternative: leave guide pages off the list until a page actually needs a photo (one line).*
 	- **(e) "Include closed" takes `true` or `1`.** Anything else, or leaving it off, means closed and moved venues are hidden. GD3's by-id lookup (OQ11 (c)) would ask with `include_closed=true`. *Rec: keep.*
 	- Mason- I'll go with your recommendations.
+	- Claude- Decided (10/29) — all five stand as built; no code change. For (d), guide-page photos stay public, so don't attach anything sensitive to a draft page's photo.
 
 # Change Log
+
+- **10/29/2026 (v0.7.1)** — **OQ11 and OQ12 decided** (all agreed). **OQ11 (b) done:** organizations gained an `adult` checkbox ("18+", starts unchecked), through the schema, admin labels, `GuideHelper`, the KeyValueTable and the org endpoints' JSON. Only checks were added to existing tests, so the count stays 2218: Windows 2218/2218, Linux LINUX_PENDING. GD1's field matrix and its OQ4 note it. **OQ11 (c) done:** GD3's by-id resolver line now says to ask with `include_closed=true`. OQ12 needs no change. Because the schema changed, **6.2's live seed needs a re-run.**
 
 - **10/29/2026 (v0.7)** — **§4 (endpoints) built.** 4.1–4.10 are marked complete with as-built notes and a route table. The 14 routes live in 8 files, alongside the shared `guide_json`, its test support, and 28 new tests. Windows and Linux are both 2218/2218 (floor 2083). Guide org, place and page photos serve to signed-out visitors. There's no schema or seed change. **OQ12 added:** five as-built calls awaiting "Agreed". OQ11 is still open.
 

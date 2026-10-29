@@ -3,7 +3,7 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
-Last Updated: 8/12/2026
+Last Updated: 10/29/2026
 Version: 0.1
 tags:
 ---
@@ -102,7 +102,7 @@ The guide's entity model, pinned so GD2's DDL and GD3's templates agree. **Bold*
 |---|---|---|
 | **Venue** | `venues` (EV1, Stream A — Contract 2) | address/city/state/zip, url, lat/lng, `neighborhood_id`, **status, last_verified_at** |
 | **Venue guide profile** | `venue_profiles` (GD2, satellite FK → `venues.id` — Contract 2) | crowd/vibe editorial, price band, scene tags, `adult` flag, closure note (graveyard entries), "where this scene talks" links, **its own last_verified_at** (guide facts verify on a different cadence than the venue row) |
-| **Organization** | `organizations` (GD2) | `org_kind` (`sports-league` · `chorus-performance` · `club-hobby` · `recovery` · `faith` · `professional` · `community-support` · `social-meetup`), url, meeting cadence text ("Mondays, Cal Anderson"), `neighborhood_id` (nullable), scene tags, links, **status, last_verified_at** |
+| **Organization** | `organizations` (GD2) | `org_kind` (`sports-league` · `chorus-performance` · `club-hobby` · `recovery` · `faith` · `professional` · `community-support` · `social-meetup`), url, meeting cadence text ("Mondays, Cal Anderson"), `neighborhood_id` (nullable), `adult` flag (added 10/29 by [[Bucket GD2 — Directory data layer, server]] OQ11 (b), for §8.4's sex-positive orgs), scene tags, links, **status, last_verified_at** |
 | **Place** | `places` (GD2) | `place_kind` (`park-beach` · `landmark` · `historical`), address-ish, `neighborhood_id`, `adult` flag, scene tags, **status, last_verified_at** — the structured row behind Denny Blaine/Howell pages; the editorial itself is a guide page |
 | **Service listing** | `service_listings` (GD2) | `service_kind` (`sti-testing` · `prep` · `hiv-care` · `primary-care` · `mental-health` · `gender-affirming` · `dental` · `everyday-service`), url/phone/address, `neighborhood_id`, `is_health` flag (drives the MHMDA rendering rule: no user attribution ever attaches to health listings — matters when CM2 arrives), **status, last_verified_at** |
 | **Guide page** | `guide_pages` (GD2) | slug, `section` (`scenes` · `health` · `services` · `new-to-seattle` · `freeze` · `new-to` · `adult`), body (editorial), `adult` flag, publish state, scene tags, **status, last_verified_at** — the CMS-lite layer the Content Pool publishes through |
@@ -207,5 +207,6 @@ No docker/ng gates — this bucket ships a locked document, not code. **Done =**
 2. **Scene-tag naming calls:** `bipoc` and `qtpoc` as separate tags (gay-BIPOC scene coverage vs. QTPOC-self-described orgs we link out to), `leather` covering kink, `furry` seeded from day one. *Rec: as drafted; all admin-renamable later except slugs.*
 3. **`coverage` posture as a column** (`full`/`link_out`) so GD3 renders link-out scene landings automatically, rather than keeping posture as editorial memory. *Rec: yes — it's the Q2 decision made structural.*
 4. **Adult flag name:** `adult` boolean on venue_profiles/places/guide_pages driving the 18+ interstitial (§4). Alternative: an `audience` enum (`all`/`adult`) if we ever foresee a third value. *Rec: boolean `adult`; simplest thing that implements Q3(b).*
+	- *Extended 10/29:* organizations carry `adult` too ([[Bucket GD2 — Directory data layer, server]] OQ11 (b)), so a sex-positive org (§8.4) sits behind the same 18+ gate.
 5. **Series freshness default `monthly`** (not `weekly`): weekly-tier truth for lineups is enforced by the events pipeline itself; the series *entity* (still running? still 2nd Saturdays?) drifts slower. *Rec: as drafted.*
 6. **Categories on guide entities:** categories stay events-only for now (orgs have `org_kind`, services have `service_kind`); the `categories` table is generic so the guide can adopt it later without a rename. *Rec: as drafted — avoids a premature everything-taxonomy.*

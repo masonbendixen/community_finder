@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.7.1
+Version: 0.8
 tags:
 ---
 
@@ -242,7 +242,12 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 6. Gates
 
-- [ ] 6.1 Docker suite green per slice; **raise the floor** (EV1 §7.2 policy — both `build_and_test.sh` and CI once PL1 lands).
+- [x] 6.1 Docker suite green per slice; **raise the floor** (EV1 §7.2 policy — both `build_and_test.sh` and CI once PL1 lands).
+	- *Done 10/29 at the bucket exit:*
+		- The suite was green after each of §1–§5, on both Windows and Linux.
+		- At the exit both platforms report 2225/2225: 132 more tests than EV2's exit (2093).
+		- The floor in `build_and_test.sh` went from 2083 to **2215**, the count minus 10, as at EV1's and EV2's exits. The Linux gate passed against it: "tests executed: 2225 (floor: 2215)", exit 0, no compiler warnings.
+		- CI's floor is still waiting on PL1.
 - [x] 6.2 **Live seed gate (Mason):** `--recreate_database` exit 0; psql spot-check: `manage_guide` granted; ten tables in admin metadata; guide tables absent from `allowed_tables`; photo support rows.
 	- *Passed 10/29 after §1 (Claude ran it on Mason's go-ahead; the dev database was rebuilt):*
 		- `--recreate_database` exited 0.
@@ -348,6 +353,13 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(d) A venue is verified in two steps.** `verify-listing` takes the six tables that carry the "Verified" stamp: venues, venue profiles, organizations, places, services and guide pages. A guide venue's stamp is the older of its two dates (OQ11 (a)), so a venue counts as verified only after both its venue row and its profile are. When you verify one of them, the command prints that reminder. Venues are included because guide curators check venue facts too (OQ3). *Rec: keep. A single "verify the venue page" command that stamps both rows is easy to add later if the two steps get tedious.*
 
 # Change Log
+
+- **10/29/2026 (v0.8)** — **§5 (test_helper commands) built**, and **§6.1–6.2 closed**.
+	- **5.1:** four Guide commands (`create-demo-guide`, `publish-page`, `verify-listing`, `list-graveyard`), with 7 new tests. Details are in 5.1's as-built note.
+	- **6.1:** Windows and Linux are both 2225/2225. The floor went from 2083 to 2215, and the Linux gate passed against it.
+	- **6.2:** closed. §5 doesn't touch the seed, so the 10/29 re-run stands.
+	- **Still open:** 6.3, Mason's manual loop through the admin editor. 6.3 now has a shortcut using the demo commands.
+	- **OQ13 added:** four as-built calls awaiting "Agreed".
 
 - **10/29/2026 (v0.7.1)** — **OQ11 and OQ12 decided** (all agreed). **OQ11 (b) done:** organizations gained an `adult` checkbox ("18+", starts unchecked), through the schema, admin labels, `GuideHelper`, the KeyValueTable and the org endpoints' JSON. Only checks were added to existing tests, so the count stays 2218: Windows 2218/2218, Linux 2218/2218. GD1's field matrix and its OQ4 note it. **OQ11 (c) done:** GD3's by-id resolver line now says to ask with `include_closed=true`. OQ12 needs no change. Because the schema changed, **6.2's live seed was re-run** on Mason's go-ahead, and it passed (details under 6.2).
 

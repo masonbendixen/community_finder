@@ -397,6 +397,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- **The fix.** Make the choice when the app is built. Only the `local` build would include a file that sets up the demo, swapped in the way Angular already swaps the environment file (`fileReplacements`). Every other build would leave the demo out.
 		- **The cost.** It changes `app.config.ts` and the three `provide…Access` helpers, which predate EV2 and belong to the app shell. Many specs call those helpers to get the offline demo, so they'd change as well.
 		- *Rec: don't do it in this gate. Log it for a pre-launch bundle-size pass.* That pass has bigger problems to solve. The largest file is 685 kB: Angular itself, plus Angular Material and its toolkit at 303 kB (the honuware UI library is 28 kB). It's the main reason the production build is 370 kB over its 500 kB budget. Removing the demo saves about 12 kB. The other option is to do it now as its own small slice, at the cost of touching the shared app setup outside EV2.
+	- Mason- I'll go with your recommendation
 
 # Change Log
 

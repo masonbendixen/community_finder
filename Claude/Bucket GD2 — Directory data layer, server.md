@@ -112,7 +112,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 - *Junction helpers: the four EV1 assignment helpers. Batch `GetForXs(ids)` reads bind one `= ANY($1::bigint[])` parameter via the shared `BigintArrayLiteral`, and each row carries the joined tag's `scene_tag_slug`.*
 - *Tests: insert with `updated_us = 0` so the bump is observable, and make any constraint violation the test's last statement, because it aborts the transaction.*
 
-*(Built 10/29 on top of the uncommitted §1. 2.1–2.6 are green: Windows 2160/2160 and Linux LINUX_PENDING (floor 2083), with 53 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `db_schema/freshness.h` gained the five cadence names. OQ10 has four as-built calls awaiting "Agreed".)*
+*(Built 10/29 on top of the uncommitted §1. 2.1–2.6 are green: Windows 2160/2160 and Linux 2160/2160 (floor 2083), with 53 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `db_schema/freshness.h` gained the five cadence names. OQ10 has four as-built calls awaiting "Agreed".)*
 
 - [x] 2.1 `venue_profiles.{h,cpp}` — `AddProfile`, `GetProfile(id)`, `GetProfileByVenueId`, `GetProfileBySlug`, `GetProfiles`, `UpdateProfile`. **Test** incl. the 1:1 uniqueness violation.
 	- *As built (10/29):* as listed. `GetProfiles` is ordered by slug, since a profile has no name of its own. A profile has no status either, so a closed venue's profile is in the list too; that's what the graveyard reads.
@@ -245,7 +245,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 # Change Log
 
-- **10/29/2026 (v0.5)** — **§2 (table_helpers) built.** 2.1–2.6 are marked complete with as-built notes: ten helper classes (30 files) and 53 new tests. Windows is 2160/2160 and Linux LINUX_PENDING (floor 2083). `db_schema/freshness.h` gained the five cadence names. **OQ10 added:** four as-built calls awaiting "Agreed".
+- **10/29/2026 (v0.5)** — **§2 (table_helpers) built.** 2.1–2.6 are marked complete with as-built notes: ten helper classes (30 files) and 53 new tests. Windows and Linux are both 2160/2160 (floor 2083). `db_schema/freshness.h` gained the five cadence names. **OQ10 added:** four as-built calls awaiting "Agreed".
 
 - **10/29/2026 (v0.4.1)** — **OQ9 decided** (all six agreed). (e)'s EV1 follow-up is done: EV1's four Enabled boxes start checked, and a catch-all test covers every checkbox (14 new tests in §1; Windows and Linux both 2107/2107). (f) went to GD4's blurb in the outline. **6.2's live seed passed** after §1: every spot-check is green (details under 6.2). 6.2 stays open for a re-run at bucket exit if the seed changes.
 - **10/29/2026 (v0.4)** — **§1 (db_schema) built.** 1.1–1.9 are marked complete with as-built notes. The ten tables are in the schema, the creation order, and the seed: admin metadata, `manage_guide`, and photo rows. There are 13 new tests; Windows and Linux are both 2106/2106 (floor 2083). Not yet live-seeded (6.2). **OQ9 added:** six as-built calls awaiting "Agreed".

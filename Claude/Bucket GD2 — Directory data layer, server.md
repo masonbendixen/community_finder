@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.5.1
+Version: 0.6
 tags:
 ---
 
@@ -145,7 +145,9 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 3. business_logic (`src/business_logic/guide/`)
 
-- [ ] 3.1 `guide_helper.{h,cpp}` — `GuideHelper(DatabaseHelper)`:
+*(Built 10/29 on top of the uncommitted §1–§2. 3.1–3.2 are green: Windows 2190/2190 and Linux LINUX_PENDING (floor 2083), with 30 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `business_logic/CMakeLists.txt` gained `add_subdirectory(guide)`. OQ11 has six as-built calls; (b) needs your call.)*
+
+- [x] 3.1 `guide_helper.{h,cpp}` — `GuideHelper(DatabaseHelper)`:
   - `GetSceneOverview` (scene tags + per-scene entity counts + coverage posture), `GetSceneDetail(slug)` (open venues joined with profiles, orgs, places, the scene's links, the intro page by slug convention).
   - `GetVenuesDirectory(filters: scene, neighborhood, includeClosed)` (join venues ⋈ venue_profiles), `GetVenueProfileBySlug` (full: venue fields + profile + tags + links).
   - `GetOrganizationsDirectory(filters: kind, scene, neighborhood)`, `GetOrganizationBySlug` (+tags +links).
@@ -155,7 +157,18 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
   - `GetPublishedGuidePage(slug)` / `GetGuidePageAnyState(slug)` (the preview path) + `IsPublished` free predicate · `GetPublishedPagesBySection(section)`.
   - **Every returned item carries `status`, `last_verified_at_us`, and (where set) `closure_note` + `adult`** — Contract 3's surfacing requirement, asserted in tests.
   - **Tests** (`guide_helper_test.cpp`): scene assembly (tagged entities in, untagged out; closed venues excluded from scene detail but present in graveyard); venue join includes both venue-row and profile-row fields; publish matrix; slug conventions resolve; neighborhood assembly; freshness fields present on every item.
-- [ ] 3.2 `guide_key_value_table.{h,cpp}` — domain→wire conversions for each shape. **Test:** field presence (incl. freshness + adult) per shape.
+	- *As built (10/29):* every method as listed, in namespace `Guide`. EV1's `EventHelper` is the model: typed result structs, with rows assembled in a fixed number of batch queries however many there are.
+		- **The shapes:** `GuideVenue`, `GuideOrganization`, `GuidePlace`, `GuideService`, `GuidePage` (with body), `GuidePageSummary` (without), and `GuideLink`. Each listing carries a `Freshness` (status plus verified date). The detail structs pair an item with its links. `SceneSummary` and `NeighborhoodSummary` carry the counts, and `SceneDetail`, `NeighborhoodDetail` and `Graveyard` hold the lists.
+		- **A guide venue** is a venue with a profile. A venue without one isn't in the guide yet. Name, description, address, url, neighborhood and status come from the venue row; slug, crowd and vibe, price band, 18+, closure note and scene tags come from the profile. The address is one line, built with EV1's `FormatVenueAddress` so it matches event pages. The verified stamp is OQ11 (a).
+		- **Who's in which list:** directories, scene pages and neighborhood pages leave out closed and moved listings (OQ10 (a)). Detail pages load by slug in any status, so a closed venue's page is its graveyard entry. The graveyard is OQ11 (f).
+		- **Slug conventions:** a scene's intro is the published `scenes` page with the scene's slug, and a neighborhood's rundown is the published `new-to-seattle` page with the neighborhood's slug. A published page with the right slug in another section isn't either one. Neither is a draft or a page scheduled for later.
+		- **The publish rule** is a free function, `IsPublished(draft, publishAtUs, nowUs)`. It's the same rule as §2.4's SQL, and it sets the page's `published` flag for the preview path.
+		- **Ordering:** venues are sorted by name in the server, because the name is on the venue row and profiles come back by slug. Everything else keeps §2's database order. The server sort compares exact characters, so a name starting lowercase lands after all the capitalized ones. Real names are capitalized, so this shouldn't show.
+	- **Tests** (20): the two free functions; the venue join, field by field, with links in order; the venue stamp; the venue directory's status rules (a venue without a profile is left out) and its filters; the scene overview's counts; scene detail, with the closed venue in the graveyard instead; disabled scenes; the org directory's filters, including by-kind (which reads every status); org and place pages; places; services by kind; neighborhood overview and detail; the graveyard; the publish matrix through both page reads; a published page's body, tags and freshness; the section list; the slug conventions; and Contract 3: every kind of listing, on every page it appears on, carries its status and verified date.
+- [x] 3.2 `guide_key_value_table.{h,cpp}` — domain→wire conversions for each shape. **Test:** field presence (incl. freshness + adult) per shape.
+	- *As built (10/29):* one conversion per shape plus its array form. EV1's conventions apply: a missing optional (a never-verified date, an unscheduled page) is an empty string so the client reads null, slug lists are comma-joined, and keys are snake_case. Checkboxes are `"true"` / `"false"`; §4 turns them into real JSON booleans, since honuware's converter leaves them as strings. Venue items carry both `venue_id` and `profile_id` (OQ11 (c)). Detail pages convert in parts (the item, its links, a scene's lists), and §4 nests them.
+	- **Tests** (10): every shape's fields, checked one by one along with its key count, so an added field has to update a test; never-verified dates and unchecked boxes; a page summary has no body; arrays keep their order.
+- *`CMakeLists.txt`:* a new `guide/CMakeLists.txt` with the four sources and two tests, and the one `add_subdirectory(guide)` line.
 
 ### 4. endpoints (`src/endpoints/`, all anonymous GETs under `/api/guide/*` — EV1 §5 conventions: PascalCase methods, volatile anchors, `handle_full` tests with `ThreadPool::Shutdown()`)
 
@@ -244,8 +257,17 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(d) A section's page list is alphabetical.** The list GD3's section indexes use is ordered by title, not newest first like knottyyoga's blog, since the guide is a reference rather than a feed. Besides the title, slug and freshness fields the plan named, each entry also carries the 18+ flag (so GD3 can mark gated pages) and the publish time. *Rec: keep.*
 - Mason- I'll go with your recommendations.
 	- Claude- Decided (10/29) — all four stand as built (§2.2–§2.4); no code or body change. §3's `GuideHelper` owns the status filtering per (b).
+11. **§3 as built — six calls the plan didn't spell out.** *(Added 10/29.)* Five are built as recommended, so "Agreed" covers them. **(b) needs your call** because it changes the schema. Answer per letter if you want any changed.
+	- **(a) A venue's "Verified" date is the older of its two checks.** A venue page mixes facts from two places. The venue's own row has the address and whether it's open; its guide profile has the crowd, vibe and price. Each has its own verified date. The page's single stamp uses the older one, and reads "never verified" if either side hasn't been checked yet. Both dates are also sent separately, so GD3 could show them apart. *Rec: keep. The stamp shouldn't vouch for facts nobody checked (GD1 §5: never hide a stale date).*
+	- **(b) Organizations can't be marked 18+.** GD1 §8.4 puts sex-positive orgs inside the 18+ layer. But GD1's 18+ checkbox (its OQ4) covers only venue profiles, places and guide pages, and §1 built it that way, so an adult org would show ungated today. *Rec: add an 18+ checkbox (`adult`, starts unchecked) to organizations as a small §1 follow-up before §4. That's one column, its admin label, the test updates, and a live seed re-run. Alternative: leave orgs ungated and describe adult groups only on 18+ guide pages.*
+	- **(c) GD3's link-from-an-event works from the directory list.** GD3 plans a `/guide/venues/by-id/:venueId` page that turns an event's venue id into that venue's guide page by looking it up in the directory list in the browser (GD3 §1). So every venue item carries the venue's id as well as its profile's, and no extra server lookup is needed. One catch for GD3: the directory hides closed venues unless asked, so the lookup should ask for them (`include_closed`). That way an old event at a bar that has since closed still links to its graveyard page. *Rec: keep. On "Agreed" I'll add the catch to GD3's resolver line.*
+	- **(d) Switching off a scene or neighborhood hides it everywhere.** If a scene or neighborhood is disabled in the admin editor, its tag drops off every listing, its page returns not-found, and filtering by it finds nothing. The listings themselves stay. This is EV1's rule for neighborhoods on event pages, applied to scenes too. *Rec: keep.*
+	- **(e) Lists are filtered in the server, not in the query.** Each directory, scene page and neighborhood page loads every active listing in a fixed handful of queries, then filters them. That keeps a scene's count on the scenes grid equal to what its page actually lists. It's fine at a city guide's size (hundreds of listings). If it ever reaches thousands, §2's per-tag lookups are ready to swap in. *Rec: keep.*
+	- **(f) The graveyard lists only closed venues and organizations.** Moved ones aren't in the graveyard or the directories, because GD1 treats a moved listing as pointing to its new home rather than gone. Their own pages still load by slug. Places aren't in the graveyard, since the plan names venues and orgs only. *Rec: keep.*
 
 # Change Log
+
+- **10/29/2026 (v0.6)** — **§3 (business_logic) built.** 3.1–3.2 are marked complete with as-built notes: `GuideHelper`, the KeyValueTable conversions, and 30 new tests. Windows 2190/2190 and Linux LINUX_PENDING (floor 2083). There's no schema or seed change. **OQ11 added:** six as-built calls. (b), an 18+ checkbox for organizations, needs Mason's call.
 
 - **10/29/2026 (v0.5.1)** — **OQ10 decided** (all four agreed, no changes). §2 is ready for Mason to commit.
 - **10/29/2026 (v0.5)** — **§2 (table_helpers) built.** 2.1–2.6 are marked complete with as-built notes: ten helper classes (30 files) and 53 new tests. Windows and Linux are both 2160/2160 (floor 2083). `db_schema/freshness.h` gained the five cadence names. **OQ10 added:** four as-built calls awaiting "Agreed".

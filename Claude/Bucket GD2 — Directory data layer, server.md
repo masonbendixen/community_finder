@@ -172,7 +172,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 4. endpoints (`src/endpoints/`, all anonymous GETs under `/api/guide/*` — EV1 §5 conventions: PascalCase methods, volatile anchors, `handle_full` tests with `ThreadPool::Shutdown()`)
 
-*(Built 10/29. 4.1–4.10 are green: Windows 2218/2218 and Linux LINUX_PENDING (floor 2083), with 28 new tests. No schema or seed change, so no live seed re-run is needed. All 14 routes are built, in 8 files instead of the 14 listed (OQ12 (a)). OQ12 has five as-built calls, and "Agreed" covers them all. OQ11 is still open. If OQ11 (b) is agreed, the org endpoints pick up `adult` with a one-word change in `guide_json.cpp` and no route change.)*
+*(Built 10/29. 4.1–4.10 are green: Windows 2218/2218 and Linux 2218/2218 (floor 2083), with 28 new tests. No schema or seed change, so no live seed re-run is needed. All 14 routes are built, in 8 files instead of the 14 listed (OQ12 (a)). OQ12 has five as-built calls, and "Agreed" covers them all. OQ11 is still open. If OQ11 (b) is agreed, the org endpoints pick up `adult` with a one-word change in `guide_json.cpp` and no route change.)*
 
 **The routes, and what each returns** (OQ12 (b) has the shapes):
 
@@ -309,7 +309,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 # Change Log
 
-- **10/29/2026 (v0.7)** — **§4 (endpoints) built.** 4.1–4.10 are marked complete with as-built notes and a route table. The 14 routes live in 8 files, alongside the shared `guide_json`, its test support, and 28 new tests. Windows is 2218/2218 and Linux is LINUX_PENDING (floor 2083). Guide org, place and page photos serve to signed-out visitors. There's no schema or seed change. **OQ12 added:** five as-built calls awaiting "Agreed". OQ11 is still open.
+- **10/29/2026 (v0.7)** — **§4 (endpoints) built.** 4.1–4.10 are marked complete with as-built notes and a route table. The 14 routes live in 8 files, alongside the shared `guide_json`, its test support, and 28 new tests. Windows and Linux are both 2218/2218 (floor 2083). Guide org, place and page photos serve to signed-out visitors. There's no schema or seed change. **OQ12 added:** five as-built calls awaiting "Agreed". OQ11 is still open.
 
 - **10/29/2026 (v0.6)** — **§3 (business_logic) built.** 3.1–3.2 are marked complete with as-built notes: `GuideHelper`, the KeyValueTable conversions, and 30 new tests. Windows and Linux are both 2190/2190 (floor 2083). There's no schema or seed change. **OQ11 added:** six as-built calls. (b), an 18+ checkbox for organizations, needs Mason's call.
 

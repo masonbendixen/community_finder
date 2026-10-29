@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/29/2026
-Version: 0.10
+Version: 0.10.1
 tags:
 ---
 
@@ -268,7 +268,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 4. Gates
 
-*(Bucket-exit gates run 10/29 on `9792dc0`, plus the 4.3 floor change. 4.1–4.3 pass. OQ10 has two calls on 4.1's bundle check. Remaining: Mason commits the floor change, answers OQ10, and runs 4.4 with Levi.)*
+*(Bucket-exit gates run 10/29 on `9792dc0`, plus the 4.3 floor change. 4.1–4.3 pass. OQ10 decided 10/29: both calls kept, and the demo-data cleanup is logged with RT4. Remaining: Mason commits the floor change and runs 4.4 with Levi.)*
 
 - [x] 4.1 `ng build -c local` + `ng build -c development` clean; events area lazy-chunked (initial bundle unchanged).
 	- *After §3 (10/28):* all three builds succeed, and the events pages load as their own chunk.
@@ -398,8 +398,13 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- **The cost.** It changes `app.config.ts` and the three `provide…Access` helpers, which predate EV2 and belong to the app shell. Many specs call those helpers to get the offline demo, so they'd change as well.
 		- *Rec: don't do it in this gate. Log it for a pre-launch bundle-size pass.* That pass has bigger problems to solve. The largest file is 685 kB: Angular itself, plus Angular Material and its toolkit at 303 kB (the honuware UI library is 28 kB). It's the main reason the production build is 370 kB over its 500 kB budget. Removing the demo saves about 12 kB. The other option is to do it now as its own small slice, at the cost of touching the shared app setup outside EV2.
 	- Mason- I'll go with your recommendation
+	- Claude- Decided (10/29): both kept as recommended, and nothing in EV2 changes.
+		- (a): the growth is accepted. §4.1 passes as "the events pages download separately".
+		- (b): logged for a pre-launch bundle-size pass in RT4's blurb in [[Initial Project Implementation Outline]], since page weight affects search ranking. The blurb covers the 685 kB file and making the demo a build-time choice, and the future RT4 doc inherits it.
 
 # Change Log
+
+- **10/29/2026 (v0.10.1)** — **OQ10 decided.** Both calls were kept. The bundle growth is accepted. The demo-data cleanup and the 685 kB file are logged as a pre-launch bundle-size pass in RT4's blurb ([[Initial Project Implementation Outline]] v0.4.2). Remaining: Mason commits the floor change; 4.4.
 
 - **10/29/2026 (v0.10)** — **§4 gates 4.1–4.3 pass at bucket exit** (on `9792dc0`, where Mason committed §3 with the re-pin).
 	- 4.1: all three `ng build`s succeed, and the events pages download separately. The initial bundle went from 843.9 kB before EV2 to 869.6 kB (+8.8 kB after compression), split between the home strip and offline demo data. **OQ10** asks about both.

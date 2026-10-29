@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.6
+Version: 0.7
 tags:
 ---
 
@@ -172,16 +172,52 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 4. endpoints (`src/endpoints/`, all anonymous GETs under `/api/guide/*` — EV1 §5 conventions: PascalCase methods, volatile anchors, `handle_full` tests with `ThreadPool::Shutdown()`)
 
-- [ ] 4.1 `get_guide_scenes.cpp` — `GET /api/guide/scenes`. **Test.**
-- [ ] 4.2 `get_guide_scene_detail.cpp` — `GET /api/guide/scenes/<string>`. **Test:** entities + links + intro page; 404 unknown slug.
-- [ ] 4.3 `get_guide_venues.cpp` (`GET /api/guide/venues?scene&neighborhood&include_closed`) + `get_guide_venue_detail.cpp` (`GET /api/guide/venues/<string>`). **Tests:** filters; closed venue serves its page (graveyard entry) with `status` surfaced; freshness fields present.
-- [ ] 4.4 `get_guide_orgs.cpp` (`?kind&scene&neighborhood`) + `get_guide_org_detail.cpp`. **Tests.**
-- [ ] 4.5 `get_guide_places.cpp` + `get_guide_place_detail.cpp` (`adult` flag surfaced — the client gates rendering). **Tests.**
-- [ ] 4.6 `get_guide_services.cpp` — `GET /api/guide/services?kind`. **Test:** `is_health` surfaced.
-- [ ] 4.7 `get_guide_neighborhoods.cpp` + `get_guide_neighborhood_detail.cpp`. **Tests.**
-- [ ] 4.8 `get_guide_graveyard.cpp` — `GET /api/guide/graveyard`. **Test:** closed-only, `closure_note` present.
-- [ ] 4.9 `get_guide_page.cpp` — `GET /api/guide/pages/<string>`: published → 200 for everyone; unpublished → 404 anonymous, 200 for `manage_guide` (preview). Also `GET /api/guide/pages?section=` (published list — powers GD3's section indexes). **Tests:** the visibility matrix over HTTP + `GrantPermissionToPerson(…, "manage_guide")` for preview.
-- [ ] 4.10 Shared-file one-liners: volatile anchors for the TUs in `web_app.cpp` (own-stream lines, alphabetized); CMakeLists additions; `main.cpp` `PublicPhotoTables` += `organizations`, `places`, `guide_pages`.
+*(Built 10/29. 4.1–4.10 are green: Windows 2218/2218 and Linux LINUX_PENDING (floor 2083), with 28 new tests. No schema or seed change, so no live seed re-run is needed. All 14 routes are built, in 8 files instead of the 14 listed (OQ12 (a)). OQ12 has five as-built calls, and "Agreed" covers them all. OQ11 is still open. If OQ11 (b) is agreed, the org endpoints pick up `adult` with a one-word change in `guide_json.cpp` and no route change.)*
+
+**The routes, and what each returns** (OQ12 (b) has the shapes):
+
+| Route | Returns | 404 when |
+|---|---|---|
+| `GET /api/guide/scenes` | `{"items": [scene…]}` | — |
+| `GET /api/guide/scenes/<slug>` | `{"scene", "venues", "organizations", "places", "links", "intro_page"}` | unknown or disabled scene |
+| `GET /api/guide/venues?scene&neighborhood&include_closed` | `{"items": [venue…]}` | — |
+| `GET /api/guide/venues/<slug>` | `{"venue", "links"}` | no profile with that slug |
+| `GET /api/guide/orgs?kind&scene&neighborhood` | `{"items": [organization…]}` | — |
+| `GET /api/guide/orgs/<slug>` | `{"organization", "links"}` | unknown slug |
+| `GET /api/guide/places` | `{"items": [place…]}` | — |
+| `GET /api/guide/places/<slug>` | `{"place", "links"}` | unknown slug |
+| `GET /api/guide/services?kind` | `{"items": [service…]}` | — |
+| `GET /api/guide/neighborhoods` | `{"items": [neighborhood…]}` | — |
+| `GET /api/guide/neighborhoods/<slug>` | `{"neighborhood", "venues", "organizations", "places", "rundown_page"}` | unknown or disabled neighborhood |
+| `GET /api/guide/graveyard` | `{"venues", "organizations"}` | — |
+| `GET /api/guide/pages/<slug>` | the page itself | unpublished (unless `manage_guide`), or unknown |
+| `GET /api/guide/pages?section=` | `{"items": [page summary…]}` | — (400 without a section) |
+
+- [x] 4.1 `get_guide_scenes.cpp` — `GET /api/guide/scenes`. **Test.**
+- [x] 4.2 `get_guide_scene_detail.cpp` — `GET /api/guide/scenes/<string>`. **Test:** entities + links + intro page; 404 unknown slug.
+	- *As built (10/29):* 4.1 and 4.2 are one file, `get_guide_scenes.{h,cpp}`. **Tests** (3): the grid in display order, with coverage and counts (the closed venue isn't counted); a landing with its venue, org, place, link and intro page; a scene with no intro gets `intro_page: null`; an unknown scene is 404.
+- [x] 4.3 `get_guide_venues.cpp` (`GET /api/guide/venues?scene&neighborhood&include_closed`) + `get_guide_venue_detail.cpp` (`GET /api/guide/venues/<string>`). **Tests:** filters; closed venue serves its page (graveyard entry) with `status` surfaced; freshness fields present.
+	- *As built (10/29):* one file, `get_guide_venues.{h,cpp}`. `include_closed` is OQ12 (e). **Tests** (3): every filter and their combinations, including an unknown scene; a venue item's joined shape, with venue-row fields, profile fields, and all three verified dates; the open venue's page with its link, the closed venue's page with its status and closure note, and 404.
+- [x] 4.4 `get_guide_orgs.cpp` (`?kind&scene&neighborhood`) + `get_guide_org_detail.cpp`. **Tests.**
+	- *As built (10/29):* one file, `get_guide_organizations.{h,cpp}`, serving `/api/guide/orgs` (OQ12 (a)). **Tests** (2): each filter, combined filters, and an unknown kind (the closed club never shows); an org's page with its link and freshness, a closed org's page with its note, and 404.
+- [x] 4.5 `get_guide_places.cpp` + `get_guide_place_detail.cpp` (`adult` flag surfaced — the client gates rendering). **Tests.**
+	- *As built (10/29):* one file, `get_guide_places.{h,cpp}`. `adult` is a real JSON true/false. **Tests** (2): the list carries the 18+ flag and freshness; the page carries its tags and link, and 404.
+- [x] 4.6 `get_guide_services.cpp` — `GET /api/guide/services?kind`. **Test:** `is_health` surfaced.
+	- *As built (10/29):* **Test** (1): both services by name, `is_health` true and false, an all-digit phone number still text, and filtering by kind, including a kind with no services.
+- [x] 4.7 `get_guide_neighborhoods.cpp` + `get_guide_neighborhood_detail.cpp`. **Tests.**
+	- *As built (10/29):* one file, `get_guide_neighborhoods.{h,cpp}`. **Tests** (2): the counts per neighborhood (the closed venue isn't counted); a page with its listings and rundown, a page with no rundown (`rundown_page: null`), and 404.
+- [x] 4.8 `get_guide_graveyard.cpp` — `GET /api/guide/graveyard`. **Test:** closed-only, `closure_note` present.
+	- *As built (10/29):* **Test** (1): exactly the closed venue and the closed org, each with its status and closure note.
+- [x] 4.9 `get_guide_page.cpp` — `GET /api/guide/pages/<string>`: published → 200 for everyone; unpublished → 404 anonymous, 200 for `manage_guide` (preview). Also `GET /api/guide/pages?section=` (published list — powers GD3's section indexes). **Tests:** the visibility matrix over HTTP + `GrantPermissionToPerson(…, "manage_guide")` for preview.
+	- *As built (10/29):* `get_guide_pages.{h,cpp}` (plural, like the others). The public read goes through §2.4's SQL publish rule, and the caller's permission is checked only when that finds nothing. A curator's preview is marked `published: false`. What the section list does for curators is OQ12 (c). **Tests** (4): a published page, field by field; a draft and a scheduled page are 404 signed out and for someone signed in without `manage_guide`; a `manage_guide` curator previews both, marked unpublished, and an unknown slug is still 404; the section list leaves out the draft and the scheduled page, has no bodies, is empty for a section with no pages, is 400 without a section, and stays published-only for a curator.
+- [x] 4.10 Shared-file one-liners: volatile anchors for the TUs in `web_app.cpp` (own-stream lines, alphabetized); CMakeLists additions; `main.cpp` `PublicPhotoTables` += `organizations`, `places`, `guide_pages`.
+	- *As built (10/29):*
+		- **Anchors:** a separate "Stream B — the guide" block in `web_app.cpp`, with its includes and eight anchors (one per file), alphabetized.
+		- **CMake:** its own block in `endpoints/CMakeLists.txt`.
+		- **Photo tables:** the list now lives in `register_app_services.cpp`, not `main.cpp`; EV1 moved it there so tests share it. The three guide tables are added. OQ12 (d) has the catch for draft pages. **Test** (1, in `register_app_services_test.cpp`): photos for an org, a place and a guide page serve to a signed-out visitor.
+	- *Shared code:*
+		- **`guide_json.{h,cpp}`:** the JSON layer, modeled on EV1's `events_json`. Checkboxes become real true/false, slug lists become arrays, and every text field stays text even when it's all digits (a phone number, a name like "1999"). Ids, times and counts are numbers. A date that was never set is `""` (EV1's convention), which the client maps to null. **Tests** (9, `guide_json_test.cpp`): every shape, field by field with its key count, using all-digit text so a missed text field would show up; a missing page is null; a summary has no body; arrays keep their order.
+		- **`guide_endpoint_test_support.{h,cpp}`:** one shared guide world (two neighborhoods, two scenes, an open and a closed venue, three orgs, an 18+ place, two services, five pages, and links), plus small helpers. Sign-in reuses EV1's test helper, without its `manage_events` grant.
 
 ### 5. test_helper commands (`src/test_helper/commands/guide_commands.{h,cpp}`)
 
@@ -264,8 +300,16 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(d) Switching off a scene or neighborhood hides it everywhere.** If a scene or neighborhood is disabled in the admin editor, its tag drops off every listing, its page returns not-found, and filtering by it finds nothing. The listings themselves stay. This is EV1's rule for neighborhoods on event pages, applied to scenes too. *Rec: keep.*
 	- **(e) Lists are filtered in the server, not in the query.** Each directory, scene page and neighborhood page loads every active listing in a fixed handful of queries, then filters them. That keeps a scene's count on the scenes grid equal to what its page actually lists. It's fine at a city guide's size (hundreds of listings). If it ever reaches thousands, §2's per-tag lookups are ready to swap in. *Rec: keep.*
 	- **(f) The graveyard lists only closed venues and organizations.** Moved ones aren't in the graveyard or the directories, because GD1 treats a moved listing as pointing to its new home rather than gone. Their own pages still load by slug. Places aren't in the graveyard, since the plan names venues and orgs only. *Rec: keep.*
+12. **§4 as built — five calls the plan didn't spell out.** *(Added 10/29.)* Each is built as recommended, so "Agreed" covers all five. Answer per letter if you want any changed.
+	- **(a) One file per kind of listing, not one per route.** The plan listed 14 endpoint files, a separate list file and detail file for each kind. They're built as 8: each file holds a kind's list and its detail page, the way EV1's series endpoints already do. All 14 routes are there. File names spell out "organizations" (the house rule against abbreviations), but the web address stays `/api/guide/orgs`, matching GD3's `/guide/orgs/<slug>` pages. *Rec: keep. It's fewer files with nothing lost, and each needs one anchor instead of two.*
+	- **(b) What each response looks like.** Lists come back as `{"items": […]}`, like EV1's. Detail pages bundle their parts under names: a venue page is `{"venue": {…}, "links": […]}`, and scene and neighborhood pages add their lists plus `intro_page` or `rundown_page`, which is null until one is written. A guide page comes back as the page itself, the way an event does. The table under §4 lists every route. GD3's access layer (its §1.1) reads these shapes. *Rec: keep.*
+	- **(c) Previews are for single pages only.** A curator with `manage_guide` can open an unpublished page at its own address, and it comes back marked `published: false` so GD3 can show a "not published yet" banner. A section's list shows only published pages, even to a curator, so the index a curator sees is exactly what visitors see. Asking for the list without saying which section is refused (400) rather than returning every page. *Rec: keep.*
+	- **(d) A draft page's photo is public.** §4.10 lets signed-out visitors see organization, place and guide-page photos. That switch works per table, not per row, so anyone who guesses a draft page's number can see its photo. The page's text stays hidden. *Rec: keep, and don't put anything sensitive in a draft page's photo before it's published. Alternative: leave guide pages off the list until a page actually needs a photo (one line).*
+	- **(e) "Include closed" takes `true` or `1`.** Anything else, or leaving it off, means closed and moved venues are hidden. GD3's by-id lookup (OQ11 (c)) would ask with `include_closed=true`. *Rec: keep.*
 
 # Change Log
+
+- **10/29/2026 (v0.7)** — **§4 (endpoints) built.** 4.1–4.10 are marked complete with as-built notes and a route table. The 14 routes live in 8 files, alongside the shared `guide_json`, its test support, and 28 new tests. Windows is 2218/2218 and Linux is LINUX_PENDING (floor 2083). Guide org, place and page photos serve to signed-out visitors. There's no schema or seed change. **OQ12 added:** five as-built calls awaiting "Agreed". OQ11 is still open.
 
 - **10/29/2026 (v0.6)** — **§3 (business_logic) built.** 3.1–3.2 are marked complete with as-built notes: `GuideHelper`, the KeyValueTable conversions, and 30 new tests. Windows and Linux are both 2190/2190 (floor 2083). There's no schema or seed change. **OQ11 added:** six as-built calls. (b), an 18+ checkbox for organizations, needs Mason's call.
 

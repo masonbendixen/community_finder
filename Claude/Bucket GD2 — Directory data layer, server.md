@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.5
+Version: 0.5.1
 tags:
 ---
 
@@ -112,7 +112,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 - *Junction helpers: the four EV1 assignment helpers. Batch `GetForXs(ids)` reads bind one `= ANY($1::bigint[])` parameter via the shared `BigintArrayLiteral`, and each row carries the joined tag's `scene_tag_slug`.*
 - *Tests: insert with `updated_us = 0` so the bump is observable, and make any constraint violation the test's last statement, because it aborts the transaction.*
 
-*(Built 10/29 on top of the uncommitted §1. 2.1–2.6 are green: Windows 2160/2160 and Linux 2160/2160 (floor 2083), with 53 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `db_schema/freshness.h` gained the five cadence names. OQ10 has four as-built calls awaiting "Agreed".)*
+*(Built 10/29 on top of the uncommitted §1. 2.1–2.6 are green: Windows 2160/2160 and Linux 2160/2160 (floor 2083), with 53 new tests. No schema or seed change, so no live seed re-run is needed. One shared-file line: `db_schema/freshness.h` gained the five cadence names. OQ10's four as-built calls were agreed 10/29.)*
 
 - [x] 2.1 `venue_profiles.{h,cpp}` — `AddProfile`, `GetProfile(id)`, `GetProfileByVenueId`, `GetProfileBySlug`, `GetProfiles`, `UpdateProfile`. **Test** incl. the 1:1 uniqueness violation.
 	- *As built (10/29):* as listed. `GetProfiles` is ordered by slug, since a profile has no name of its own. A profile has no status either, so a closed venue's profile is in the list too; that's what the graveyard reads.
@@ -242,9 +242,12 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(b) The kind and neighborhood lookups return every status.** "Organizations of this kind" and "places in this neighborhood" include closed ones, as EV1's venues-by-neighborhood does. §3's `GuideHelper` decides what each page shows, so the directory hides closed rows and the graveyard shows them, using the same lookups. *Rec: keep. The alternative puts the same filter in two layers.*
 	- **(c) The cadence rules apply only when a row is created.** A service listing's cadence follows its Health Care box when the listing is created. Unchecking the box later doesn't change the cadence, and moving a guide page to another section doesn't either. An editor who changes one should change the other. The admin hints state the rule but don't spell out that step. *Rec: keep. Silently overwriting a cadence someone chose would be worse than leaving it.*
 	- **(d) A section's page list is alphabetical.** The list GD3's section indexes use is ordered by title, not newest first like knottyyoga's blog, since the guide is a reference rather than a feed. Besides the title, slug and freshness fields the plan named, each entry also carries the 18+ flag (so GD3 can mark gated pages) and the publish time. *Rec: keep.*
+- Mason- I'll go with your recommendations.
+	- Claude- Decided (10/29) — all four stand as built (§2.2–§2.4); no code or body change. §3's `GuideHelper` owns the status filtering per (b).
 
 # Change Log
 
+- **10/29/2026 (v0.5.1)** — **OQ10 decided** (all four agreed, no changes). §2 is ready for Mason to commit.
 - **10/29/2026 (v0.5)** — **§2 (table_helpers) built.** 2.1–2.6 are marked complete with as-built notes: ten helper classes (30 files) and 53 new tests. Windows and Linux are both 2160/2160 (floor 2083). `db_schema/freshness.h` gained the five cadence names. **OQ10 added:** four as-built calls awaiting "Agreed".
 
 - **10/29/2026 (v0.4.1)** — **OQ9 decided** (all six agreed). (e)'s EV1 follow-up is done: EV1's four Enabled boxes start checked, and a catch-all test covers every checkbox (14 new tests in §1; Windows and Linux both 2107/2107). (f) went to GD4's blurb in the outline. **6.2's live seed passed** after §1: every spot-check is green (details under 6.2). 6.2 stays open for a re-run at bucket exit if the seed changes.

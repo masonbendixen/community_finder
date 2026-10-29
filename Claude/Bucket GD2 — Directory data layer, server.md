@@ -239,7 +239,10 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 		- All 16 guide CHECK constraints are in the live catalog, and `venue_id` is UNIQUE.
 		- EV1's vocabularies are still 12 / 11 / 25.
 	- Left open for the bucket exit: re-run it then if §2–§5 change the seed (4.10's photo-table line is in `register_app_services.cpp`, not the seed).
-	- **Re-run needed:** OQ11 (b) added `organizations.adult` and its two admin label rows (10/29), so the dev database is one column behind until the next `--recreate_database`. The extra spot-check: `organizations` has `adult`, its label is "18+", and it starts unchecked.
+	- *Re-run 10/29 after OQ11 (b) (Claude ran it on Mason's go-ahead; the dev database was rebuilt):*
+		- `--recreate_database` exited 0.
+		- `organizations.adult` is there, after `neighborhood_id`: a boolean, NOT NULL, default false. Its admin label is "18+" with its hint, and it starts unchecked.
+		- Everything else matches the first run: still exactly six checkboxes start checked, all 16 guide CHECK constraints are present, the guide tables are empty, `manage_guide` maps to 11 tables, no guide table is on `allowed_tables`, photo support covers the same six tables, and EV1's vocabularies are still 12 / 11 / 25.
 - [ ] 6.3 **Manual loop:** via the admin CRUD editor create a venue (Stream A's table) + its profile + scene tags + a link → `curl /api/guide/venues/<slug>` shows the joined shape with freshness fields → set the venue `status='closed'` + a closure note → it appears in `/api/guide/graveyard` → create a draft page, confirm 404, publish (draft=false + publish_at_us) → 200.
 
 # Open Questions
@@ -304,7 +307,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(f) The graveyard lists only closed venues and organizations.** Moved ones aren't in the graveyard or the directories, because GD1 treats a moved listing as pointing to its new home rather than gone. Their own pages still load by slug. Places aren't in the graveyard, since the plan names venues and orgs only. *Rec: keep.*
 	- Mason- I'll go with your recommendations.
 	- Claude- Decided (10/29) — all six as recommended.
-		- **(b) done:** organizations have an `adult` checkbox ("18+", starts unchecked), carried through to the org endpoints. See 1.2's follow-up. GD1's field matrix and its OQ4 note it too. The schema changed, so 6.2's live seed needs a re-run (see the change log).
+		- **(b) done:** organizations have an `adult` checkbox ("18+", starts unchecked), carried through to the org endpoints. See 1.2's follow-up. GD1's field matrix and its OQ4 note it too. The schema changed, so 6.2's live seed was re-run, and it passed.
 		- **(c) done:** the `include_closed=true` catch is on GD3's resolver line ([[Bucket GD3 — Guide public UI]], "Venue-page identity").
 		- (a), (d), (e) and (f) stand as built.
 12. **§4 as built — five calls the plan didn't spell out.** *(Added 10/29.)* Each is built as recommended, so "Agreed" covers all five. Answer per letter if you want any changed.
@@ -318,7 +321,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 # Change Log
 
-- **10/29/2026 (v0.7.1)** — **OQ11 and OQ12 decided** (all agreed). **OQ11 (b) done:** organizations gained an `adult` checkbox ("18+", starts unchecked), through the schema, admin labels, `GuideHelper`, the KeyValueTable and the org endpoints' JSON. Only checks were added to existing tests, so the count stays 2218: Windows 2218/2218, Linux 2218/2218. GD1's field matrix and its OQ4 note it. **OQ11 (c) done:** GD3's by-id resolver line now says to ask with `include_closed=true`. OQ12 needs no change. Because the schema changed, **6.2's live seed needs a re-run.**
+- **10/29/2026 (v0.7.1)** — **OQ11 and OQ12 decided** (all agreed). **OQ11 (b) done:** organizations gained an `adult` checkbox ("18+", starts unchecked), through the schema, admin labels, `GuideHelper`, the KeyValueTable and the org endpoints' JSON. Only checks were added to existing tests, so the count stays 2218: Windows 2218/2218, Linux 2218/2218. GD1's field matrix and its OQ4 note it. **OQ11 (c) done:** GD3's by-id resolver line now says to ask with `include_closed=true`. OQ12 needs no change. Because the schema changed, **6.2's live seed was re-run** on Mason's go-ahead, and it passed (details under 6.2).
 
 - **10/29/2026 (v0.7)** — **§4 (endpoints) built.** 4.1–4.10 are marked complete with as-built notes and a route table. The 14 routes live in 8 files, alongside the shared `guide_json`, its test support, and 28 new tests. Windows and Linux are both 2218/2218 (floor 2083). Guide org, place and page photos serve to signed-out visitors. There's no schema or seed change. **OQ12 added:** five as-built calls awaiting "Agreed". OQ11 is still open.
 

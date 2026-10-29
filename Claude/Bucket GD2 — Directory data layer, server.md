@@ -222,12 +222,28 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 ### 5. test_helper commands (`src/test_helper/commands/guide_commands.{h,cpp}`)
 
-- [ ] 5.1 `create-demo-guide` (a venue+profile, a closed venue+profile with closure note, two orgs of different kinds, Denny Blaine as an adult place, one published + one draft page — prints ids) · `publish-page <slug>` · `verify-listing <table> <id>` (sets `last_verified_at_us = now` — the verification act) · `list-graveyard`.
+- [x] 5.1 `create-demo-guide` (a venue+profile, a closed venue+profile with closure note, two orgs of different kinds, Denny Blaine as an adult place, one published + one draft page — prints ids) · `publish-page <slug>` · `verify-listing <table> <id>` (sets `last_verified_at_us = now` — the verification act) · `list-graveyard`.
+	- *As built (10/29):* four commands under a new "Guide" category, registered beside EV1's in `command_runner.cpp`. Like EV1's, they take named flags.
+		- **`create-demo-guide` (`dg`):** builds the seven rows the plan lists. Every name starts with "Demo:", and every slug with `demo-`.
+			- The rows are an open bar with a price band and one link, a closed bar with a closure note, a softball league and a chorus, the 18+ place (re-checked monthly), and one published page and one draft page, both in the health section.
+			- It prints a table of what it made: kind, id, slug, and whether it was created or already there. A venue's row also shows its profile's id, which `verify-listing` needs.
+			- It's safe to re-run (OQ13 (a)). Scene tags and the neighborhood are added only when the seeded vocabulary is there (OQ13 (b)).
+		- **`publish-page --slug=…` (`pp`):** clears the draft box and sets the publish time to now. That works for a draft and for a page scheduled for later (OQ13 (c)). A page that's already public is left alone.
+		- **`verify-listing --table=… --id=…` (`vl`):** sets `last_verified_at_us` to now on one row, then prints the time. It accepts the six tables that carry the stamp (OQ13 (d)). It refuses, without writing anything, an unknown table, a missing or non-numeric id, or an id with no row.
+		- **`list-graveyard` (`lg`):** the closed venues and organizations with their closure notes, exactly what `/api/guide/graveyard` serves.
+		- **Tests** (7, `guide_commands_test.cpp`):
+			- Every command is registered with its alias.
+			- The demo builds each kind of listing, and checks it through `GuideHelper` (directory, graveyard, org kinds, the 18+ place, published vs. draft, the venue's link). A re-run adds no rows.
+			- With the vocabulary present, the demo tags its rows.
+			- Publishing works for a draft and for a scheduled page, and publishing again keeps the time.
+			- Verifying works for all six tables. A guide venue shows as verified only once both its venue and its profile are.
+			- Bad input stamps nothing.
+			- `list-graveyard` runs both empty and full.
 
 ### 6. Gates
 
 - [ ] 6.1 Docker suite green per slice; **raise the floor** (EV1 §7.2 policy — both `build_and_test.sh` and CI once PL1 lands).
-- [ ] 6.2 **Live seed gate (Mason):** `--recreate_database` exit 0; psql spot-check: `manage_guide` granted; ten tables in admin metadata; guide tables absent from `allowed_tables`; photo support rows.
+- [x] 6.2 **Live seed gate (Mason):** `--recreate_database` exit 0; psql spot-check: `manage_guide` granted; ten tables in admin metadata; guide tables absent from `allowed_tables`; photo support rows.
 	- *Passed 10/29 after §1 (Claude ran it on Mason's go-ahead; the dev database was rebuilt):*
 		- `--recreate_database` exited 0.
 		- The ten tables exist, all empty.
@@ -243,7 +259,14 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 		- `--recreate_database` exited 0.
 		- `organizations.adult` is there, after `neighborhood_id`: a boolean, NOT NULL, default false. Its admin label is "18+" with its hint, and it starts unchecked.
 		- Everything else matches the first run: still exactly six checkboxes start checked, all 16 guide CHECK constraints are present, the guide tables are empty, `manage_guide` maps to 11 tables, no guide table is on `allowed_tables`, photo support covers the same six tables, and EV1's vocabularies are still 12 / 11 / 25.
+	- *Closed at the bucket exit (10/29):* §5 changes only test_helper, not the seed, so the 10/29 re-run stands as the bucket-exit check.
 - [ ] 6.3 **Manual loop:** via the admin CRUD editor create a venue (Stream A's table) + its profile + scene tags + a link → `curl /api/guide/venues/<slug>` shows the joined shape with freshness fields → set the venue `status='closed'` + a closure note → it appears in `/api/guide/graveyard` → create a draft page, confirm 404, publish (draft=false + publish_at_us) → 200.
+	- *Open (Mason's).* The admin-editor steps are the point of this loop, so the loop is still yours to run. §5's commands give a shortcut for the rest:
+		1. Run `create-demo-guide`, then `curl http://localhost:18081/api/guide/venues/demo-bar`.
+		2. `list-graveyard` shows `demo-closed-bar`, and so does `curl /api/guide/graveyard`.
+		3. `curl /api/guide/pages/demo-draft-page` returns 404. Run `publish-page --slug=demo-draft-page`, and the same curl returns 200.
+		4. `verify-listing` on the bar's venue and then its profile turns on its "Verified" date.
+	- The demo writes to the dev database, so I haven't run it there.
 
 # Open Questions
 
@@ -318,6 +341,11 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(e) "Include closed" takes `true` or `1`.** Anything else, or leaving it off, means closed and moved venues are hidden. GD3's by-id lookup (OQ11 (c)) would ask with `include_closed=true`. *Rec: keep.*
 	- Mason- I'll go with your recommendations.
 	- Claude- Decided (10/29) — all five stand as built; no code change. For (d), guide-page photos stay public, so don't attach anything sensitive to a draft page's photo.
+13. **§5 as built — four calls the plan didn't spell out.** *(Added 10/29.)* Each is built as recommended, so "Agreed" covers all four. Answer per letter if you want any changed.
+	- **(a) Re-running the demo never overwrites.** `create-demo-guide` looks each row up by its `demo-` slug first. If the row is already there, the command reports "already there" and leaves the row alone, even if someone edited it. To start over, delete the demo rows in the admin editor or rebuild the dev database. *Rec: keep. A demo that undid your edits would get in the way of the 6.3 loop.*
+	- **(b) The demo is tagged only when the vocabulary is there.** On the dev database, the demo bar is tagged leather, the closed bar bear, and the league jock; both bars and the league are placed in Capitol Hill. The test database has no vocabulary, so if a tag or the neighborhood is missing, the demo builds without it and prints a warning naming what was left off. The demo place gets no neighborhood, so the demo doesn't state where a real park is. *Rec: keep.*
+	- **(c) "Publish" means public from now.** `publish-page` makes a page public immediately, whether it was a draft or scheduled for later. A page that's already public keeps its original publish time. *Rec: keep. Scheduling for later is the admin editor's job.*
+	- **(d) A venue is verified in two steps.** `verify-listing` takes the six tables that carry the "Verified" stamp: venues, venue profiles, organizations, places, services and guide pages. A guide venue's stamp is the older of its two dates (OQ11 (a)), so a venue counts as verified only after both its venue row and its profile are. When you verify one of them, the command prints that reminder. Venues are included because guide curators check venue facts too (OQ3). *Rec: keep. A single "verify the venue page" command that stamps both rows is easy to add later if the two steps get tedious.*
 
 # Change Log
 

@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/29/2026
-Version: 0.9
+Version: 0.10
 tags:
 ---
 
@@ -189,7 +189,7 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 3. Events pages (`ui/src/app/pages/events/`, lazy `events.routes.ts`; standalone components; Material via the app's existing patterns)
 
-*(Built 10/28. 3.1–3.7, 3.9 and 3.10 are green: vitest 173/173, up from 82 after §2, with 91 new tests in 15 new spec files. The suite also passes with the machine clock set to UTC and to Tokyo time. `ng build -c local`, `-c development` and `-c production` all build, and the events pages load as their own chunk (129 kB, 43 kB optimized). 3.8 waits for GD3. Nothing was checked against a live server, since none was running; that's §4.4's manual loop. OQ9 decided 10/28: all twelve calls kept, with (a)'s honuware fix done now rather than later, and the editor's stopgap is gone. honuware was pushed 10/29 as `4e5089b` "Quick fix", and CF is re-pinned from `7cd3522`. The pinned build is green: Windows 2093/2093 and the strict Linux gate 2093/2093 (fresh clone, floor 2058), one more than §1.5's 2092 for the new honuware test. vitest stays 173, and the three `ng build`s still succeed. **§3 is complete.** Mason commits it together with the re-pin.)*
+*(Built 10/28. 3.1–3.7, 3.9 and 3.10 are green: vitest 173/173, up from 82 after §2, with 91 new tests in 15 new spec files. The suite also passes with the machine clock set to UTC and to Tokyo time. `ng build -c local`, `-c development` and `-c production` all build, and the events pages load as their own chunk (129 kB, 43 kB optimized). 3.8 waits for GD3. Nothing was checked against a live server, since none was running; that's §4.4's manual loop. OQ9 decided 10/28: all twelve calls kept, with (a)'s honuware fix done now rather than later, and the editor's stopgap is gone. honuware was pushed 10/29 as `4e5089b` "Quick fix", and CF is re-pinned from `7cd3522`. The pinned build is green: Windows 2093/2093 and the strict Linux gate 2093/2093 (fresh clone, floor 2058), one more than §1.5's 2092 for the new honuware test. vitest stays 173, and the three `ng build`s still succeed. **§3 is complete — committed 10/29 as `9792dc0`, with the re-pin.**)*
 
 - [x] 3.1 Route scaffolding — `app.routes.ts` one-liner: `{ path: 'events', loadChildren: … }`; child routes: `''` (list), `calendar`, `series`, `series/:slug`, `:id` (**`:id` last** — the knottyyoga route-ordering hazard). Header gains the "Events" nav link (one-line shared-file edit, both logged-in and logged-out states).
 	- *As built (10/28):* `pages/events/events.routes.ts` is lazy-loaded from `app.routes.ts`, with `:id` last and a comment saying why. The header's **Events** link sits beside the site name, so it shows whether or not anyone is signed in. `header.spec.ts` checks it.
@@ -268,6 +268,8 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 4. Gates
 
+*(Bucket-exit gates run 10/29 on `9792dc0`, plus the 4.3 floor change. 4.1–4.3 pass. OQ10 has two calls on 4.1's bundle check. Remaining: Mason commits the floor change, answers OQ10, and runs 4.4 with Levi.)*
+
 - [x] 4.1 `ng build -c local` + `ng build -c development` clean; events area lazy-chunked (initial bundle unchanged).
 	- *After §3 (10/28):* all three builds succeed, and the events pages load as their own chunk.
 	- *Bucket exit (10/29, on `9792dc0`):*
@@ -277,7 +279,12 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- The 10/28 note's "12 kB, 857 kB before" compared against the bundle after §2, not before EV2.
 - [x] 4.2 vitest green; record the new count (grows from 22). *(It was already 27 when §2 started, 82 after §2, and 173 after §3.)*
 	- *Bucket exit (10/29, on `9792dc0`):* **173/173 in 29 files**, all green. That's up from 27 before EV2: 146 new tests.
-- [ ] 4.3 Docker suite green for the server slice; floor per EV1 §7.2 policy.
+- [x] 4.3 Docker suite green for the server slice; floor per EV1 §7.2 policy.
+	- *Bucket exit (10/29):*
+		- **Floor:** EV1 §7.2's rule is the actual count minus about 10. `MIN_EXPECTED_TESTS` in `server/docker/build_and_test.sh` went from 2058 to **2083** (2093 − 10), and the header comment records the EV2 exit count. That change is uncommitted.
+		- **Linux:** a strictly pinned Release gate. FetchContent cloned honuware `4e5089bb…` from GitHub, with no `HONUWARE_SRC_DIR` and no build cache. It printed `tests executed: 2093 (floor: 2083)` and `[communityfinder] OK`: 2093/2093 passed.
+		- **Windows:** x64-Debug passed 2093/2093 on the same tree.
+		- EV2 added 25 server tests, from 2068 at EV1's exit: 16 for §1's calendar endpoints, 8 for §1.5's calendar name and refresh hint, and the honuware blank-text test.
 - [ ] 4.4 **Manual browser loop = milestone M1 (Mason + Levi):** offline first (`ng serve`, mock): browse list/tonight/weekend/calendar/series/detail with zero backend. Then dev (`ng serve -c development` against :18081): admin-enter a venue + events via §3.7's editor (or raw admin CRUD) → approve in the editor's queue → they appear on list + calendar + detail **and in the home-page strip** → devtools confirms the meta/OG tags on a detail page → download the event ICS and subscribe to a category feed in a real calendar app (Google Calendar URL-subscribe or Apple Calendar; after §1.5, so the subscription shows its name) → JSON-LD validates in Google's Rich Results test (paste the rendered detail page HTML).
 
 # Open Questions
@@ -392,6 +399,12 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- *Rec: don't do it in this gate. Log it for a pre-launch bundle-size pass.* That pass has bigger problems to solve. The largest file is 685 kB: Angular itself, plus Angular Material and its toolkit at 303 kB (the honuware UI library is 28 kB). It's the main reason the production build is 370 kB over its 500 kB budget. Removing the demo saves about 12 kB. The other option is to do it now as its own small slice, at the cost of touching the shared app setup outside EV2.
 
 # Change Log
+
+- **10/29/2026 (v0.10)** — **§4 gates 4.1–4.3 pass at bucket exit** (on `9792dc0`, where Mason committed §3 with the re-pin).
+	- 4.1: all three `ng build`s succeed, and the events pages download separately. The initial bundle went from 843.9 kB before EV2 to 869.6 kB (+8.8 kB after compression), split between the home strip and offline demo data. **OQ10** asks about both.
+	- 4.2: vitest 173/173 in 29 files.
+	- 4.3: the floor went from 2058 to 2083 (uncommitted). The strictly pinned Linux Release gate passed 2093/2093 (floor 2083), and Windows passed 2093/2093.
+	- Remaining: Mason commits the floor change and answers OQ10. 4.4 is the manual loop with Levi.
 
 - **10/29/2026 (v0.9)** — **§3 complete.**
 	- honuware was pushed as `4e5089b` "Quick fix" (OQ9 (a)'s blank-text fix), and CF is re-pinned from `7cd3522`.

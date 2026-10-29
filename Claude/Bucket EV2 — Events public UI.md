@@ -268,9 +268,15 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 
 ### 4. Gates
 
-- [ ] 4.1 `ng build -c local` + `ng build -c development` clean; events area lazy-chunked (initial bundle unchanged).
-	- *After §3 (10/28):* all three builds succeed, and the events pages load as their own chunk. The initial bundle grew about 12 kB, for the home strip and the header link. The production build's warning that the initial bundle is over its 500 kB budget was already there before §3: 857 kB then, 870 kB now.
-- [ ] 4.2 vitest green; record the new count (grows from 22). *(It was already 27 when §2 started, 82 after §2, and 173 after §3.)*
+- [x] 4.1 `ng build -c local` + `ng build -c development` clean; events area lazy-chunked (initial bundle unchanged).
+	- *After §3 (10/28):* all three builds succeed, and the events pages load as their own chunk.
+	- *Bucket exit (10/29, on `9792dc0`):*
+		- **Builds:** `-c local` and `-c development` build with no warnings. `-c production` builds too. Its one warning, that the initial bundle is over its 500 kB budget, predates EV2: the bundle was already 844 kB before it.
+		- **Lazy:** every events page is in the lazy `events-routes` file (43 kB), and the editor is in `admin-routes`. The build's file list confirms none of their source is in the initial bundle.
+		- **Initial bundle:** 843.9 kB before EV2 (`a1c7b2e`, built from a copy of that commit), 869.6 kB now. That's +25.7 kB, or +8.8 kB after compression. About 14 kB is the home strip and the header's Events link, plus the event types and Seattle-time helpers the strip needs. The other 12 kB is offline demo data that production doesn't use. Both are OQ10.
+		- The 10/28 note's "12 kB, 857 kB before" compared against the bundle after §2, not before EV2.
+- [x] 4.2 vitest green; record the new count (grows from 22). *(It was already 27 when §2 started, 82 after §2, and 173 after §3.)*
+	- *Bucket exit (10/29, on `9792dc0`):* **173/173 in 29 files**, all green. That's up from 27 before EV2: 146 new tests.
 - [ ] 4.3 Docker suite green for the server slice; floor per EV1 §7.2 policy.
 - [ ] 4.4 **Manual browser loop = milestone M1 (Mason + Levi):** offline first (`ng serve`, mock): browse list/tonight/weekend/calendar/series/detail with zero backend. Then dev (`ng serve -c development` against :18081): admin-enter a venue + events via §3.7's editor (or raw admin CRUD) → approve in the editor's queue → they appear on list + calendar + detail **and in the home-page strip** → devtools confirms the meta/OG tags on a detail page → download the event ICS and subscribe to a category feed in a real calendar app (Google Calendar URL-subscribe or Apple Calendar; after §1.5, so the subscription shows its name) → JSON-LD validates in Google's Rich Results test (paste the rendered detail page HTML).
 
@@ -377,6 +383,13 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- **CF:** the editor's "can't be emptied yet" check is gone, and its two specs now check that an emptied field saves as a blank.
 		- **Who else it affects:** only saves through the generic update (`/api/update_item`, the admin editor) that clear a required text column. Those always failed before, so nothing that worked changes. No honuware or knottyyoga test relied on the old failure. knottyyoga gets this whenever it next re-pins.
 		- **Order:** the CF editor change needs the new honuware. Commit §3 together with the re-pin, so the editor never offers a save the pinned server refuses.
+10. **§4.1's bundle check: two calls** *(added 10/29)*. Background: the "initial bundle" is the code every visitor downloads before the first page appears. §4.1 asked for it to stay unchanged, so that the events pages download only when someone opens one. They do: the events pages are their own 43 kB file. Even so, the initial bundle grew from 844 kB to 870 kB, about 9 kB more to download after compression. The growth has two parts.
+	- **(a) 14 kB is the home-page strip and the header's Events link.** OQ4 put the strip on the home page after §4.1 was written. The home page is the first page, so whatever it shows is part of the initial bundle: the strip, plus the event types and Seattle-time helpers it uses. *Rec: accept it, and read §4.1 as "the events pages download separately", which holds.*
+	- **(b) 12 kB is offline demo data, which production never uses.**
+		- **Why it's there.** The app chooses between the real server and the offline demo while it runs (`environment.useMock`), not when it's built. So every build carries the demo data and the fake services, including production. That was already true before EV2: about 3 kB, for the demo admin and the admin editor's sample tables. EV2's events demo data and the editor's offline store raised it to 15 kB.
+		- **The fix.** Make the choice when the app is built. Only the `local` build would include a file that sets up the demo, swapped in the way Angular already swaps the environment file (`fileReplacements`). Every other build would leave the demo out.
+		- **The cost.** It changes `app.config.ts` and the three `provide…Access` helpers, which predate EV2 and belong to the app shell. Many specs call those helpers to get the offline demo, so they'd change as well.
+		- *Rec: don't do it in this gate. Log it for a pre-launch bundle-size pass.* That pass has bigger problems to solve. The largest file is 685 kB: Angular itself, plus Angular Material and its toolkit at 303 kB (the honuware UI library is 28 kB). It's the main reason the production build is 370 kB over its 500 kB budget. Removing the demo saves about 12 kB. The other option is to do it now as its own small slice, at the cost of touching the shared app setup outside EV2.
 
 # Change Log
 

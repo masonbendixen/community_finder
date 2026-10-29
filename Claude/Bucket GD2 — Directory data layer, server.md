@@ -318,7 +318,7 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 
 # Change Log
 
-- **10/29/2026 (v0.7.1)** — **OQ11 and OQ12 decided** (all agreed). **OQ11 (b) done:** organizations gained an `adult` checkbox ("18+", starts unchecked), through the schema, admin labels, `GuideHelper`, the KeyValueTable and the org endpoints' JSON. Only checks were added to existing tests, so the count stays 2218: Windows 2218/2218, Linux LINUX_PENDING. GD1's field matrix and its OQ4 note it. **OQ11 (c) done:** GD3's by-id resolver line now says to ask with `include_closed=true`. OQ12 needs no change. Because the schema changed, **6.2's live seed needs a re-run.**
+- **10/29/2026 (v0.7.1)** — **OQ11 and OQ12 decided** (all agreed). **OQ11 (b) done:** organizations gained an `adult` checkbox ("18+", starts unchecked), through the schema, admin labels, `GuideHelper`, the KeyValueTable and the org endpoints' JSON. Only checks were added to existing tests, so the count stays 2218: Windows 2218/2218, Linux 2218/2218. GD1's field matrix and its OQ4 note it. **OQ11 (c) done:** GD3's by-id resolver line now says to ask with `include_closed=true`. OQ12 needs no change. Because the schema changed, **6.2's live seed needs a re-run.**
 
 - **10/29/2026 (v0.7)** — **§4 (endpoints) built.** 4.1–4.10 are marked complete with as-built notes and a route table. The 14 routes live in 8 files, alongside the shared `guide_json`, its test support, and 28 new tests. Windows and Linux are both 2218/2218 (floor 2083). Guide org, place and page photos serve to signed-out visitors. There's no schema or seed change. **OQ12 added:** five as-built calls awaiting "Agreed". OQ11 is still open.
 

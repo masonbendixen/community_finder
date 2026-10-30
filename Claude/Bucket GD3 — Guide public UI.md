@@ -156,6 +156,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 	- **(d) The guide's data code loads with the app, adding 23 kB.** §1.4 puts the provider in `app.config.ts`. That means the seam and its offline demo data load with the app's first download, even on pages that aren't the guide and in the production build. The production initial bundle went from 870 kB (EV2's recorded size) to 893 kB. §4.1 asks for the initial bundle to stay unchanged.
 		- The fix: when §3.1 creates `guide.routes.ts`, move the provider into those routes. The seam and its data then load only when someone opens a guide page. Nothing outside `/guide` uses the seam, since EV2 links to venue pages by address.
 		- *Rec: move it at §3.1. That's one line out of `app.config.ts` and one line into the guide routes. Alternative: leave it in `app.config.ts` and accept the 23 kB.*
+	- I'll go with your recommendations.
 8. **The freshness footer already exists.** *(Added 10/29, a heads-up for §2.)* EV2 built `shared/components/freshness-footer` for its series pages, and its doc offers it to GD3. It already does most of §2.1:
 	- It shows "Verified {Month Year}", or "Not yet verified".
 	- It adds a "Closed", "Moved" or "Seasonal" marker. The "Closed" wording can be changed; series say "Ended".
@@ -170,6 +171,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 	- *Alternatives:*
 		- Add an optional closure-note input to EV2's footer. That's a small edit to Stream A's file, so ping Levi first.
 		- Build GD3's own footer as planned, under a different name.
+	- Mason- I'll go with your recommendation.
 
 # Change Log
 

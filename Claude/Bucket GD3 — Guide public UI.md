@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
-Last Updated: 10/29/2026
-Version: 0.5
+Last Updated: 10/30/2026
+Version: 0.5.1
 tags:
 ---
 
@@ -225,8 +225,12 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 		- Cards show an "18+" badge on adult listings, so a reader knows before clicking that the page will ask.
 		- Link-out cards use plain icons (Material Icons has no Discord or Instagram logos), and the platform's name is always written next to the icon, as GD1 asks.
 		- *Rec: keep.*
+	- Mason- I'll go with your recommendations.
+	- Claude- Decided (10/30) — all five stay as built; no body change.
 
 # Change Log
+
+- **10/30/2026 (v0.5.1)** — **OQ9 decided** (Mason went with the recommendations). All five §2 calls stay as built; no body changes.
 
 - **10/29/2026 (v0.5)** — **§2 (shared components) built.** 2.2–2.6 are marked complete, with as-built notes. 2.1 was already done (reusing EV2's footer).
 	- The work is the link-out card, scene chips, the 18+ gate, the entity card and the in-app-links directive. Three helpers come with them: the guide's date formatter, its display-name lists, and a scene and neighborhood names service.

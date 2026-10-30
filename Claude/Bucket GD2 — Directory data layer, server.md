@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.8
+Version: 0.8.1
 tags:
 ---
 
@@ -351,8 +351,12 @@ Also inherited from EV1's pin-downs: **deletes cascade** (honuware FKs are `ON D
 	- **(b) The demo is tagged only when the vocabulary is there.** On the dev database, the demo bar is tagged leather, the closed bar bear, and the league jock; both bars and the league are placed in Capitol Hill. The test database has no vocabulary, so if a tag or the neighborhood is missing, the demo builds without it and prints a warning naming what was left off. The demo place gets no neighborhood, so the demo doesn't state where a real park is. *Rec: keep.*
 	- **(c) "Publish" means public from now.** `publish-page` makes a page public immediately, whether it was a draft or scheduled for later. A page that's already public keeps its original publish time. *Rec: keep. Scheduling for later is the admin editor's job.*
 	- **(d) A venue is verified in two steps.** `verify-listing` takes the six tables that carry the "Verified" stamp: venues, venue profiles, organizations, places, services and guide pages. A guide venue's stamp is the older of its two dates (OQ11 (a)), so a venue counts as verified only after both its venue row and its profile are. When you verify one of them, the command prints that reminder. Venues are included because guide curators check venue facts too (OQ3). *Rec: keep. A single "verify the venue page" command that stamps both rows is easy to add later if the two steps get tedious.*
+	- Mason- go with your recommendations
+	- Claude- Decided (10/29) — all four stand as built (§5.1); no code change.
 
 # Change Log
+
+- **10/29/2026 (v0.8.1)** — **OQ13 decided** (all four agreed, no changes). §5 and the floor change are ready for Mason to commit. Only 6.3, Mason's manual loop, is still open.
 
 - **10/29/2026 (v0.8)** — **§5 (test_helper commands) built**, and **§6.1–6.2 closed**.
 	- **5.1:** four Guide commands (`create-demo-guide`, `publish-page`, `verify-listing`, `list-graveyard`), with 7 new tests. Details are in 5.1's as-built note.

@@ -82,11 +82,23 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 *(Numbered; recommendations included so "agreed" suffices.)*
 
 1. **18+ gate = sessionStorage interstitial** (no persistence, no cookie, no server round-trip), per the Q3(b)/MHMDA posture. *Rec: as pinned; revisit only if WA passes an AV law (tracked in the brainstorm).*
+	- Mason- (10/29, in chat) Accept all the open question recommendations.
+	- Claude- Decided (10/29) — as pinned (the 18+ gate pin-down, §2.4); no body change.
 2. **`/guide/venues/by-id/:venueId` resolver** (client-side lookup + redirect) as the cross-stream linking seam for event pages. *Rec: include; it's ~20 lines and unblocks EV2's venue links without any API change.*
+	- Mason- (10/29, in chat) Accept all the open question recommendations.
+	- Claude- Decided (10/29) — included (§3.4), with `include_closed=true` per GD2 OQ11 (c); no body change.
 3. **ngx-markdown dependency** (with `marked`), route-scoped via `provideMarkdown()` — the knottyyoga blog wiring. *Rec: yes; pin versions compatible with Angular 21 and commit the lockfile.*
+	- Mason- (10/29, in chat) Accept all the open question recommendations.
+	- Claude- Decided (10/29) — yes. The dependency arrives with §3.1, the first item that renders markdown; §1 doesn't need it.
 4. **noindex on adult pages?** Site-wide robots/meta policy is RT4's; nothing here blocks on it. *Rec: defer to RT4; leave a code comment at the AdultGate.*
+	- Mason- (10/29, in chat) Accept all the open question recommendations.
+	- Claude- Decided (10/29) — deferred to RT4; the code comment goes in with §2.4.
 5. **Tiny local date formatter** in `freshness-footer` (Month Year only) instead of importing Stream A's `events-date.utils`. *Rec: as pinned — 5 lines of `Intl.DateTimeFormat` beats a cross-stream import; if the streams later want one shared date module, merge it as a deliberate post-M2 cleanup.*
+	- Mason- (10/29, in chat) Accept all the open question recommendations.
+	- Claude- Decided (10/29) — as pinned (§2.1); no body change.
 6. **Empty-state copy** ("Nothing here yet — this guide section is being written") appears wherever content hasn't landed, so GD3 can merge before GD4b/Pool content exists. *Rec: as pinned; the mock dataset keeps the demo experience full regardless.*
+	- Mason- (10/29, in chat) Accept all the open question recommendations.
+	- Claude- Decided (10/29) — as pinned (§3); no body change.
 
 # Change Log
 

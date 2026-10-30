@@ -45,10 +45,56 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 
 ### 1. Access seam (`ui/src/app/core/guide-access/` — mirror `community-access/`'s 4 files)
 
-- [ ] 1.1 `guide-access.ts` — `GUIDE_ACCESS` token + interface: `getScenes()`, `getScene(slug)`, `getVenues(filters?)`, `getVenue(slug)`, `getOrgs(filters?)`, `getOrg(slug)`, `getPlaces()`, `getPlace(slug)`, `getServices(kind?)`, `getNeighborhoods()`, `getNeighborhood(slug)`, `getGraveyard()`, `getGuidePage(slug)`, `getGuidePagesBySection(section)`, `getVenueEvents(venueId)` + `getSceneEvents(sceneSlug)` (the Stream A public-API reads); types file with `normalizeX` statics (`?? []`, number coercion, freshness fields on every entity type).
-- [ ] 1.2 `guide-access.http.ts` — HTTP impl over `/api/guide/*` (+ `/api/events/upcoming` for the two event reads), `HONUWARE_API_BASE`, `withCredentials: true`, query-string building. **Spec:** URL/query construction per method (HttpClient spy).
-- [ ] 1.3 `guide-access.mock.ts` — the offline demo dataset (relative dates where dated): GD1's scene tags with postures; 5 venues with profiles across neighborhoods (one **closed** with a closure note, one **adult**); 6 orgs across kinds (league, chorus, recovery, professional…); Denny Blaine as an adult place; 6 services (mixed `is_health`); 3 published pages (a scene intro, a neighborhood rundown, an adult-section page) + 1 draft that must never surface; links on several entities; demo venue events. **Spec:** draft never returned; graveyard returns exactly the closed entities.
-- [ ] 1.4 `guide-access.providers.ts` — `provideGuideAccess(useMock)`; wire into `app.config.ts` beside `provideCommunityAccess` (one-line shared-file edit).
+*(Built 10/29.)*
+- vitest is 226/226 in 32 files, up from 173 in 29: 53 new tests in 3 new spec files.
+- The suite also passes with the machine set to UTC and to Tokyo time.
+- `ng build -c local`, `-c development` and `-c production` all build.
+- The initial bundle grew by 23 kB (OQ7 (d)).
+- **§1 is complete**, pending OQ7.
+
+- [x] 1.1 `guide-access.ts` — `GUIDE_ACCESS` token + interface: `getScenes()`, `getScene(slug)`, `getVenues(filters?)`, `getVenue(slug)`, `getOrgs(filters?)`, `getOrg(slug)`, `getPlaces()`, `getPlace(slug)`, `getServices(kind?)`, `getNeighborhoods()`, `getNeighborhood(slug)`, `getGraveyard()`, `getGuidePage(slug)`, `getGuidePagesBySection(section)`, `getVenueEvents(venueId)` + `getSceneEvents(sceneSlug)` (the Stream A public-API reads); types file with `normalizeX` statics (`?? []`, number coercion, freshness fields on every entity type).
+	- *As built (10/29):* all 16 reads, as listed. The organization pair is spelled out as `getOrganizations` / `getOrganization` (OQ7 (a)).
+		- **Types:** `core/types/guide.types.ts`, beside EV2's `events.types.ts` and in its style: exported `normalizeX` functions. They mirror GD2's wire shapes field for field (checked against `guide_key_value_table.cpp` and `guide_json.cpp`).
+			- Every listing type extends a shared `GuideFreshness` (`status`, `last_verified_at_us`).
+			- A guide venue carries both raw verified dates as well as the combined one.
+			- A missing intro or rundown page stays `null`.
+		- **The event reads** come back as the guide's own small `GuideEvent`, only the fields a "coming up" list shows, not Stream A's event type (OQ7 (b)).
+- [x] 1.2 `guide-access.http.ts` — HTTP impl over `/api/guide/*` (+ `/api/events/upcoming` for the two event reads), `HONUWARE_API_BASE`, `withCredentials: true`, query-string building. **Spec:** URL/query construction per method (HttpClient spy).
+	- *As built (10/29):* GD2's routes as built.
+		- `getOrganizations` asks for `/api/guide/orgs`.
+		- Filters go in a fixed order. `include_closed` is sent only when it's on, as `true`.
+		- Slugs are URL-encoded.
+		- A 404 passes through for the page to show "not found".
+		- **Specs** (25, `guide-access.http.spec.ts`): every method's URL, method and credentials (one table-driven test per method); the filters; slug encoding; reading a scene landing, the graveyard and a venue's events; the 404. Plus 10 for the normalizers in `guide.types.spec.ts`: all-digit text stays text, `""` becomes null, missing fields are defaulted, a missing intro page stays null, and the query-string builder.
+- [x] 1.3 `guide-access.mock.ts` — the offline demo dataset (relative dates where dated): GD1's scene tags with postures; 5 venues with profiles across neighborhoods (one **closed** with a closure note, one **adult**); 6 orgs across kinds (league, chorus, recovery, professional…); Denny Blaine as an adult place; 6 services (mixed `is_health`); 3 published pages (a scene intro, a neighborhood rundown, an adult-section page) + 1 draft that must never surface; links on several entities; demo venue events. **Spec:** draft never returned; graveyard returns exactly the closed entities.
+	- *As built (10/29):* the dataset is in `core/mock/guide-mock-data.ts`, beside the events mock. `GuideMockAccess` serves it by GD2's rules:
+		- Closed and moved listings are left out of every list but the graveyard. The graveyard has closed listings only.
+		- `include_closed` brings closed venues back.
+		- Scene and neighborhood counts equal what their pages list.
+		- Only published pages show, as of the moment you ask.
+		- Events come from the 42-day window, in start order.
+		- An unknown slug is a 404, and a missing section is a 400.
+		- The data is a bit larger than the list above (OQ7 (c)):
+			- 6 venues.
+			- 9 organizations, including one closed, one moved and one 18+.
+			- 2 places.
+			- 6 services.
+			- 5 published pages, plus a draft and one scheduled for next week.
+			- 10 events.
+		- Everything is made up apart from GD1's vocabularies and the name "Denny Blaine Park". Its listing says nothing about the park beyond being 18+.
+		- **Specs** (18, `guide-access.mock.spec.ts`):
+			- The draft and the scheduled page never show, and the scheduled one does once its week has passed.
+			- The graveyard is exactly the closed venue and the closed organization, not the moved one.
+			- Retired listings are out of the directories, but their own pages still load.
+			- Every filter works. Every scene's and neighborhood's counts match its page. The link-out postures and the slug conventions hold.
+			- Each unknown slug is a 404.
+			- The 18+ layer is there.
+			- Event reads stay within the window.
+			- The mock hands out copies.
+			- Parity: running the normalizers over the mock data changes nothing.
+			- Every venue's stamp is the older of its two dates.
+- [x] 1.4 `guide-access.providers.ts` — `provideGuideAccess(useMock)`; wire into `app.config.ts` beside `provideCommunityAccess` (one-line shared-file edit).
+	- *As built (10/29):* as planned, one provider line and its import in `app.config.ts`, directly after `provideCommunityAccess`. This is what costs the initial bundle its 23 kB (OQ7 (d)).
 
 ### 2. Shared components (`ui/src/app/shared/components/`)
 

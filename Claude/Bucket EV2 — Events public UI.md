@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 10/29/2026
-Version: 0.10.1
+Last Updated: 10/30/2026
+Version: 0.10.2
 tags:
 ---
 
@@ -252,8 +252,9 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 			- `manage-events-form.spec.ts`: Seattle time to instants in summer and winter, both 2026 clock-change weekends, next-morning and month-end endings, a multi-day event, the error messages, loading a row, the insert and edit rows, an emptied field sent as a blank, the tag changes.
 			- `manage-events.spec.ts`, against the offline store: the queue; approve; reject with and without a note; `?edit=` loading Seattle times and tags; a new event's row and tags; a series event with no tags of its own; an edit sending only the cost and swapping a tag; emptying the description; a missing start.
 			- `events-crud-mock.spec.ts`: the offline rows, with no tag rows for events that inherit their series'.
-- [ ] 3.8 **Cross-stream venue-link-up (per OQ3, mirrored in GD3 §3.4):** whichever of EV2/GD3 lands **second** wires the detail page's venue name to `/guide/venues/by-id/{venue_id}` — a one-line edit in `EventDetailPage`, called out in that landing PR's checklist so it can't be forgotten.
+- [x] 3.8 **Cross-stream venue-link-up (per OQ3, mirrored in GD3 §3.4):** whichever of EV2/GD3 lands **second** wires the detail page's venue name to `/guide/venues/by-id/{venue_id}` — a one-line edit in `EventDetailPage`, called out in that landing PR's checklist so it can't be forgotten.
 	- *Not done here (10/28):* GD3 hasn't landed, so GD3 lands second and wires the link (GD3 §3.4). A comment marks the spot in `event-detail.html`.
+	- *Done by GD3 (10/30):* the venue name in `event-detail.html` now links to `/guide/venues/by-id/{venue_id}`. That address finds the venue's guide page, including a venue that has since closed. `event-detail.spec.ts` checks the link. **Mason pings Levi** that his page changed.
 - [x] 3.9 `<app-upcoming-events-strip>` (`shared/components/upcoming-events-strip/` — **decided OQ4**): self-contained compact strip — the next ~5 upcoming events (own `CommunityAccess` fetch; quiet-empty on error or no events), title/time/venue rows, "See all events →" link to `/events`. **Mount it on the home page:** if RT1's restyle hasn't landed, edit `pages/home/` directly (an announced one-block addition — the OQ4-sanctioned exception to the shared-shell etiquette; ping John-Michael in the PR); if RT1 landed first, mount into the slot it provides (mirrored contract in the outline's RT1 blurb). **Specs:** renders rows from mock; empty and error states stay quiet; the home page hosts it.
 	- *As built (10/28):*
 		- The strip shows the next five events ("Fri, Aug 14 · 10:00 PM", the title, the place) and "See all events →". It renders nothing at all when there's nothing to show or the fetch fails.
@@ -403,6 +404,8 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- (b): logged for a pre-launch bundle-size pass in RT4's blurb in [[Initial Project Implementation Outline]], since page weight affects search ranking. The blurb covers the 685 kB file and making the demo a build-time choice, and the future RT4 doc inherits it.
 
 # Change Log
+
+- **10/30/2026 (v0.10.2)** — **§3.8 done by GD3**, which landed second ([[Bucket GD3 — Guide public UI]] §3.4). The event page's venue name links to its guide page. Mason pings Levi.
 
 - **10/29/2026 (v0.10.1)** — **OQ10 decided.** Both calls were kept. The bundle growth is accepted. The demo-data cleanup and the 685 kB file are logged as a pre-launch bundle-size pass in RT4's blurb ([[Initial Project Implementation Outline]] v0.4.2). Remaining: Mason commits the floor change; 4.4.
 

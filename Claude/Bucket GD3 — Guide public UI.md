@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/30/2026
-Version: 0.5.1
+Version: 0.6
 tags:
 ---
 
@@ -146,20 +146,130 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 
 ### 3. Guide pages (`ui/src/app/pages/guide/`, lazy `guide.routes.ts`; `app.routes.ts` one-liner `{ path: 'guide', loadChildren: … }`; header gains "Guide" — one-line shared-file edits)
 
-- [ ] 3.1 Route scaffolding — child routes in hazard-safe order (literals before `:slug`): `''` home · `venues` · `venues/by-id/:venueId` · `venues/:slug` · `orgs` · `orgs/:slug` · `places/:slug` · `services` · `neighborhoods` · `neighborhoods/:slug` · `graveyard` · `scenes/:slug` · `sections/:section` · `pages/:slug`; `provideMarkdown()` in the route providers. **Move `provideGuideAccess(environment.useMock)` out of `app.config.ts` into those same route providers** (OQ7 (d)), so the seam and its demo data load only in the guide chunk. `GuideVocabulariesService` (§2) goes in the same providers; it isn't app-wide, since it reads through the seam. Every page sets `document.title` and carries loading / notFound / error flags (knottyyoga detail-page pattern).
-- [ ] 3.2 `GuideHomePage` (`/guide`) — the hub per GD1 §7: scene grid (full-coverage scenes as tiles; `link_out` scenes as a credited "sister scenes" card row), section links (Health · Services · New to Seattle · Beat the Freeze · 18+), neighborhoods + graveyard links. **Spec:** postures split correctly from mock.
-- [ ] 3.3 `SceneLandingPage` (`/guide/scenes/:slug`) — GD1 §7's scene template: intro article (page-slug convention), venues, orgs, places, links, "this scene's upcoming events" sub-fetch (quiet-empty). `link_out` scenes render intro + link-out cards + a note on the coverage rule instead of entity sections. **Specs:** full vs link-out branches; sub-fetch failure doesn't break the page.
-- [ ] 3.4 `VenueDirectoryPage` (`/guide/venues`) — entity cards + filter bar (scene, neighborhood, "include closed" toggle); `VenueProfilePage` (`/guide/venues/:slug`) — the GD1 §7 venue template: header + status badge, crowd/vibe, practical block, chips, links, **upcoming events sub-fetch**, photos (`PhotoUrlBuilder('venues', venueId, …)`), freshness footer; adult-flagged profiles wrap in `AdultGate`. Plus the `by-id/:venueId` resolver-redirect. **Cross-stream venue-link-up (per EV2 OQ3, 8/14 — mirrored in EV2 §3.8):** whichever of EV2/GD3 lands **second** wires Stream A's `EventDetailPage` venue name to `/guide/venues/by-id/{venue_id}` (a one-line edit on their side) and calls it out in that landing PR's checklist so it can't slip. **"Subscribe to this venue's events" (optional, per EV2 OQ6 (d), 10/28):** EV2's calendar feed `/api/events/feed.ics` takes category, scene, neighborhood and series filters, but not `venue_id` yet. If the venue page wants a subscribe link, ask Stream A for the `venue_id` filter first. It's a one-line server change, since the upcoming list already filters by venue. **Specs:** closed venue renders with banner + note; by-id redirects; adult profile gated.
-- [ ] 3.5 `OrgDirectoryPage` (`/guide/orgs`) — kind filter (the Freeze directory's data surface: leagues/choruses/recovery/faith/professional/social), scene + neighborhood filters; `OrgProfilePage` (`/guide/orgs/:slug`) — org template (what/when/where, how to join, links, freshness). **Specs.**
-- [ ] 3.6 `PlacePage` (`/guide/places/:slug`) — place fields + related article links; adult places gated. `ServicesPage` (`/guide/services`) — kind-grouped list of link-out service cards (services have no detail pages at MVP). **Specs:** adult gating; kind grouping.
-- [ ] 3.7 `NeighborhoodsPage` (`/guide/neighborhoods`) — index grouped by GD1 §3's regions (Eastside first-class); `NeighborhoodPage` (`/guide/neighborhoods/:slug`) — rundown article (slug convention) + venues/orgs/places here. **Specs.**
-- [ ] 3.8 `GraveyardPage` (`/guide/graveyard`) — the closure graveyard: closed venues + orgs with closure notes and dates, framed as history (voice per GD1 §6). **Spec.**
-- [ ] 3.9 `GuideArticlePage` (`/guide/pages/:slug`) — title, markdown body (with the §2.6 in-app-links directive on the rendered body), related-listing links (by shared scene tags), freshness footer; `adult` pages gated; 404 state for unknown/unpublished slugs. The scene-intro and neighborhood-rundown bodies (§3.3, §3.7) render through the same markdown + directive pairing. `SectionIndexPage` (`/guide/sections/:section`) — published pages of that section (title + verified stamp list); `adult` section mounts the gate. **Specs:** markdown renders; an in-body guide link navigates in-app; draft slug → notFound; adult article gated.
+*(Built 10/30.)*
+- vitest is 303/303 in 53 files, up from 251 in 39. That's 52 new tests: 50 in the 13 page spec files, plus one each for the new label and date helpers.
+- The suite also passes with the machine set to UTC and to Tokyo time.
+- **§3 is complete.** OQ10 lists the calls made along the way.
+- **New packages (OQ3):** `ngx-markdown` 21.3.0 and `marked` 18.0.8, the versions knottyyoga's blog runs. `package.json` and `package-lock.json` changed. `npm audit` lists 27 warnings, all in packages that were already installed (Angular's, and the build and test tools'). None are in these two.
+- **Shared page plumbing:**
+	- `guide-page-state.ts` gives every page the same load handling: loading, "not found" (a 404) and "failed" (anything else). It also sets the tab title and supplies the scene and neighborhood names.
+	- `guide-markdown.ts` renders a markdown body with the §2.6 directive on it. The article, scene intro and neighborhood rundown all use it.
+	- `guide-upcoming-events.*` is the "Coming up" list that the scene and venue pages share.
+- **Spec helper:** `guide-testing.ts`. Each page spec opens the real guide routes over the offline data, at a fixed "now" of Thu Oct 29, 2026, 1 PM in Seattle.
+
+- [x] 3.1 Route scaffolding — child routes in hazard-safe order (literals before `:slug`): `''` home · `venues` · `venues/by-id/:venueId` · `venues/:slug` · `orgs` · `orgs/:slug` · `places/:slug` · `services` · `neighborhoods` · `neighborhoods/:slug` · `graveyard` · `scenes/:slug` · `sections/:section` · `pages/:slug`; `provideMarkdown()` in the route providers. **Move `provideGuideAccess(environment.useMock)` out of `app.config.ts` into those same route providers** (OQ7 (d)), so the seam and its demo data load only in the guide chunk. `GuideVocabulariesService` (§2) goes in the same providers; it isn't app-wide, since it reads through the seam. Every page sets `document.title` and carries loading / notFound / error flags (knottyyoga detail-page pattern).
+	- *As built (10/30):* `guide.routes.ts`, with the routes in the planned order.
+		- The routes provide the seam, `GuideVocabulariesService` and `provideMarkdown()`. `provideGuideAccess` is out of `app.config.ts` (OQ7 (d)); 4.1 has the bundle sizes.
+		- `venues/by-id/:venueId` is a redirect with a small "Venue not found" page behind it (OQ10 (f)).
+		- Every page sits inside one wrapper, `GuideShell`, which carries the guide's shared styles (OQ10 (a)).
+		- A new address on the same page, like going from one venue to the next, loads afresh. The tab title reads "{Page} · CommunityFinder", or "Venue not found · …" and the like (OQ10 (g)).
+		- **Shared-file edits:**
+			- `app.routes.ts` gets the `guide` line.
+			- The header gets a **Guide** link after Events, and its spec now checks both links.
+- [x] 3.2 `GuideHomePage` (`/guide`) — the hub per GD1 §7: scene grid (full-coverage scenes as tiles; `link_out` scenes as a credited "sister scenes" card row), section links (Health · Services · New to Seattle · Beat the Freeze · 18+), neighborhoods + graveyard links. **Spec:** postures split correctly from mock.
+	- *As built (10/30):* `guide-home.*`.
+		- The scenes we cover are tiles, each with what's listed ("2 venues · 1 organization"), or "Being written" if nothing is.
+		- The link-out scenes are a "Sister scenes" row, each tile saying "Where to find them".
+		- Then come the five section links, and directory tiles for Venues, Organizations, Neighborhoods and Closed (the graveyard).
+		- If the scenes can't be loaded, the rest of the page still links everywhere.
+		- **Specs** (3, `guide-home.spec.ts`): the two postures split correctly; the section and directory links; the scenes failing to load.
+- [x] 3.3 `SceneLandingPage` (`/guide/scenes/:slug`) — GD1 §7's scene template: intro article (page-slug convention), venues, orgs, places, links, "this scene's upcoming events" sub-fetch (quiet-empty). `link_out` scenes render intro + link-out cards + a note on the coverage rule instead of entity sections. **Specs:** full vs link-out branches; sub-fetch failure doesn't break the page.
+	- *As built (10/30):* `scene-landing.*`.
+		- **A scene we cover** shows:
+			- The intro page, rendered as markdown. If the intro is itself 18+, the page links to it instead (OQ10 (e)).
+			- Venues, Organizations and Places, as cards. With nothing listed, OQ6's "being written" line shows instead.
+			- **Coming up:** the scene's next five events, plus "All upcoming events in this scene →" linking to `/events?scene=<slug>`. When there's nothing, or the fetch fails, it says "Nothing on the calendar here in the next six weeks."
+			- "Where this scene talks", then the footer, dated from the intro page.
+		- **A link-out scene** shows its intro, a quiet note that the scene's own community covers it best, and the curators' link-out cards. Then comes "Shared spaces in this guide": anything we list with that tag, per GD1 §7's template (OQ10 (b)).
+		- **Specs** (6, `scene-landing.spec.ts`): a full scene end to end; a link-out scene; a link-out scene's intro; the coming-up fetch failing while the page stays up; an empty scene; an unknown scene.
+- [x] 3.4 `VenueDirectoryPage` (`/guide/venues`) — entity cards + filter bar (scene, neighborhood, "include closed" toggle); `VenueProfilePage` (`/guide/venues/:slug`) — the GD1 §7 venue template: header + status badge, crowd/vibe, practical block, chips, links, **upcoming events sub-fetch**, photos (`PhotoUrlBuilder('venues', venueId, …)`), freshness footer; adult-flagged profiles wrap in `AdultGate`. Plus the `by-id/:venueId` resolver-redirect. **Cross-stream venue-link-up (per EV2 OQ3, 8/14 — mirrored in EV2 §3.8):** whichever of EV2/GD3 lands **second** wires Stream A's `EventDetailPage` venue name to `/guide/venues/by-id/{venue_id}` (a one-line edit on their side) and calls it out in that landing PR's checklist so it can't slip. **"Subscribe to this venue's events" (optional, per EV2 OQ6 (d), 10/28):** EV2's calendar feed `/api/events/feed.ics` takes category, scene, neighborhood and series filters, but not `venue_id` yet. If the venue page wants a subscribe link, ask Stream A for the `venue_id` filter first. It's a one-line server change, since the upcoming list already filters by venue. **Specs:** closed venue renders with banner + note; by-id redirects; adult profile gated.
+	- *As built (10/30):*
+		- **Directory** (`venue-directory.*`):
+			- Cards, with a scene dropdown, a neighborhood dropdown and an "Include closed" checkbox. All three are kept in the address (`?scene=…&neighborhood=…&include_closed=true`), so a filtered list can be bookmarked or shared.
+			- Nothing matching says "No venues match these filters."
+		- **Profile** (`venue-profile.*`), inside the 18+ gate (a non-adult venue passes straight through):
+			- The name and neighborhood.
+			- A "Closed" banner with the closure note, or "Moved", or a quiet "Seasonal" banner.
+			- The photo, from `PhotoUrlBuilder` (`venues`, 1200×675), which hides itself if the venue has none.
+			- The description and "The crowd".
+			- Address, Website and Price.
+			- Scene chips and links.
+			- "Coming up", except on a closed or moved venue.
+			- The footer.
+		- **by-id** (`venue-by-id.ts`): as pinned, looking the venue up with `include_closed=true`.
+		- **EV2 §3.8 is done here, since GD3 landed second.** The event page's venue name now links to `/guide/venues/by-id/{venue_id}`, and `event-detail.spec.ts` checks the link. EV2's doc is updated to match.
+			- **Mason: please ping Levi.** It's an edit to his file, and EV2 OQ3 asks for it to be called out.
+		- **Not built:** a "subscribe to this venue's events" link. It needs Stream A to add a `venue_id` filter to the calendar feed first (EV2 OQ6 (d)).
+		- **Specs** (11):
+			- `venue-directory.spec.ts`: the open venues; filters read from the address, with closed venues brought back and an empty result; the checkbox writing the address.
+			- `venue-profile.spec.ts`: an open venue in full; the photo, and no photo; a closed venue with its banner and note; the 18+ gate; an unknown venue. For by-id: the redirect; a venue that has since closed; a venue that isn't in the guide.
+- [x] 3.5 `OrgDirectoryPage` (`/guide/orgs`) — kind filter (the Freeze directory's data surface: leagues/choruses/recovery/faith/professional/social), scene + neighborhood filters; `OrgProfilePage` (`/guide/orgs/:slug`) — org template (what/when/where, how to join, links, freshness). **Specs.**
+	- *As built (10/30):*
+		- **Directory** (`organization-directory.*`): a button for each of the eight kinds. Pressing the active one clears it. Scene and neighborhood dropdowns sit beside them, and all three are kept in the address.
+		- **Profile** (`organization-profile.*`), inside the 18+ gate:
+			- The kind as the lead line.
+			- The "Closed" or "Moved" banner with its note, or "Seasonal — active part of the year."
+			- The description.
+			- When, Where ("Countywide, or it moves around" when there's no neighborhood) and How to join.
+			- "Where this group talks", then the footer.
+		- **Specs** (8):
+			- `organization-directory.spec.ts`: the list; a kind from the address, with the buttons switching and clearing it; kind, scene and neighborhood together.
+			- `organization-profile.spec.ts`: a full profile; a seasonal league with no single neighborhood, and its links; closed and moved organizations; the 18+ gate; an unknown organization.
+- [x] 3.6 `PlacePage` (`/guide/places/:slug`) — place fields + related article links; adult places gated. `ServicesPage` (`/guide/services`) — kind-grouped list of link-out service cards (services have no detail pages at MVP). **Specs:** adult gating; kind grouping.
+	- *As built (10/30):*
+		- **Place** (`place-page.*`), inside the 18+ gate:
+			- The kind and neighborhood ("Park & beach · Capitol Hill"), the address and the description.
+			- "Read more:", linking the published guide page that has the place's own slug, when there is one (OQ10 (c)).
+			- Chips, links, then the footer.
+		- **Services** (`services-page.*`): grouped by kind, health kinds first and everyday services last. Each card links out to the service's site and shows its phone number (OQ10 (d)). The lead links to the Health section.
+		- **Specs** (6):
+			- `place-page.spec.ts`: a place in full; its article link; the 18+ gate; an unknown place.
+			- `services-page.spec.ts`: the grouping; the outbound link and phone number.
+- [x] 3.7 `NeighborhoodsPage` (`/guide/neighborhoods`) — index grouped by GD1 §3's regions (Eastside first-class); `NeighborhoodPage` (`/guide/neighborhoods/:slug`) — rundown article (slug convention) + venues/orgs/places here. **Specs.**
+	- *As built (10/30):*
+		- **Index** (`neighborhoods-page.*`): grouped under GD1 §3's five regions, in GD1's order, with the region names written out (OQ10 (h)). Each neighborhood shows what's listed ("1 venue · 2 organizations"), or nothing if it has no listings.
+		- **Page** (`neighborhood-page.*`):
+			- The region as the lead line.
+			- The rundown, as markdown. An 18+ rundown is linked instead (OQ10 (e)). With no rundown yet, it says "The rundown for this neighborhood is being written."
+			- Venues, Organizations and Places, or "Nothing is listed here yet."
+			- The footer, dated from the rundown.
+		- **Specs** (6):
+			- `neighborhoods-page.spec.ts`: the regions, with the Eastside as its own; counts and links.
+			- `neighborhood-page.spec.ts`: rundown and listings; no rundown yet; nothing listed; an unknown neighborhood.
+- [x] 3.8 `GraveyardPage` (`/guide/graveyard`) — the closure graveyard: closed venues + orgs with closure notes and dates, framed as history (voice per GD1 §6). **Spec.**
+	- *As built (10/30):* `graveyard-page.*`, titled "Closed venues and organizations".
+		- Venues and Organizations are shown as faded cards, each with its closure note and a link to its own page.
+		- A moved listing isn't here, because it lives on elsewhere.
+		- If there's nothing, it says "Nothing listed here has closed."
+		- **Spec** (1, `graveyard-page.spec.ts`).
+- [x] 3.9 `GuideArticlePage` (`/guide/pages/:slug`) — title, markdown body (with the §2.6 in-app-links directive on the rendered body), related-listing links (by shared scene tags), freshness footer; `adult` pages gated; 404 state for unknown/unpublished slugs. The scene-intro and neighborhood-rundown bodies (§3.3, §3.7) render through the same markdown + directive pairing. `SectionIndexPage` (`/guide/sections/:section`) — published pages of that section (title + verified stamp list); `adult` section mounts the gate. **Specs:** markdown renders; an in-body guide link navigates in-app; draft slug → notFound; adult article gated.
+	- *As built (10/30):*
+		- **Article** (`guide-article.*`), inside the 18+ gate when the page is 18+:
+			- A link to its section, then the title.
+			- The markdown body, with in-app links.
+			- "Related listings": venues, organizations and places that share a scene tag with the page. Each appears once, with its kind and an 18+ note where it applies, and the list stops at ten (OQ10 (i)).
+			- The footer.
+			- An unknown page, a draft, or one scheduled for later is "Page not found".
+			- A curator who can see unpublished pages (GD2 §4.9) gets a "Curator preview: this page isn't published." banner.
+		- **Section index** (`section-index.*`):
+			- It checks the section name first, so an unknown one is "Section not found" without asking the server.
+			- The 18+ section sits behind the gate.
+			- Each page is listed with its "Verified {Month Year}" and an 18+ note where it applies.
+			- With nothing published, it shows OQ6's "being written" line.
+		- **Specs** (9):
+			- `guide-article.spec.ts`: the markdown, section link, related listings, footer and title; a link in the body navigating in-app without a reload; draft and scheduled pages not found; the 18+ gate; the curator preview.
+			- `section-index.spec.ts`: published pages with their stamps and not the draft; an empty section; the 18+ section; an unknown section, without a server call.
 
 ### 4. Gates
 
-- [ ] 4.1 `ng build -c local` + `ng build -c development` clean; guide area lazy-chunked (initial bundle unchanged; `marked` only in the guide chunk). "Unchanged" is measured against EV2's recorded 870 kB production initial, so the 23 kB §1 added must be gone (OQ7 (d)).
-- [ ] 4.2 vitest green; record the new count.
+- [x] 4.1 `ng build -c local` + `ng build -c development` clean; guide area lazy-chunked (initial bundle unchanged; `marked` only in the guide chunk). "Unchanged" is measured against EV2's recorded 870 kB production initial, so the 23 kB §1 added must be gone (OQ7 (d)).
+	- *Passed (10/30):* `-c local`, `-c development` and `-c production` all build.
+		- The production initial bundle is 871.6 kB. That's down from §2's 893 kB, so the 23 kB is gone, and 2 kB above EV2's recorded 869.6 kB.
+		- The guide is its own download: 147 kB in production, 34 kB compressed.
+		- Searching the built files shows `marked`, ngx-markdown and the guide's demo data only in the guide's file.
+		- The "initial bundle exceeded 500 kB" warning is the one the app's builds already gave before GD3.
+- [x] 4.2 vitest green; record the new count.
+	- *Passed (10/30):* 303/303 in 53 files, also with the machine set to UTC and to Tokyo time.
 - [ ] 4.3 **Manual browser loop ≈ milestone M2's UI half (Mason):** offline (`ng serve`, mock): browse home → scene (full + link-out) → venue profile (open, closed, adult-gated) → orgs by kind → neighborhood → graveyard → article; interstitial accepts/declines correctly; then dev mode against the real server: create a venue + profile + page via admin CRUD → browse them live; verify the "Verified {Month Year}" stamp reflects a `verify-listing` run from the test_helper.
 
 # Open Questions
@@ -227,8 +337,41 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 		- *Rec: keep.*
 	- Mason- I'll go with your recommendations.
 	- Claude- Decided (10/30) — all five stay as built; no body change.
+10. **§3 as built: ten calls the plan didn't spell out.** *(Added 10/30.)* All are built as recommended, so "Agreed" covers them. Answer per letter if you want any of them changed.
+	- **(a) One wrapper carries the guide's look.** Every guide page uses the same headings, banners, lists and tiles. Rather than repeat those styles in thirteen page stylesheets, one wrapper around all the guide pages (`GuideShell`) holds them, and the pages have no stylesheets of their own. *Rec: keep.*
+	- **(b) Link-out scenes still list their shared spaces.** §3.3 says a link-out scene shows its intro and link-out cards "instead of" the venue and organization sections. GD1 §7's template says those scenes show "intro + link-out cards + shared anchors only". The big shared places get listed like anything else (GD1 §6.6).
+		- So a link-out scene shows its curators' links first. Then one combined "Shared spaces in this guide" list shows whatever we list with that tag.
+		- With nothing tagged, the list is left off.
+		- *Rec: keep, since it's GD1's template. Alternative: links only, as §3.3 reads.*
+	- **(c) A place finds its article by slug.** §3.6 asks for "related article links" on a place page without saying how to find them. It uses the rule scene intros and neighborhood rundowns already follow: a published guide page with the same slug as the place. When there is one, the place page shows "Read more: {title}". This needs no new data. *Rec: keep. Alternative: list every page sharing a scene tag. That's noisier, and the articles already list related places.*
+	- **(d) Service cards show the phone number.** GD2 gives services a phone field, and for a clinic it's often the thing you need. The card shows it as a tap-to-call link. A 10-digit number is written 206-555-0601, and anything else is shown as entered. *Rec: keep.*
+	- **(e) An 18+ intro or rundown is linked, not shown.** Say a scene's intro page or a neighborhood's rundown is itself marked 18+. Then the scene or neighborhood page doesn't print it. It says the text is in the 18+ section and links to it, and the gate asks there. Gating the whole scene or neighborhood page would hide its listings from everyone who says no. *Rec: keep.*
+	- **(f) The by-id address redirects, with a "not found" page behind it.** It's built as a check that runs before the page opens: it looks the venue up and sends the browser straight to `/guide/venues/<slug>`. If the venue isn't in the guide, or the lookup fails, a small "Venue not found" page shows rather than a blank screen. *Rec: keep.*
+	- **(g) The tab title resets on each navigation.** Guide pages set only the tab title, since the rest of a page's metadata is RT4's. The title goes back to the site's name as each navigation starts, so a page that's still loading never shows the last page's title.
+		- Once someone has visited the guide, this applies across the app.
+		- Pages that set their own title, like the events pages, look the same as before.
+		- A page that sets none now shows the site's name rather than whatever came before.
+		- *Rec: keep.*
+	- **(h) Display names for regions and sections.**
+		- GD1 §3's regions read Seattle, South Seattle, North of Seattle, Eastside and South King County.
+		- The section titles read Scenes, Health, Services, New to Seattle, Beat the Freeze, "New to…" and 18+.
+		- The `new-to` section holds the outline's "New to being a sober gay" and "New to gay parenting" kind of pages, so "New to…" is the heading they share.
+		- They're one list each in `core/utils/guide-labels.ts`, so renaming is a one-word edit.
+		- *Rec: keep, and rename any you like.*
+	- **(i) Related listings stop at ten.** An article tagged with a big scene could match dozens of listings. The list shows at most ten: venues first, then organizations, then places. *Rec: keep. Alternative: show them all.*
+	- **(j) Empty-state wording beyond OQ6's.** "The rundown for this neighborhood is being written." · "Nothing is listed here yet." · "Nothing on the calendar here in the next six weeks." · "No venues match these filters." · "Nothing listed here has closed." *Rec: keep. Each is one line in its page's template.*
 
 # Change Log
+
+- **10/30/2026 (v0.6)** — **§3 (guide pages) built, and gates 4.1 and 4.2 pass.** 3.1–3.9 are marked complete with as-built notes.
+	- The work is the thirteen guide pages, the lazy `/guide` routes, the shared page plumbing, the "Guide" header link and a phone line on service cards.
+	- `ngx-markdown` 21.3.0 and `marked` 18.0.8 are added (OQ3).
+	- `provideGuideAccess` moved from `app.config.ts` into the guide routes (OQ7 (d)).
+	- **EV2 §3.8 is done here:** the event page's venue name links to `/guide/venues/by-id/{venue_id}`. EV2's doc is updated. Mason pings Levi.
+	- 52 new tests. vitest is 303/303 in 53 files, up from 251, and also passes in UTC and in Tokyo time.
+	- 4.1: all three builds succeed. The production initial bundle is 871.6 kB, back from 893 kB to within 2 kB of EV2's 869.6 kB. `marked` and the guide's data are only in the guide's 147 kB download.
+	- **OQ10 added:** ten as-built calls, all recommended to keep.
+	- Remaining: 4.3, Mason's manual browser loop.
 
 - **10/30/2026 (v0.5.1)** — **OQ9 decided** (Mason went with the recommendations). All five §2 calls stay as built; no body changes.
 

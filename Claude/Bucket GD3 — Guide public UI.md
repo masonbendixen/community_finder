@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
-Last Updated: 10/28/2026
-Version: 0.2.1
+Last Updated: 10/29/2026
+Version: 0.3
 tags:
 ---
 
@@ -145,8 +145,41 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 6. **Empty-state copy** ("Nothing here yet — this guide section is being written") appears wherever content hasn't landed, so GD3 can merge before GD4b/Pool content exists. *Rec: as pinned; the mock dataset keeps the demo experience full regardless.*
 	- Mason- (10/29, in chat) Accept all the open question recommendations.
 	- Claude- Decided (10/29) — as pinned (§3); no body change.
+7. **§1 as built — four calls the plan didn't spell out.** *(Added 10/29.)* (a)–(c) are built as recommended, so "Agreed" covers them. **(d) needs your call**, because it changes when the guide code loads. Answer per letter if you want any changed.
+	- **(a) "Organizations" spelled out.** The plan named the methods `getOrgs` / `getOrg`. They're built as `getOrganizations` / `getOrganization`, following the house rule against abbreviations, as GD2 did for its files (GD2 OQ12 (a)). The web addresses stay `/api/guide/orgs` and `/guide/orgs/<slug>`. *Rec: keep.*
+	- **(b) Stream B keeps its own copies.** Per the cross-stream pin, the guide imports nothing from Stream A's client code. So it has its own small event type (just what a "coming up" list shows), its own copy of GD1's scene and neighborhood lists for the mock, and its own copy of the few small helpers that clean up the server's JSON. That's under 100 lines repeating what EV2 has. *Rec: keep. Merging them into one shared module is a deliberate later cleanup, like OQ5's date module.*
+	- **(c) The demo data is a bit bigger than planned, on purpose.**
+		- **Venues:** venues 1–4 are the events demo's own venues, with the same ids and names. So when EV2's event pages start linking to venue pages, the link also works offline.
+		- **Organizations:** there's an 18+ one, because GD2 added that box (GD2 OQ11 (b)). There's also a moved one, to prove that a moved listing stays out of both the directory and the graveyard. The softball league is marked seasonal, so pages have a seasonal marker to show.
+		- **Pages:** a page scheduled for next week sits beside the draft, to prove neither shows early.
+		- *Rec: keep.*
+	- **(d) The guide's data code loads with the app, adding 23 kB.** §1.4 puts the provider in `app.config.ts`. That means the seam and its offline demo data load with the app's first download, even on pages that aren't the guide and in the production build. The production initial bundle went from 870 kB (EV2's recorded size) to 893 kB. §4.1 asks for the initial bundle to stay unchanged.
+		- The fix: when §3.1 creates `guide.routes.ts`, move the provider into those routes. The seam and its data then load only when someone opens a guide page. Nothing outside `/guide` uses the seam, since EV2 links to venue pages by address.
+		- *Rec: move it at §3.1. That's one line out of `app.config.ts` and one line into the guide routes. Alternative: leave it in `app.config.ts` and accept the 23 kB.*
+8. **The freshness footer already exists.** *(Added 10/29, a heads-up for §2.)* EV2 built `shared/components/freshness-footer` for its series pages, and its doc offers it to GD3. It already does most of §2.1:
+	- It shows "Verified {Month Year}", or "Not yet verified".
+	- It adds a "Closed", "Moved" or "Seasonal" marker. The "Closed" wording can be changed; series say "Ended".
+	- It has no slot for a closure note.
+	- It uses Stream A's own date formatter.
+
+	So OQ5 (a local date formatter) and §2.1 (a new footer at that same path) were planned without knowing it exists.
+	- *Rec:*
+		- GD3 uses EV2's footer as it is, and shows the closure note on the page itself, next to the "Closed" banner at the top. That's where GD1's venue page puts the status anyway.
+		- §2.1 then becomes "reuse; no new footer". OQ5's formatter isn't needed, because GD3 never formats a date for the footer.
+		- A shared component in `shared/` is meant to be shared, so importing it isn't the payload coupling the cross-stream pin guards against.
+	- *Alternatives:*
+		- Add an optional closure-note input to EV2's footer. That's a small edit to Stream A's file, so ping Levi first.
+		- Build GD3's own footer as planned, under a different name.
 
 # Change Log
+
+- **10/29/2026 (v0.3)** — **OQ1–OQ6 decided** (Mason accepted every recommendation; no body changes). **§1 (access seam) built:**
+	- 1.1–1.4 are marked complete, with as-built notes.
+	- The work is the seam's four files, the guide types, the offline demo dataset, and 53 new tests in 3 new spec files.
+	- vitest is 226/226, up from 173. It also passes in UTC and in Tokyo time.
+	- The local, development and production builds all succeed.
+	- **OQ7 added:** four as-built calls. (d), where the guide's data code loads, needs Mason's call: it adds 23 kB to the initial bundle unless it moves into the guide routes at §3.1.
+	- **OQ8 added:** a heads-up for §2. EV2 already built a shared freshness footer that GD3 can reuse.
 
 - **10/28/2026 (v0.2.1)** — Mirrored [[Bucket EV2 — Events public UI]] OQ6 (d) into §3.4: the events calendar feed has no `venue_id` filter yet, so a "subscribe to this venue's events" link means asking Stream A for that one-line server change first.
 - **10/26/2026 (v0.2)** — Folded in [[Bucket GD2 — Directory data layer, server]] OQ5 (decided 10/26): article bodies are markdown with sanitizer-filtered HTML, and they link with plain relative links. The Markdown pin is extended, a new §2.6 `in-app-links` directive turns same-origin clicks into router navigations, and §3.9 applies it (also to the scene-intro and neighborhood-rundown bodies) with an in-app-navigation spec.

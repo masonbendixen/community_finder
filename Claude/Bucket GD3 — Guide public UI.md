@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen (owner)
 Last Updated: 10/29/2026
-Version: 0.3
+Version: 0.4
 tags:
 ---
 
@@ -22,17 +22,17 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 - GD1 §6–§7 (voice + templates — the templates are the spec for these components) and §5 (what the freshness stamp means).
 - CF client as-built: `ui/src/app/core/community-access/` — **the 4-file access-seam pattern** (`*.ts` interface + `InjectionToken` · `*.http.ts` · `*.mock.ts` · `*.providers.ts`) this bucket's `guide-access/` copies; `app.config.ts` (provider order is load-bearing — new providers slot in beside `provideCommunityAccess`); `pages/admin/admin.routes.ts` (lazy child-routes shape, `export default routes`); `pages/home/home.spec.ts` (the spec pattern: object-literal access mock + `provideNoopAnimations`).
 - knottyyoga UI patterns (reference, not reuse): `pages/public/public.routes.ts` (**route-ordering hazard: literal segments before `:slug`**, redirects for old URLs), `pages/public/class-detail/` (loading/notFound/error flags; **independent sub-fetches never take each other down**), `pages/blog/` + `provideMarkdown()` route-scoped (the markdown rendering model for guide articles).
-- EV2's `events-date` utilities are Stream A's files — this bucket needs only "Month Year" formatting; keep a tiny local formatter rather than importing across streams (see OQ5).
+- EV2's `shared/components/freshness-footer` — GD3 reuses it as the footer on every page (OQ8). So this bucket formats no dates itself, and it needs nothing from Stream A's `events-date` utilities.
 
 # Scope
 
-**In:** `GuideAccess` seam + full offline mock dataset · guide client area (`/guide/*`): guide home, scene landings (full + link-out postures), venue directory + venue profiles (incl. graveyard rendering), org directory (the Freeze-directory data view) + org profiles, places, services list, neighborhoods index + pages, guide-article pages with markdown rendering, section indexes · shared freshness-footer + link-out-card + scene-chips components · the 18+ interstitial · "upcoming events at this venue/scene" sub-fetches (via Stream A's public API, from Stream B-owned code) · header "Guide" nav link · vitest specs throughout.
+**In:** `GuideAccess` seam + full offline mock dataset · guide client area (`/guide/*`): guide home, scene landings (full + link-out postures), venue directory + venue profiles (incl. graveyard rendering), org directory (the Freeze-directory data view) + org profiles, places, services list, neighborhoods index + pages, guide-article pages with markdown rendering, section indexes · shared link-out-card + scene-chips components (the freshness footer is EV2's, reused — OQ8) · the 18+ interstitial · "upcoming events at this venue/scene" sub-fetches (via Stream A's public API, from Stream B-owned code) · header "Guide" nav link · vitest specs throughout.
 
 **Out (explicit non-goals):** all editorial content (**Pool GD5–GD10** — this bucket ships with mock/demo content and empty-state handling) · registry data entry (**GD4b**) · the "pick your onramp" interactive flow (**GD8-flow** — it mounts at `/guide/onramp` later) · report-stale flags, claims (**CM1**) · site-wide SEO/meta/OG (**RT4** — pages set `document.title` only) · event pages (**EV2**) · admin editing UI (the Phase 7 CRUD editor already covers guide tables via GD2's metadata).
 
 # Design pin-downs
 
-- **Freshness rendering (GD1 §5/§7):** every entity/article page ends with the freshness footer: "Verified {Month} {Year}" from `last_verified_at_us` (absent → "Not yet verified" in the same quiet style — honesty over polish); `status != 'open'` adds the marker banner (venues/orgs: "Closed" + `closure_note`; `seasonal`: "Seasonal"; series-style "Ended" wording stays Stream A's concern). Closed pages render fully — the graveyard is history, not an error state.
+- **Freshness rendering (GD1 §5/§7):** every entity/article page ends with EV2's shared freshness footer (`shared/components/freshness-footer`, reused per OQ8): "Verified {Month} {Year}" from `last_verified_at_us` (absent → "Not yet verified" in the same quiet style — honesty over polish), plus a "Closed" / "Moved" / "Seasonal" marker when `status` says so (series-style "Ended" wording stays Stream A's concern, through the footer's `closedLabel` input). A closed venue or org also shows a "Closed" banner at the top of its page with the `closure_note` beside it, since the footer has no slot for the note (OQ8). Closed pages render fully — the graveyard is history, not an error state.
 - **18+ gate (Q3b):** a data-driven interstitial, not age verification (WA has no AV law as of mid-2026; the brainstorm's posture). Mechanics: entities/pages carry `adult` from the server; an `AdultGate` wrapper component checks `sessionStorage['cf_adult_ok']` — unset → full-viewport interstitial ("18+ section · I'm 18 or older / Take me back"), accept → set flag + render, decline → `router.navigate('/guide')`. **sessionStorage, not cookies/localStorage** (MHMDA-flavored minimalism: nothing persistent, nothing sent to the server). The `/guide/sections/adult` index route also mounts the gate.
 - **Link-out cards (GD1 §4/§7):** platform icon + label, outbound `target="_blank" rel="noopener noreferrer"`; used for "where this scene talks" on profiles AND as the whole body of `link_out`-posture scene landings ("we point you to this scene's own curators, with credit").
 - **Cross-stream reads happen in Stream B files:** venue/scene pages show "coming up" by calling Stream A's public `/api/events/upcoming?venue_id=…` / `?scene=…` from `GuideAccess` (own HTTP method, own mock) — no import of Stream A client code, no payload coupling. Sub-fetch failure or an empty result renders as a quiet empty state, never an error (the knottyyoga isolation pattern) — so this bucket works even before EV1's endpoints exist.
@@ -49,8 +49,8 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 - vitest is 226/226 in 32 files, up from 173 in 29: 53 new tests in 3 new spec files.
 - The suite also passes with the machine set to UTC and to Tokyo time.
 - `ng build -c local`, `-c development` and `-c production` all build.
-- The initial bundle grew by 23 kB (OQ7 (d)).
-- **§1 is complete**, pending OQ7.
+- The initial bundle grew by 23 kB. That goes away when §3.1 moves the provider into the guide routes (OQ7 (d)).
+- **§1 is complete.**
 
 - [x] 1.1 `guide-access.ts` — `GUIDE_ACCESS` token + interface: `getScenes()`, `getScene(slug)`, `getVenues(filters?)`, `getVenue(slug)`, `getOrgs(filters?)`, `getOrg(slug)`, `getPlaces()`, `getPlace(slug)`, `getServices(kind?)`, `getNeighborhoods()`, `getNeighborhood(slug)`, `getGraveyard()`, `getGuidePage(slug)`, `getGuidePagesBySection(section)`, `getVenueEvents(venueId)` + `getSceneEvents(sceneSlug)` (the Stream A public-API reads); types file with `normalizeX` statics (`?? []`, number coercion, freshness fields on every entity type).
 	- *As built (10/29):* all 16 reads, as listed. The organization pair is spelled out as `getOrganizations` / `getOrganization` (OQ7 (a)).
@@ -94,11 +94,14 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 			- Parity: running the normalizers over the mock data changes nothing.
 			- Every venue's stamp is the older of its two dates.
 - [x] 1.4 `guide-access.providers.ts` — `provideGuideAccess(useMock)`; wire into `app.config.ts` beside `provideCommunityAccess` (one-line shared-file edit).
-	- *As built (10/29):* as planned, one provider line and its import in `app.config.ts`, directly after `provideCommunityAccess`. This is what costs the initial bundle its 23 kB (OQ7 (d)).
+	- *As built (10/29):* as planned, one provider line and its import in `app.config.ts`, directly after `provideCommunityAccess`. This is what costs the initial bundle its 23 kB. §3.1 moves it into the guide routes (OQ7 (d)).
 
 ### 2. Shared components (`ui/src/app/shared/components/`)
 
-- [ ] 2.1 `freshness-footer/` — inputs: `lastVerifiedAtUs`, `status`, `closureNote?`; renders the stamp + marker per the pin-down (a local "Month Year" formatter — see OQ5). **Spec:** verified / never-verified / closed / seasonal renderings.
+- [x] 2.1 `freshness-footer/` — **reuse EV2's; nothing to build** (OQ8, 10/29).
+	- Its inputs are `status`, `lastVerifiedAtUs` and `closedLabel` (default "Closed"). The guide's `GuideFreshnessStatus` is the same list of statuses as its own, so a page passes a listing's `status` and `last_verified_at_us` straight in.
+	- The closure note isn't the footer's job. Pages show it beside the top-of-page "Closed" banner (§3.4, §3.5, §3.8).
+	- **Spec:** none here. EV2's `freshness-footer.spec.ts` covers the footer, and the page specs check the banner and note.
 - [ ] 2.2 `link-out-card/` — input: the GD1 link shape; platform icon mapping; outbound rel attributes. **Spec:** href + rel.
 - [ ] 2.3 `scene-chips/` — chips from scene-tag slugs → `routerLink /guide/scenes/:slug`. **Spec.**
 - [ ] 2.4 `adult-gate/` — the interstitial wrapper per the pin-down (content-projected body renders only past the gate). **Spec:** blocked without the flag; accept sets sessionStorage + renders; decline navigates away.
@@ -107,7 +110,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 
 ### 3. Guide pages (`ui/src/app/pages/guide/`, lazy `guide.routes.ts`; `app.routes.ts` one-liner `{ path: 'guide', loadChildren: … }`; header gains "Guide" — one-line shared-file edits)
 
-- [ ] 3.1 Route scaffolding — child routes in hazard-safe order (literals before `:slug`): `''` home · `venues` · `venues/by-id/:venueId` · `venues/:slug` · `orgs` · `orgs/:slug` · `places/:slug` · `services` · `neighborhoods` · `neighborhoods/:slug` · `graveyard` · `scenes/:slug` · `sections/:section` · `pages/:slug`; `provideMarkdown()` in the route providers. Every page sets `document.title` and carries loading / notFound / error flags (knottyyoga detail-page pattern).
+- [ ] 3.1 Route scaffolding — child routes in hazard-safe order (literals before `:slug`): `''` home · `venues` · `venues/by-id/:venueId` · `venues/:slug` · `orgs` · `orgs/:slug` · `places/:slug` · `services` · `neighborhoods` · `neighborhoods/:slug` · `graveyard` · `scenes/:slug` · `sections/:section` · `pages/:slug`; `provideMarkdown()` in the route providers. **Move `provideGuideAccess(environment.useMock)` out of `app.config.ts` into those same route providers** (OQ7 (d)), so the seam and its demo data load only in the guide chunk. Every page sets `document.title` and carries loading / notFound / error flags (knottyyoga detail-page pattern).
 - [ ] 3.2 `GuideHomePage` (`/guide`) — the hub per GD1 §7: scene grid (full-coverage scenes as tiles; `link_out` scenes as a credited "sister scenes" card row), section links (Health · Services · New to Seattle · Beat the Freeze · 18+), neighborhoods + graveyard links. **Spec:** postures split correctly from mock.
 - [ ] 3.3 `SceneLandingPage` (`/guide/scenes/:slug`) — GD1 §7's scene template: intro article (page-slug convention), venues, orgs, places, links, "this scene's upcoming events" sub-fetch (quiet-empty). `link_out` scenes render intro + link-out cards + a note on the coverage rule instead of entity sections. **Specs:** full vs link-out branches; sub-fetch failure doesn't break the page.
 - [ ] 3.4 `VenueDirectoryPage` (`/guide/venues`) — entity cards + filter bar (scene, neighborhood, "include closed" toggle); `VenueProfilePage` (`/guide/venues/:slug`) — the GD1 §7 venue template: header + status badge, crowd/vibe, practical block, chips, links, **upcoming events sub-fetch**, photos (`PhotoUrlBuilder('venues', venueId, …)`), freshness footer; adult-flagged profiles wrap in `AdultGate`. Plus the `by-id/:venueId` resolver-redirect. **Cross-stream venue-link-up (per EV2 OQ3, 8/14 — mirrored in EV2 §3.8):** whichever of EV2/GD3 lands **second** wires Stream A's `EventDetailPage` venue name to `/guide/venues/by-id/{venue_id}` (a one-line edit on their side) and calls it out in that landing PR's checklist so it can't slip. **"Subscribe to this venue's events" (optional, per EV2 OQ6 (d), 10/28):** EV2's calendar feed `/api/events/feed.ics` takes category, scene, neighborhood and series filters, but not `venue_id` yet. If the venue page wants a subscribe link, ask Stream A for the `venue_id` filter first. It's a one-line server change, since the upcoming list already filters by venue. **Specs:** closed venue renders with banner + note; by-id redirects; adult profile gated.
@@ -119,7 +122,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 
 ### 4. Gates
 
-- [ ] 4.1 `ng build -c local` + `ng build -c development` clean; guide area lazy-chunked (initial bundle unchanged; `marked` only in the guide chunk).
+- [ ] 4.1 `ng build -c local` + `ng build -c development` clean; guide area lazy-chunked (initial bundle unchanged; `marked` only in the guide chunk). "Unchanged" is measured against EV2's recorded 870 kB production initial, so the 23 kB §1 added must be gone (OQ7 (d)).
 - [ ] 4.2 vitest green; record the new count.
 - [ ] 4.3 **Manual browser loop ≈ milestone M2's UI half (Mason):** offline (`ng serve`, mock): browse home → scene (full + link-out) → venue profile (open, closed, adult-gated) → orgs by kind → neighborhood → graveyard → article; interstitial accepts/declines correctly; then dev mode against the real server: create a venue + profile + page via admin CRUD → browse them live; verify the "Verified {Month Year}" stamp reflects a `verify-listing` run from the test_helper.
 
@@ -142,6 +145,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 5. **Tiny local date formatter** in `freshness-footer` (Month Year only) instead of importing Stream A's `events-date.utils`. *Rec: as pinned — 5 lines of `Intl.DateTimeFormat` beats a cross-stream import; if the streams later want one shared date module, merge it as a deliberate post-M2 cleanup.*
 	- Mason- (10/29, in chat) Accept all the open question recommendations.
 	- Claude- Decided (10/29) — as pinned (§2.1); no body change.
+	- Claude- Superseded (10/29) by OQ8. GD3 reuses EV2's footer, so it never formats a date and needs no formatter.
 6. **Empty-state copy** ("Nothing here yet — this guide section is being written") appears wherever content hasn't landed, so GD3 can merge before GD4b/Pool content exists. *Rec: as pinned; the mock dataset keeps the demo experience full regardless.*
 	- Mason- (10/29, in chat) Accept all the open question recommendations.
 	- Claude- Decided (10/29) — as pinned (§3); no body change.
@@ -157,6 +161,7 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 		- The fix: when §3.1 creates `guide.routes.ts`, move the provider into those routes. The seam and its data then load only when someone opens a guide page. Nothing outside `/guide` uses the seam, since EV2 links to venue pages by address.
 		- *Rec: move it at §3.1. That's one line out of `app.config.ts` and one line into the guide routes. Alternative: leave it in `app.config.ts` and accept the 23 kB.*
 	- I'll go with your recommendations.
+	- Claude- Decided (10/29) — (a)–(c) stay as built. (d): the provider moves into `guide.routes.ts` at §3.1 (added to 3.1 and 4.1). Until then it stays in `app.config.ts`, so the initial bundle carries the 23 kB in the meantime.
 8. **The freshness footer already exists.** *(Added 10/29, a heads-up for §2.)* EV2 built `shared/components/freshness-footer` for its series pages, and its doc offers it to GD3. It already does most of §2.1:
 	- It shows "Verified {Month Year}", or "Not yet verified".
 	- It adds a "Closed", "Moved" or "Seasonal" marker. The "Closed" wording can be changed; series say "Ended".
@@ -172,8 +177,13 @@ The guide's public face: scene landings, venue/org profiles, neighborhood pages,
 		- Add an optional closure-note input to EV2's footer. That's a small edit to Stream A's file, so ping Levi first.
 		- Build GD3's own footer as planned, under a different name.
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (10/29) — reuse EV2's footer as it is. §2.1 is now "reuse; nothing to build" and is checked off. The Freshness pin-down, Scope and "Read before starting" lines say so. The closure note goes on the page beside the "Closed" banner, and OQ5's formatter is dropped.
 
 # Change Log
+
+- **10/29/2026 (v0.4)** — **OQ7 and OQ8 decided** (Mason went with the recommendations).
+	- OQ7 (a)–(c) stay as built. For (d), §3.1 now moves `provideGuideAccess` from `app.config.ts` into the guide routes, and §4.1 says the initial bundle must be back to EV2's 870 kB.
+	- OQ8: GD3 reuses EV2's freshness footer. §2.1 is checked off with nothing to build. The Freshness pin-down now puts the closure note on the page beside the "Closed" banner. Scope and "Read before starting" are updated, and OQ5 is marked superseded.
 
 - **10/29/2026 (v0.3)** — **OQ1–OQ6 decided** (Mason accepted every recommendation; no body changes). **§1 (access seam) built:**
 	- 1.1–1.4 are marked complete, with as-built notes.

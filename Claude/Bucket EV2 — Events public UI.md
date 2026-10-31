@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 10/30/2026
-Version: 0.10.2
+Version: 0.11
 tags:
 ---
 
@@ -287,6 +287,57 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 		- **Windows:** x64-Debug passed 2093/2093 on the same tree.
 		- EV2 added 25 server tests, from 2068 at EV1's exit: 16 for §1's calendar endpoints, 8 for §1.5's calendar name and refresh hint, and the honuware blank-text test.
 - [ ] 4.4 **Manual browser loop = milestone M1 (Mason + Levi):** offline first (`ng serve`, mock): browse list/tonight/weekend/calendar/series/detail with zero backend. Then dev (`ng serve -c development` against :18081): admin-enter a venue + events via §3.7's editor (or raw admin CRUD) → approve in the editor's queue → they appear on list + calendar + detail **and in the home-page strip** → devtools confirms the meta/OG tags on a detail page → download the event ICS and subscribe to a category feed in a real calendar app (Google Calendar URL-subscribe or Apple Calendar; after §1.5, so the subscription shows its name) → JSON-LD validates in Google's Rich Results test (paste the rendered detail page HTML).
+	- *Sample data (10/30):* §6's `--populate_sample_data` fills a dev database with four weeks of events and a small guide, so the loop has something on every page before anyone enters an event by hand.
+
+### 5. Interim restyle *(added 10/30 — Mason's ask after first running the site: "super ugly and generic looking, mainly just black and white")*
+
+*(Built 10/30, not yet committed. It changes Stream C's shared shell files ahead of RT1, so **ping John-Michael in the PR**, as with OQ4. OQ11 asks about it.)*
+
+A stand-in look until RT1 (Stream C's brand and design system) lands. Before this the app was Angular Material's default theme: blue on white, with plain rows.
+
+- [x] 5.1 **One place for the brand** (`ui/src/styles.scss`, fonts in `ui/src/index.html`).
+	- Plum `#5E2A8C` as the main color, sunset coral `#E8613C` as the accent, a warm cream page `#FBF7F2` with white cards on it, and lavender `#F3ECF8` for chips and quiet fills.
+	- Fraunces for headings and Inter for text, from Google Fonts. They replace Roboto.
+	- The values are CSS variables named after honuware's tenant-theming token catalog (Token Catalog v1 in the KY [[Tenant Theming and Branding]] doc): `--theme-primary`, `--theme-accent`, `--theme-background`, `--theme-surface-tint`, `--theme-border`, `--font-heading`, `--font-body`, `--radius-card` and the rest. RT1 can change the values, or later serve them per community, without touching a component. Two extras aren't in the catalog: `--brand-stripe` (the header's gradient) and `--shadow-raised`.
+	- Material's own color variables (`--mat-sys-*`) now point at those names. Every page already used Material's colors, so the whole app recolored without per-page edits, including admin and account.
+- [x] 5.2 **Header and footer.**
+	- The header is a plum band with a small "setting sun" mark and a sunset-to-violet stripe under it. It stays at the top while scrolling and highlights the section you're in (Events or Guide). On a phone the sun stands in for the site name, so the links fit.
+	- The footer is deep plum, with the site's main links (Events, Calendar, Recurring, Guide, Venues, Organizations). It sits at the bottom of the window even on a short page.
+- [x] 5.3 **Home page.**
+	- A plum-to-coral welcome banner with **Browse events** and **Explore the guide** buttons.
+	- Six quick links: Tonight, This weekend, Recurring, Venues, Organizations, New to Seattle.
+	- The §3.9 Coming-up strip, now in a white card.
+	- The server-health line is kept, in small print at the bottom. It's the original "simple call that gets shown", and the home spec checks it.
+- [x] 5.4 **Lists as cards.**
+	- Event rows, guide listings, series, guide tiles and link cards are white rounded cards that lift on hover.
+	- Event times are coral, darkened enough to read at that size. Titles are in Fraunces.
+	- An event with no photo shows a plum-to-coral tile instead of a grey box.
+	- Neighborhood chips are lavender. Category and scene chips are peach, and the guide's scene chips match.
+- **Checks (10/30):**
+	- vitest 303/303 in 53 files. `ng build -c local`, `-c development` and `-c production` all succeed.
+	- The production initial bundle is 882.6 kB, up 11 kB from GD3's 871.6 kB. That's mostly the bigger shell stylesheets (home, header, footer, strip). It was already over the 500 kB budget; RT4's pre-launch pass owns that (OQ10).
+	- **Looked at in a browser:** headless Chrome screenshots of home, events, guide and venues at desktop width, plus home, events and venues on a 390 px phone with nothing scrolling sideways. The quick links, the banner glow and the photo-less tiles were adjusted after the first look.
+	- Prettier would split the new `mat.…-overrides((…))` calls across more lines. They follow `styles.scss`'s existing layout, which prettier already disagreed with, so they were left alone.
+
+### 6. Sample data command *(added 10/30 — Mason's ask)*
+
+*(Built 10/30, not yet committed. Server side; it covers the guide as well as events.)*
+
+- [x] 6.1 **`communityfinder_database_helper --populate_sample_data`.**
+	- **Needs** `HONUWARE_ALLOW_DESTRUCTIVE=1`, the switch production never sets, so it can't put made-up events on the live site.
+	- **Combines** with a rebuild in one run: `--recreate_database --populate_sample_data` wipes the database, seeds it, then adds the sample data.
+	- **Adds a guide:** 39 listings. That's 6 venues (one closed, one 18+), 9 organizations (one closed, one moved, one seasonal, one 18+), 2 places, 6 services, 11 guide pages (one a draft and one scheduled a week out, so 9 show) and 5 series, plus the scene pages' outside links.
+	- **Adds four weeks of events from the day it runs:** 28 in all. 14 are one-offs, three weekly series run four weeks each (Bear Happy Hour on Thursdays, Queer Trivia on Tuesdays, Board Game Night on Wednesdays), and a hike runs every other Saturday. 27 are approved. "Open Mic (awaiting review)" is left pending, so the editor's review queue has something in it.
+	- **It's all made up.** It's the same invented world as the offline demo (`ui/src/app/core/mock/`): The Lantern Room, Driftwood Hall and so on. No real business is named.
+	- **Safe to re-run.** A listing whose address name (slug) is already there is left alone. The events come in through EV1's ingest path from one "Sample data" source, each under a fixed key. A later run moves them into the four weeks after *that* run instead of adding more. A move sends an approved event back to pending (EV1's rule), so the run approves it again.
+	- **Seattle times.** Times are Seattle clock times, worked out by Postgres. Bear Happy Hour is Thursday at 6 PM on both sides of a clock change.
+	- **Approver.** The sample events record the first administrator as the one who approved them, or no one (0) if there isn't an administrator yet.
+	- **Code:** `server/…/business_logic/populate_sample_data.{h,cpp}`, with 4 tests in `populate_sample_data_test.cpp`, and the flag in `database_helper/main.cpp`.
+- **Checks (10/30):**
+	- Windows x64-Debug 2231/2231.
+	- The Linux docker gate 2231/2231, built against the local honuware tree at the pinned `04f88ee`. The gate's floor went from 2215 to **2221** (2231 − 10).
+	- **Live:** ran once against the dev `communityfinder` database. It reported "39 listings created, 0 already there" and "28 created … 27 approved", with no vocabulary missing. The headless screenshots above show that data.
+	- Windows' server exe wasn't relinked, because the running server had it open. The server doesn't use the new code, so nothing is lost; Visual Studio relinks it next build.
 
 # Open Questions
 
@@ -402,8 +453,20 @@ This bucket is mostly Angular, **plus a thin C++ slice** (the ICS endpoints — 
 	- Claude- Decided (10/29): both kept as recommended, and nothing in EV2 changes.
 		- (a): the growth is accepted. §4.1 passes as "the events pages download separately".
 		- (b): logged for a pre-launch bundle-size pass in RT4's blurb in [[Initial Project Implementation Outline]], since page weight affects search ranking. The blurb covers the 685 kB file and making the demo a build-time choice, and the future RT4 doc inherits it.
+11. **§5 (the restyle) and §6 (the sample data) as built — five calls** *(added 10/30)*. Each one is already in the code. "Agreed" locks all five, or name the ones to change.
+	- **(a) The restyle edits Stream C's files before RT1.** The header, footer, home page and the app-wide stylesheet belong to Stream C (John-Michael), like OQ4's strip. You asked for it to look better now, so it's done as a stand-in. RT1 is free to redo any of it. Because the colors and fonts sit under the token catalog's names, a rebrand is mostly new values in one file. *Rec: keep, and ping John-Michael in the PR. When RT1's doc is drafted, it should say it starts from these tokens.*
+	- **(b) The colors and fonts are a placeholder brand.** Plum and coral on cream, with Fraunces and Inter. They were picked to feel warm (the "Beyond the Freeze" name) and to read clearly. They aren't a decision about the real brand. *Rec: keep until RT1 picks the real one.*
+	- **(c) The sample-data command needs `HONUWARE_ALLOW_DESTRUCTIVE=1` even though it deletes nothing.** That switch is never set in production, so the command can't put made-up events on the live site. Being able to run it in production has no use. *Rec: keep.*
+	- **(d) The "Sample data" event source is switched on but has no web address.** Every sample event comes in through it, as EV1's ingest path requires a source. EV5's scanner will visit every switched-on source. It will need to skip one with no address anyway, since a curator can make one. *Rec: keep, and note it for EV5. The other option is to switch the sample source off, a small server change plus a lookup that finds it when it's off.*
+	- **(e) The home page still shows the server-health line**, in small print at the bottom. *Rec: keep until RT1. It's how you can tell at a glance that the site is talking to the server.*
 
 # Change Log
+
+- **10/30/2026 (v0.11)** — **Two additions, at Mason's ask after first running the site.**
+	- **§5, an interim restyle:** brand tokens under the catalog's names, a plum header and footer, a home-page banner with quick links, and lists as cards. vitest 303/303, all three builds succeed, and it was checked in headless-Chrome screenshots at desktop and phone width.
+	- **§6, `database_helper --populate_sample_data`:** a small made-up guide and four weeks of events from the day it runs. Windows 2231/2231 and Linux 2231/2231 (floor 2215 → 2221). It ran live once on the dev database.
+	- **OQ11:** five as-built calls awaiting "Agreed".
+	- Remaining: Mason commits both, and pings John-Michael about §5.
 
 - **10/30/2026 (v0.10.2)** — **§3.8 done by GD3**, which landed second ([[Bucket GD3 — Guide public UI]] §3.4). The event page's venue name links to its guide page. Mason pings Levi.
 

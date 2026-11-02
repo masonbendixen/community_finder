@@ -127,6 +127,14 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 > - Of the test Meetup groups, Another Gay Social Club and Seattle Gaymers return "Group not found", and Seattle Queer & Ally Hiking has had no events since 1/31/2026.
 > - Kremwerk's feed runs about 9 weeks ahead, not the appendix's 4 months.
 > - EverOut's robots.txt no longer blocks crawlers. Its terms still need checking, so it stays human-read until RT5 asks.
+> - **Great American Casino Tukwila closed on 11/1/2026, and its domain now redirects to an online-casino affiliate site.** Drop the Royal Flush drag show unless it has moved, and never link the domain.
+> - **`comettavern.com` is parked for sale**, and "Caliente Thursdays" wasn't found anywhere. Confirm it with the Comet (Instagram) before entering the series.
+> - **The climb-night rotation:**
+> 	- Half Moon's queer climb club is every Tuesday, with Queer Mountaineers on the 4th Tuesday, not Monday;
+> 	- Edgeworks' Queer Climb Night (2nd Wednesday) is missing below;
+> 	- Vertical World North's site lists no queer night, and Uplift's page shows only a stale date, so confirm both with Queer Mountaineers, which runs every gym's night;
+> 	- Climb NORA is in Federal Way.
+> - Southgate's site works over plain HTTP only (enter `http://`).
 
 **Sources never scraped** are still entered (`social`, `enabled = false`), so the registry is the complete map of where events come from and EV5 knows never to visit them.
 
@@ -239,7 +247,8 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 		- [ ] Climb NORA (2nd Fri)
 		- [ ] Castle (3rd Mon)
 		- [ ] SBP Poplar (3rd Thu)
-		- [ ] Half Moon (4th Mon)
+		- [ ] Half Moon (4th Mon → **4th Tue** per its site, 11/1; queer climb club every Tue)
+		- [ ] Edgeworks (2nd Wed) *(added 11/1 from the feed research)*
 
 ### 5. GD4b — Venues and profiles (Stream B; owner: Mason)
 
@@ -284,7 +293,7 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 	- [ ] Jet City Improv · Queerly Beloved
 	- [ ] Phoenix Comics & Games · queer board games
 	- [ ] West Seattle Bowl · three queer leagues
-	- [ ] Great American Casino Tukwila · Royal Flush drag
+	- [ ] ~~Great American Casino Tukwila · Royal Flush drag~~ *(closed 11/1/2026; domain hijacked; skip)*
 	- [ ] Gallery Erato
 	- [ ] Raygun Lounge
 	- [ ] Asylum Collective · `sapphic` goth
@@ -473,5 +482,12 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 
 # Change Log
 
-- **11/1/2026 (v0.1.1)** — §4 picks up the 11/1 feed research from [[Bucket EV6 — Structured feed import]]: set `feed_format` where a feed exists. Plus a corrections callout covering the hijacked Neighbours domain, CC's and Club Z's real sites, dead sites, gone sources and missing Meetup groups, with inline notes on the affected rows.
+- **11/1/2026 (v0.1.1)** — §4 picks up the 11/1 feed research from [[Bucket EV6 — Structured feed import]]: set `feed_format` where a feed exists. Plus a corrections callout covering:
+	- the hijacked Neighbours and Great American Casino domains (the casino closed 11/1);
+	- CC's and Club Z's real sites;
+	- dead and parked sites (including the Comet's, whose Caliente night couldn't be found);
+	- gone sources and missing Meetup groups;
+	- the climb-night rotation (Half Moon is a Tuesday; Edgeworks' 2nd Wednesday was missing).
+
+	Inline notes mark the affected rows.
 - **11/1/2026 (v0.1)** — Initial draft from the outline's GD4 blurb and do-first item, the brainstorm's Appendix A–H, GD1 §4–§8, GD2's tables and EV1's sources and series. The registries are laid out as claimable checklists, with the dropdown slice (§1) first and an optional bulk loader (§3, OQ1). Seven open questions.

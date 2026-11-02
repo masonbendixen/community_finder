@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/1/2026
-Version: 0.1
+Version: 0.1.1
 tags:
 ---
 
@@ -19,7 +19,7 @@ tags:
 **Feeds:**
 - GD9's two adult lanes, sexual exploration and kink (marked † there), which live in this section;
 - GD5's leather and bear scene intros, which link here for the 18+ half;
-- EV1's adult events, whose `adult` flag already exists.
+- **adult events, which have no 18+ flag yet.** The guide's tables have one, but `events` doesn't. [[Bucket EV6 — Structured feed import]] OQ9 proposes a small Stream A follow-up (`events.adult`, inherited from the series; GD3's gate on event pages; left out of the home strip and ICS feeds). Until it lands, 18+ events (Pan Eros's calendar, most of it) stay off the public calendar.
 
 # Context
 
@@ -116,7 +116,7 @@ The same six steps as every Pool bucket ([[Bucket GD5 — Nightlife & scenes con
 	- the same fields, plus its 50th anniversary in 2026;
 	- **a watch item:** the building was listed for sale in 2/2026. The profile says what's known and dated; a sale or closure moves it to the graveyard with its note;
 	- website **`thezclub.com`** (clubzseattle.com is a parked domain, per the 11/1 feed research);
-	- its public Google Calendar is EV6's to import.
+	- its public Google Calendar (empty as of 11/1) is EV6's to import, with its events marked 18+ once events can be (EV6 OQ9).
 	- **Tier `quarterly`**, monthly while the sale watch is open.
 - [ ] 3.3 **"Bathhouses in Seattle"** (`bathhouses-seattle`) *(claimed: ______)*: a short orientation to what to expect, the house rules both post, safety, and links to the two profiles. History (the Seattle bathhouses that closed) can link the graveyard.
 
@@ -126,7 +126,7 @@ The same six steps as every Pool bucket ([[Bucket GD5 — Nightlife & scenes con
 - [ ] 4.2 **Sex-positive orgs** *(claimed: ______)*:
 	- **Pan Eros Foundation** (active), its Gallery Erato, and the **Seattle Erotic Art Festival** (5/1–3/2026; the next year's dates verified);
 	- **the Center for Sex Positive Culture is listed CLOSED in the appendix, which needs primary confirmation**: graveyard if confirmed;
-	- Pan Eros's public calendar is EV6's richest feed, so its events come in that way.
+	- Pan Eros's public calendar is EV6's richest feed, so its events come in that way, **once events have an 18+ flag** (EV6 OQ9).
 - [ ] 4.3 **"Leather and kink in Seattle"** (`leather-kink-seattle`), the deep dive *(claimed: ______)*:
 	- the scene's institutions: the Cuff, the Seattle Eagle, Doghouse Leathers as the retail and community hub;
 	- the clubs and titles, verified current;
@@ -170,4 +170,5 @@ The same six steps as every Pool bucket ([[Bucket GD5 — Nightlife & scenes con
 
 # Change Log
 
+- **11/1/2026 (v0.1.1)** — Corrected the Feeds line: events have **no** 18+ flag yet (only the guide's tables do). Adult events, including Pan Eros's and Club Z's calendars, wait on EV6 OQ9's proposed follow-up.
 - **11/1/2026 (v0.1)** — Initial draft from the outline's GD10 blurb, the brainstorm's Q3(b) decision, Appendix H (the Denny Blaine timeline) and the adult inventory in the appendix. Also drew on GD3's built 18+ gate and the 11/1 feed research (Club Z's real domain and public calendar; Steamworks' site). Hub, etiquette/safety/law, two beaches, Volunteer Park as history, two bathhouses, orgs, a leather/kink deep dive, and a monthly refresh routine. Five open questions.

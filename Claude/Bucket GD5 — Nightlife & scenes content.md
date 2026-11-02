@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/1/2026
-Version: 0.1
+Version: 0.1.1
 tags:
 ---
 
@@ -84,12 +84,12 @@ Links between pages are plain relative markdown links (`/guide/venues/the-cuff-c
 	- [ ] Seattle Eagle
 	- [ ] Diesel
 	- [ ] Pony
-	- [ ] CC Attle's
+	- [ ] CC's Seattle (renamed from CC Attle's; `ccsseattle.com`)
 	- [ ] Madison Pub
 	- [ ] Crescent Lounge
 	- [ ] Union
 - **1.2 Dance, drag and shows** *(claimed: ______)*:
-	- [ ] Neighbours
+	- [ ] Neighbours *(its old domain now redirects to a gambling site; confirm it's open, and link only its Instagram/Facebook)*
 	- [ ] Massive
 	- [ ] Kremwerk / Timbre Room / Cherry
 	- [ ] Queer/Bar (re-check after the remodel)
@@ -99,16 +99,16 @@ Links between pages are plain relative markdown links (`/guide/venues/the-cuff-c
 - **1.3 Beyond the Hill** *(claimed: ______)*:
 	- [ ] Lumber Yard Bar
 	- [ ] Boombox
-	- [ ] Changes
+	- [ ] Changes *(its site no longer resolves; confirm it's open)*
 - **1.4 Queer nights at mainstream venues** *(claimed: ______)*. Describe the night, not the whole venue:
 	- [ ] Southgate (Pride Skate)
 	- [ ] Chop Suey (Flammable Sundays)
-	- [ ] Comet (Caliente)
+	- [ ] Comet (Caliente) *(the night couldn't be found anywhere on 11/1; confirm before writing)*
 	- [ ] Rough & Tumble
 	- [ ] Stoup (Board Gayme Night)
 	- [ ] El Sueñito
 	- [ ] Charlie's Queer Books
-	- [ ] Great American Casino (Royal Flush)
+	- [ ] ~~Great American Casino (Royal Flush)~~ *(the casino closed 11/1/2026; skip unless the show has moved)*
 	- [ ] the rest of GD4 §5.2 as entered
 - **1.5 Graveyard notes** *(claimed: ______)*. Each closed venue's `closure_note` gets one or two dated sentences: what it was, when and why it closed, and where its crowd went if that's known. Framed as history, not loss-porn (GD1 §6):
 	- [ ] The Comeback
@@ -150,7 +150,7 @@ The scene page already lists venues, orgs, places and upcoming events beneath th
 	- It covers every open queer venue in one or two lines each, grouped by crowd (leather and bears · dance · drag and shows · low-key · beyond the Hill), each linking its profile.
 	- It ends with "Gone but not forgotten," which links the graveyard.
 	- **Tier `monthly`**, because it names many venues whose status moves.
-- [ ] 3.2 **"Drag in Seattle"** (`drag-in-seattle`) *(claimed: ______)*: the regular shows (Le Faux, Mimosas Cabaret, Fridays Are a Drag, T4T, Centerfold, Judy, Royal Flush), brunches, etiquette (tip the queens: bring small bills), and where the big names play. Performers are named as billed acts (OQ2).
+- [ ] 3.2 **"Drag in Seattle"** (`drag-in-seattle`) *(claimed: ______)*: the regular shows (Le Faux, Mimosas Cabaret, Fridays Are a Drag, T4T, Centerfold, Judy; Royal Flush only if it has found a new home, since Great American Casino closed on 11/1/2026), brunches, etiquette (tip the queens: bring small bills), and where the big names play. Performers are named as billed acts (OQ2).
 - [ ] 3.3 **"Your first night out on Capitol Hill"** (`first-night-out-capitol-hill`) *(claimed: ______)*: a walkable route by mood, practical notes (Link's Capitol Hill station, last trains, the rideshare crush at 2 AM), and the safety basics (buddy up, watch your drink, Seattle Police's non-emergency line versus 911). Links GD7's neighborhood page.
 - [ ] 3.4 **"Gone but not forgotten: Seattle's closed gay bars"** (`closed-gay-bars-seattle`) *(claimed: ______)*: the history article over the graveyard. R Place, Re-bar, the Comeback, Purr, Basic Plumbing, Double Header, with dates and sources. **Tier `annual`.** The graveyard page itself has no intro slot, so this article is linked from 3.1 and from GD3's graveyard page (OQ5).
 
@@ -183,4 +183,9 @@ The scene page already lists venues, orgs, places and upcoming events beneath th
 
 # Change Log
 
+- **11/1/2026 (v0.1.1)** — Notes from [[Bucket EV6 — Structured feed import]]'s research:
+	- CC Attle's is now CC's Seattle;
+	- Neighbours' old domain is hijacked, and Changes' site is dead (confirm both are open);
+	- the Comet's Caliente night couldn't be found;
+	- Great American Casino closed 11/1, taking Royal Flush's home with it.
 - **11/1/2026 (v0.1)** — Initial draft from the outline's GD5 blurb, the brainstorm's Pillars 2.1, 2.2 and 5.5 and Appendices B and C, GD1's posture and voice, and GD2/GD3's storage and routes. Defines the Pool workflow the other content buckets repeat. Six open questions.

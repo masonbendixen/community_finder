@@ -134,7 +134,7 @@ Doghouse Leathers' RSS is new products, not events.
 | **Charlie's Queer Books** | A session-based private API behind its React storefront | none | Ask them |
 
 **Dead or changed:**
-- **Great American Casino Tukwila closed on 11/1/2026** (Maverick Gaming), and **its domain now redirects to an unrelated online-casino affiliate site**. Drop the Royal Flush drag brunch, and never link the old domain.
+- **Great American Casino Tukwila closed on 11/1/2026** (Maverick Gaming), and **its domain now redirects to an unrelated online-casino affiliate site**. Drop the Royal Flush drag show unless it has moved, and never link the old domain.
 - **`comettavern.com` is parked for sale.** The Comet appears to be Instagram-only, and **"Caliente Thursdays" wasn't found in any source**.
 - Southgate's site works over plain HTTP only. Intiman serves an empty page to non-browsers.
 
@@ -147,7 +147,7 @@ Doghouse Leathers' RSS is new products, not events.
 
 ### What the findings mean for the design
 
-1. **Two readers and two ways to find pages cover everything usable:**
+1. **Two readers, with three ways to find the pages, cover everything usable:**
 	- **`ics`** reads whole calendars: Google Calendar, The Events Calendar, Teamup.
 	- **Event markup (JSON-LD) on event pages** is the other reader. The page list comes from:
 		- one page itself (`json_ld`: SimpleTix, Ticket Tailor, ArtsWest);
@@ -240,7 +240,7 @@ Doghouse Leathers' RSS is new products, not events.
 - the honuware fetch options (§1);
 - the `event_sources` feed columns and the shared `scan_runs` table (§2);
 - their helpers (§3);
-- three parsers, the robots check, the fetcher, the importer and the four create-time ingest rules (§4);
+- the readers (ICS, event markup, RSS/Atom/sitemap lists, Squarespace), the robots check, the fetcher, the importer and the four create-time ingest rules (§4);
 - one admin endpoint (§5);
 - the EV4 job wiring and a failure alert (§6);
 - test_helper commands (§7);
@@ -248,8 +248,9 @@ Doghouse Leathers' RSS is new products, not events.
 
 **Out:**
 - **the AI scanner and the verifier (EV5)**, including the closure-news monitors. The RSS reader is built here and reused there.
+- **an 18+ flag for events** (OQ9: a separate small Stream A follow-up);
 - **Meetup, Eventbrite, Evvnt, LeagueApps and Do206** (OQ5);
-- the Wix embedded-data adapter (OQ6);
+- adapters for one venue's undocumented data (CC's, Stoup, Phoenix; OQ6);
 - all-day events (pin-down 7);
 - acting on vanished events (pin-down 9);
 - outbound feeds (EV2 has them);

@@ -113,7 +113,9 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 1. db_schema
 
-- [ ] 1.1 `src/db_schema/event_submissions.{h,cpp}`. Columns:
+*Done 11/2 — Windows: 2233 passed. Linux: 2233 passed (+2 new tests; floor unchanged at 2221 until the bucket exit). The live seed check (§7.3) hasn't been run yet: it's destructive and waits for the go-ahead.*
+
+- [x] 1.1 `src/db_schema/event_submissions.{h,cpp}`. Columns:
 	- `submitted_by_person_id` (BIGINT, required, a **plain id, not an FK**, per EV1 OQ8 (e): deleting an account must not delete its events)
 	- `submitter_note` (text, default `''`)
 	- `relationship` (CHECK `IN ('organizer','venue','performer','attendee','other')`, default `'other'`)
@@ -125,9 +127,9 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- Index `(submitted_by_person_id, created_us)`, which serves "my submissions" and the 24-hour count.
 
 	*Note:* the reason lives on the submission, not the event. "Reject all" is the normal case, and a per-date reason would be noise.
-- [ ] 1.2 `events.submission_id`: a nullable FK to `event_submissions` (cascade: deleting a spam submission deletes its dates, which is wanted), plus index `events_submission_idx`. `make_app_tables.cpp` order: `event_submissions` goes **before** `events`.
+- [x] 1.2 `events.submission_id`: a nullable FK to `event_submissions` (cascade: deleting a spam submission deletes its dates, which is wanted), plus index `events_submission_idx`. `make_app_tables.cpp` order: `event_submissions` goes **before** `events`.
 	- **Pre-launch, a `--recreate_database` covers it.** Once real data exists, a column on an existing table needs a migration in `BuildAllMigrations`. Note it in the PR.
-- [ ] 1.3 `create_app_tables.cpp` (the three-place rule):
+- [x] 1.3 `create_app_tables.cpp` (the three-place rule):
 	- admin metadata for `event_submissions`: top-level, friendly names, display template `Submission #{id}`, and column info with the person id and timestamps read-only;
 	- ~~nest it under `events`~~ **top-level only, not nested.** The editor nests a table under the tables it has an FK onto. Here the FK runs from `events` to `event_submissions`, so the only way to nest would be marking `events` itself as nested, which would also put it under venues, series and sources. *(Corrected in v0.2.)*
 	- `events.submission_id` gets column info too, read-only: the pipeline sets it, and a curator never should;

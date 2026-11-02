@@ -26,7 +26,7 @@ tags:
 
 # Context
 
-The outline's EV5 is an AI scanner for event content. Mason's hunch (11/1): **some of the bars publish RSS or other feeds with event information, which a plain importer could read without AI.** On 11/1 three research passes checked about 60 sources by hand with curl:
+The outline's EV5 is an AI scanner for event content. Mason's hunch (11/1): **some of the bars publish RSS or other feeds with event information, which a plain importer could read without AI.** On 11/1 three research passes checked about 80 sources by hand with curl:
 - the gay bars, clubs and adult venues;
 - the mainstream venues, arts spaces and climbing gyms;
 - the organizations, leagues, platforms (Meetup, Eventbrite, Evvnt), aggregators and news RSS.
@@ -41,12 +41,13 @@ The raw captures are in the session scratchpad. Their findings are below.
 	- **Squarespace's events collection:** four bars plus several orgs;
 	- **calendar (ICS) feeds:** Google Calendar, the WordPress "The Events Calendar" plugin, Teamup;
 	- **schema.org `Event` markup on event pages:** ticketing pages and Squarespace event pages.
-- **A small importer that reads those three shapes covers roughly a dozen sources today**, including the richest one found (Pan Eros: 2,401 calendar entries) and the best sports feed (Rain City Soccer's five Google calendars).
+- **A small importer that reads those three shapes covers about fifteen sources today**, including the richest one found (Pan Eros: 2,401 calendar entries) and the best sports feed (Rain City Soccer's five Google calendars).
 - **The catch is permission.**
 	- Squarespace's default robots.txt blocks its own JSON and ICS endpoints for every crawler.
 	- Meetup, Eventbrite and Do206 forbid automated extraction in their terms.
+	- `calendar.google.com`'s robots.txt is `Disallow: /`, even for the public calendar links Google offers for subscribing from any calendar app.
 
-	EV6 honors both by default (OQ1) and lists who to ask.
+	EV6 honors robots.txt for every page it reads, and fetches a subscription calendar the way a calendar app does (pin-down 11, OQ1). It also lists who to ask.
 
 **Why a deterministic importer before the AI scanner:** a feed parse is exact, cheap, testable with fixed fixtures, and needs no model, no prompt and no per-run cost. Every source it covers is one EV5 never has to scan, and the scanner's guesses are reserved for the sources that need judgment.
 
@@ -62,7 +63,7 @@ The raw captures are in the session scratchpad. Their findings are below.
 | **The Cuff Complex** (`cuffcomplex.com/events`) | Squarespace collection: 10 upcoming, to 12/19 | `squarespace` | **Yes**, same path |
 | **Queer/Bar** (`thequeerbar.com/events`) | Squarespace collection: 15 upcoming. Its Ticket Tailor pages carry event markup | `squarespace` | **Yes**, same path. Same owners as the Cuff |
 | **Unicorn** (`unicornseattle.com/events`) | Squarespace collection: exactly 30 upcoming, which is Squarespace's page size, so there may be more | `squarespace` | **Yes**, same path |
-| **Pan Eros Foundation / SEAF / Gallery Erato** | Public Google Calendar: 5.4 MB, 2,401 entries going back years, 471 recurrence rules, 568 per-date overrides, mixed time formats. Includes non-public items ("Retail Hours") | `ics` | **Yes.** The richest feed found, and the reason the recurrence expander must be real. Needs a title filter |
+| **Pan Eros Foundation / SEAF / Gallery Erato** | Public Google Calendar: 5.4 MB, 2,401 entries going back years, 471 recurrence rules, 568 per-date overrides, mixed time formats. Includes non-public items ("Retail Hours") | `ics` | **Technically yes.** The richest feed found, and the reason the recurrence expander must be real. Needs a filter, and **most of it is adult and kink education**, so it waits on an 18+ flag for events (OQ9) |
 | **Club Z** (`thezclub.com`; clubzseattle.com is parked) | Public Google Calendar embedded on its events page: valid, 0 events ("coming soon") | `ics` | **Subscribe now.** It costs nothing until they post |
 | **Le Faux at Julia's** (SimpleTix) | Event markup on each SimpleTix show page, one entry per date. All dates share one URL | `json_ld` | **Yes**, one source per show page |
 | **Massive** (`massive.club/calendar`) | Event markup with **dates but no times** (`"Nov 02, 2026"`). Tixr blocks automated reads | `json_ld` | **No**: date-only entries are skipped (pin-down 7). Hand entry or EV5 |
@@ -116,18 +117,44 @@ Doghouse Leathers' RSS is new products, not events.
 - **Out x Out** (`outxout.com`) has event markup for the recurring nights of the Instagram-only bars. It's an aggregator, so ask before using it.
 - **Sapphie Taffy** posts monthly prose roundups. RSS spots a new post; the events inside need EV5, and permission.
 
-### Mainstream venues, arts spaces and climbing gyms
+### Mainstream venues with queer nights, arts spaces and climbing gyms (25 checked)
 
-*(The third research pass was still running when this draft was written; its table lands here.)*
+| Source | What it publishes | EV6 format | Usable today? |
+|---|---|---|---|
+| **Gallery Erato** | The same Pan Eros Google Calendar as above (10 future entries located at the gallery) | `ics` | One source with Pan Eros, not two. **Mostly adult and kink education**, so it waits on an 18+ flag for events (OQ9) |
+| **Rendezvous / Jewelbox Theater** (`rendezvous.squarespace.com/events`) | Squarespace collection: 19 upcoming. General venue; the drag brunch and a queer holiday show are in it | `squarespace` with an include filter | **Yes** |
+| **El Sueñito Brewing** (Wix) | An event-pages sitemap (720 URLs, past included, each with a last-modified date). Every event page has event markup and a per-event ICS. Some events are at its Bellingham taproom | `json_ld_list` over the sitemap, excluding `Bellingham` | **Yes**: Queer Book Club, drag brunch and bingo |
+| **Stoup Brewing (Capitol Hill)** | An undocumented JSON endpoint behind its events page: 650 entries about three years ahead, **list entries without a year** | none (OQ6) | No adapter. Board Gayme Night is a stable weekly: a hand-entered series |
+| **Phoenix Comics & Games** (Shopify "Calee" app) | Undocumented app JSON: 47 events, recurrence as vendor fields. **Its `start_date_time` is local time with a misleading `Z`**; only `start_date_time_utc` is right | none (OQ6) | No adapter. Queer Geek and XL Bears meetups: hand entry or EV5 |
+| **Chop Suey** | Event RSS and a sitemap without show dates. Each event page lists every date as plain HTML, with no event markup | none | No. Flammable Sundays is a stable weekly: a hand-entered series |
+| **ArtsWest** | Event markup on show pages with **floating local times** (no offset) | `json_ld` per show page | Possible. No recurring queer night found |
+| **Seattle Bouldering Project** (via SweatPals) | Event markup on each SweatPals event page; the host page lists only 6 upcoming links | `json_ld` per page | Partly. See Queer Mountaineers below |
+| **The other climbing gyms** (Edgeworks, Half Moon, Castle, Climb NORA, Uplift, Vertical World North) | Booking systems (RedPoint HQ, Approach, RockGymPro). The queer nights appear only as prose or programs. VW North's iCal link answers "Invalid guid" | none | No. **Every gym's queer night is run by Queer Mountaineers**, so the organizer is the source (§8.2) |
+| Skylark Cafe, Southgate Roller Rink, Rough & Tumble, Raygun Lounge, Jet City Improv, Intiman, Métier, West Seattle Bowl | HTML only, an empty or stale feed, or ticketing systems with no feed (Salesforce PatronTicket, TicketWeb) | none | No. Southgate's Pride Skate (Wed 21+) is a stable weekly: a hand-entered series |
+| **Charlie's Queer Books** | A session-based private API behind its React storefront | none | Ask them |
+
+**Dead or changed:**
+- **Great American Casino Tukwila closed on 11/1/2026** (Maverick Gaming), and **its domain now redirects to an unrelated online-casino affiliate site**. Drop the Royal Flush drag brunch, and never link the old domain.
+- **`comettavern.com` is parked for sale.** The Comet appears to be Instagram-only, and **"Caliente Thursdays" wasn't found in any source**.
+- Southgate's site works over plain HTTP only. Intiman serves an empty page to non-browsers.
+
+**Climbing-night facts that differ from GD4's rotation:**
+- Half Moon's queer climb club is **every Tuesday**, with Queer Mountaineers on the **4th Tuesday**; GD4 says 4th Monday.
+- **Edgeworks' Queer Climb Night (2nd Wednesday) is missing** from GD4's list.
+- Climb NORA is in Federal Way.
+- Vertical World North's site lists no queer night, and Uplift's page shows only a stale date.
+- "Castle" is Castle Climbing Club in West Seattle, open since 1/1/2026.
 
 ### What the findings mean for the design
 
-1. **Three formats cover everything usable:**
-	- `ics` covers Google Calendar, The Events Calendar and Teamup;
-	- `squarespace` covers the four bars and the Squarespace orgs;
-	- `json_ld` covers single event pages (SimpleTix, Ticket Tailor).
+1. **Two readers and two ways to find pages cover everything usable:**
+	- **`ics`** reads whole calendars: Google Calendar, The Events Calendar, Teamup.
+	- **Event markup (JSON-LD) on event pages** is the other reader. The page list comes from:
+		- one page itself (`json_ld`: SimpleTix, Ticket Tailor, ArtsWest);
+		- an RSS feed or sitemap whose links are event pages (`json_ld_list`: El Sueñito's Wix sitemap);
+		- Squarespace's RSS (`squarespace`, the same path with Squarespace's own key rule: four bars, Rendezvous and the Squarespace orgs).
 
-	Nothing else recurs often enough to justify an adapter.
+	The undocumented one-venue backends (CC's Wix data, Stoup, Phoenix's Calee app) don't justify adapters (OQ6).
 2. **Recurrence is unavoidable:**
 	- the Google feeds (Pan Eros, Rain City, Club Z) state recurrence as rules, with per-date overrides and exclusions;
 	- everything else lists each date separately.
@@ -147,7 +174,8 @@ Doghouse Leathers' RSS is new products, not events.
 	- ticketing pages share one URL across dates.
 
 	Each needs its own key rule (pin-down 5).
-5. **Robots and terms decide more than technology does** (OQ1, OQ5).
+5. **Robots and terms decide more than technology does** (OQ1, OQ5). Cloudflare-managed robots files are spreading (Edgeworks, ma.to). They block AI crawlers by name (ClaudeBot, GPTBot) and signal `ai-train=no`. EV6's honest, non-AI user agent is matched on `*`, but **EV5 inherits the question of how an AI scanner identifies itself**.
+6. **The organizer often beats the venue.** Queer Mountaineers runs the queer night at every climbing gym, so one organizer source replaces seven booking systems. **Many of the best-known nights are stable rituals** (Board Gayme Night, Pride Skate, Flammable Sundays, the climb nights). A hand-entered series (GD4 §4.8) is cheaper than any importer for those.
 
 # Design pin-downs
 
@@ -163,7 +191,7 @@ Doghouse Leathers' RSS is new products, not events.
 	- **ICS, one-off:** the UID. For The Events Calendar (its `PRODID` names the plugin), use only the UID's leading id, the part before the first `-`, because the rest is the start and end time and changes on a reschedule.
 	- **ICS, one date of a recurring series:** `UID|<that date's original start>`. The original start comes from the override's `RECURRENCE-ID` when there is one, so a moved date keeps its key.
 	- **Squarespace:** the 24-character item id, the same in both modes. A source switching from the RSS path to JSON after permission keeps its keys.
-	- **JSON-LD:** the markup's `@id` when present; otherwise `url|startDate`, because ticketing pages share one URL across dates.
+	- **JSON-LD (`json_ld`, `json_ld_list`):** the markup's `@id` when present; otherwise `url|startDate`, because ticketing pages share one URL across dates.
 6. **Time rules:**
 	- **Every value becomes a UTC instant.** `Z` is UTC. A numeric offset (`-08:00`, `-0800`, `+00:00`) is applied as given.
 	- **Floating local time, any `TZID`, and an ICS file's `X-WR-TIMEZONE` all read as Pacific**, through `Events::kEventsTimeZone`. A feed in another zone isn't a King County feed. An unrecognized `TZID` is logged in the run's details, not guessed.
@@ -173,7 +201,7 @@ Doghouse Leathers' RSS is new products, not events.
 	- **recurrence rules using parts the expander doesn't support**;
 	- entries without a title or start;
 	- entries outside the window;
-	- entries the source's title filter excludes.
+	- entries the source's text filter excludes.
 8. **Cancellations.** An entry the feed marks cancelled (ICS `STATUS:CANCELLED`, JSON-LD `EventCancelled`, or a cancelled override of one date) is sent with a new **`cancelled`** flag on `IngestItem`:
 	- an approved or pending event goes to **pending** with the review note "Cancelled at the source", which takes it off the public site;
 	- a cancelled entry that's new is not created;
@@ -187,8 +215,9 @@ Doghouse Leathers' RSS is new products, not events.
 
 	Because these apply only at creation, a curator's later edit to an event's categories or series survives every re-import.
 11. **Polite fetching:**
-	- **robots.txt is honored by default** (OQ1). It's read once per host per run and matched on our product token and `*`, with `Allow`/`Disallow` longest-match and the `*` and `$` wildcards. A `Crawl-delay` is honored.
-	- **A source with a recorded `feed_permission_note`** (who said yes, and when) skips the robots check. That's the only override.
+	- **robots.txt is honored for every page EV6 reads**: RSS feeds, sitemaps and event pages, in the `squarespace`, `json_ld` and `json_ld_list` formats (OQ1). It's read once per host per run and matched on our product token and `*`, with `Allow`/`Disallow` longest-match and the `*` and `$` wildcards. A `Crawl-delay` is honored.
+	- **A subscription calendar (`ics`) is fetched the way a calendar app fetches it, with no robots check.** These are links publishers offer precisely so calendar apps can subscribe: Google's "public address in iCal format", The Events Calendar's export, a club's own "subscribe" link. `calendar.google.com`'s robots.txt is `Disallow: /`, which is aimed at crawlers of its web pages. Honoring it would refuse every Google calendar, including the ones Rain City links on its own page for subscribing. **The admin rule that goes with it:** an `ics` source is a whole-calendar subscription link the publisher offers. Never use one-event export links, such as Squarespace's per-event `?format=ical`, which its robots.txt disallows.
+	- **A source with a recorded `feed_permission_note`** (who said yes, and when) skips the robots check. That's the only other override.
 	- **Limits:**
 		- one request per second per host;
 		- at most 50 requests per source per run;
@@ -203,7 +232,7 @@ Doghouse Leathers' RSS is new products, not events.
 	- redirects are followed by EV6 itself, at most 3 hops, each re-checked.
 13. **Budgeted runs.** One import run (one job tick) handles due sources until **60 seconds** have passed, then returns; the rest are due on the next tick.
 	- **A feed source is due** once its `last_scanned_at_us` is more than 20 hours old, so feeds import daily whatever their volatility tier. A feed is one cheap request, and the tier is EV5's cost control.
-	- **The Squarespace path costs one request per event page,** so it re-reads known future events on the source's tier and new ones daily.
+	- **The list paths (`squarespace`, `json_ld_list`) cost one request per event page.** So they read new links daily, re-read known future events on the source's tier, and skip links that are clearly past. A Squarespace event-date path or a sitemap's old `lastmod` is enough to tell, with no fetch. A sitemap is walked newest-`lastmod` first, so El Sueñito's 720 URLs don't eat the request cap.
 
 # Scope
 
@@ -245,10 +274,10 @@ Doghouse Leathers' RSS is new products, not events.
 
 	| Column | Type | Default | Meaning |
 	|---|---|---|---|
-	| `feed_format` | TEXT NULL, CHECK in (`ics`, `squarespace`, `squarespace_json`, `json_ld`) | NULL | How EV6 reads the source; NULL = not EV6's. `squarespace_json` is the robots-disallowed JSON endpoint, so it's for permission holders only |
-	| `feed_permission_note` | TEXT | `''` | Who granted permission to read past robots.txt, and when. Non-empty is the only robots override |
-	| `title_include` | TEXT | `''` | `\|`-separated, case-insensitive substrings; empty keeps all |
-	| `title_exclude` | TEXT | `''` | The same, applied after include (Pan Eros: `Retail Hours`) |
+	| `feed_format` | TEXT NULL, CHECK in (`ics`, `squarespace`, `squarespace_json`, `json_ld`, `json_ld_list`) | NULL | How EV6 reads the source; NULL = not EV6's. `squarespace_json` is the robots-disallowed JSON endpoint, so it's for permission holders only |
+	| `feed_permission_note` | TEXT | `''` | Who granted permission to read past robots.txt, and when. Non-empty is the robots override for page formats |
+	| `include_text` | TEXT | `''` | `\|`-separated, case-insensitive substrings matched against the title **and** location; empty keeps all (Rendezvous: `drag\|queer\|gay`) |
+	| `exclude_text` | TEXT | `''` | The same, applied after include (Pan Eros: `Retail Hours`; El Sueñito: `Bellingham`) |
 	| `default_category_slugs` | TEXT | `''` | Comma-separated, for new events that state none |
 	| `default_scene_tag_slugs` | TEXT | `''` | The same |
 	| `auto_approve` | BOOLEAN | false | Trusted source (pin-down 10, OQ3) |
@@ -258,6 +287,7 @@ Doghouse Leathers' RSS is new products, not events.
 	- `ics`: the `.ics` URL, which may contain `{month}`. The importer fetches one URL per month of the window, as `YYYY-MM`.
 	- `squarespace` / `squarespace_json`: the collection URL, without `?format=`.
 	- `json_ld`: the page URL.
+	- `json_ld_list`: an RSS/Atom feed or sitemap whose links are event pages.
 - [ ] 2.2 **New table `scan_runs`** (`db_schema/scan_runs.{h,cpp}`), shared with EV5, in `kEventsDomainTables` after `event_sources`:
 	- `id`;
 	- `source_id`, FK → `event_sources`, ON DELETE CASCADE per the house rule;
@@ -340,23 +370,31 @@ Doghouse Leathers' RSS is new products, not events.
 	- `+00:00`;
 	- `"Nov 02, 2026"` skipped;
 	- a malformed block skipped while the others still parse.
-- [ ] 4.3 **`rss_reader`** (RSS 2.0 and Atom, minimal):
-	- `guid` / `id`, `link`, `title`, and a **lenient** `pubDate` that accepts RFC 822, ISO and the JavaScript `Date.toString()` form SGN emits;
-	- built here for the Squarespace path and **reused by EV5's monitors**.
+- [ ] 4.3 **`link_list_reader`**: RSS 2.0, Atom and sitemaps (`<urlset>`), minimal. There's no XML library in the dependencies, so it's a small tag scanner that handles entities and CDATA.
+	- **RSS and Atom:** `guid` / `id`, `link`, `title`, and a **lenient** `pubDate` that accepts RFC 822, ISO and the JavaScript `Date.toString()` form SGN emits.
+	- **Sitemaps:** `loc` and `lastmod`.
+	- Built here for the list paths and **reused by EV5's monitors**.
 
-	**Tests:** RSS, Atom, SGN's date, a CDATA title, a missing guid falling back to the link.
-- [ ] 4.4 **`squarespace_adapter`**:
-	- **`squarespace` mode:**
-		1. read `<collection>?format=rss`;
-		2. for each item whose link isn't clearly past (an event-date path such as `/2026/11/06/` is checked without a fetch), fetch the event page and run 4.2 on it;
-		3. key on the item id from the guid (`site:collection:item`).
-	- **`squarespace_json` mode:** one read of `?format=json`, mapping `upcoming[]`'s epoch-millisecond times, `title`, `fullUrl`, `excerpt` and `location.addressTitle` (the room).
-	- **Both modes** trim and collapse titles (Unicorn's trailing spaces), and record a warning when `upcoming` holds exactly 30 items (a possibly capped list).
+	**Tests:** RSS, Atom, a sitemap, SGN's date, a CDATA title, a missing guid falling back to the link.
+- [ ] 4.4 **`page_list_adapter`** (`squarespace`, `json_ld_list`) and **`squarespace_json`**:
+	- **The list paths:**
+		1. read the list (4.3). For `squarespace`, that's `<collection>?format=rss`;
+		2. drop links that are clearly past: a Squarespace event-date path such as `/2026/11/06/`, or a sitemap `lastmod` older than the window. Walk a sitemap newest first;
+		3. fetch each remaining page and run 4.2 on it.
 
-	**Tests:** both modes from fixtures; the same item gives the same key in both; the past-path skip; the 30-item warning.
+		**`squarespace` keys** on the item id from the guid (`site:collection:item`). `json_ld_list` keys per pin-down 5.
+	- **`squarespace_json`:** one read of `?format=json`, mapping `upcoming[]`'s epoch-millisecond times, `title`, `fullUrl`, `excerpt` and `location.addressTitle` (the room).
+	- **Both Squarespace modes** trim and collapse titles (Unicorn's trailing spaces), and record a warning when the list holds exactly 30 items (a possibly capped list).
+
+	**Tests:**
+	- each path from fixtures;
+	- the same Squarespace item gives the same key in both modes;
+	- the past-link skip for both kinds of list;
+	- the request cap on a long sitemap;
+	- the 30-item warning.
 - [ ] 4.5 **`robots_policy`**: parse, group selection (our token, else `*`), longest-match `Allow`/`Disallow` with `*` and `$`, and `Crawl-delay`. A missing robots.txt (404) allows all; a 5xx disallows for this run.
 
-	**Tests:** Squarespace's default file blocks `?format=json` and allows `?format=rss`; TRACTION's `/wp-json/` disallow; an empty `Disallow:`; the wildcard and `$` cases.
+	**Tests:** Squarespace's default file blocks `?format=json` and allows `?format=rss`; TRACTION's `/wp-json/` disallow; an empty `Disallow:`; the wildcard and `$` cases. **Plus the fetcher's rule (4.6):** an `ics` source is fetched even when its host's robots.txt is `Disallow: /`, as Google's is, and a page format on that same host is refused.
 - [ ] 4.6 **`feed_fetcher`** (wraps `Http::HttpClientPtr`, so tests use honuware's `Http::Test::TestHttpClient` from `honuware_testing`):
 	- the URL guard;
 	- robots, cached per host per run;
@@ -368,7 +406,7 @@ Doghouse Leathers' RSS is new products, not events.
 
 	**Tests:** every refusal (scheme, a private IP literal, a redirect to a private IP, robots); 304 handling; the hop limit; the request cap; the `If-None-Match` round trip; pacing.
 - [ ] 4.7 **`feed_importer`** (`ImportDueFeeds(nowUs, budget)`, `ImportSource(sourceId, nowUs, optional documentText)`):
-	- per source: fetch → parse → title filters → `IngestItem`s → one transaction (`IngestEvents`, `TouchLastScanned`, `UpdateFeedValidators`, a `scan_runs` row, and the "missing from the feed" list);
+	- per source: fetch → parse → text filters → `IngestItem`s → one transaction (`IngestEvents`, `TouchLastScanned`, `UpdateFeedValidators`, a `scan_runs` row, and the "missing from the feed" list);
 	- **after 3 trailing failures it raises one admin alert** (`TableHelpers::AdminAlerts`), which EV4's digest emails;
 	- **`documentText`** parses supplied text instead of fetching. That's for single-document formats only, and it's what the test_helper uses.
 
@@ -420,18 +458,27 @@ Doghouse Leathers' RSS is new products, not events.
 ### 8. Turning the feeds on (content-ops, rides GD4a)
 
 - [ ] 8.1 **Set `feed_format` on the sources the Findings marked "Yes":**
-	- **Squarespace:** Kremwerk complex, Cuff, Queer/Bar, Unicorn, PNW Black Pride, Three Dollar Bill;
-	- **ICS:** Pan Eros (with `title_exclude` = `Retail Hours`), Club Z, PFLAG, Rainbow City (the concerts feed only), Rain City Soccer (Kickabouts, Programs, Ripple Effect and Skills Clinics as four sources), Entre Hermanos, ECSA;
-	- **JSON-LD:** the Le Faux show page.
+	- **`squarespace`:** Kremwerk complex, Cuff, Queer/Bar, Unicorn, Rendezvous (with `include_text`), PNW Black Pride, Three Dollar Bill;
+	- **`ics`:** Club Z, PFLAG, Rainbow City (the concerts feed only), Rain City Soccer (Kickabouts, Programs, Ripple Effect and Skills Clinics as four sources), Entre Hermanos, ECSA. **Pan Eros / Gallery Erato is entered but left disabled** until OQ9 is settled;
+	- **`json_ld`:** the Le Faux show page;
+	- **`json_ld_list`:** El Sueñito's event sitemap (excluding `Bellingham`; include `queer|drag`).
 
 	Set each source's default categories and scene tags while entering it.
 - [ ] 8.2 **The asks**, for RT5's outreach (each yes recorded in `feed_permission_note`):
 	- **JSON permission** from the Squarespace venues (it's one request instead of one per event);
-	- TRACTION; Queer Social Club;
+	- **Queer Mountaineers:** does it keep one calendar (Google, Eventbrite organizer, SweatPals host) for all its gym nights? One organizer source would replace seven gym booking systems;
+	- TRACTION; Queer Social Club; Charlie's Queer Books;
 	- **Seattle Quake's calendar address**;
 	- **LeagueApps keys** from OutLoud, Queer City Sports and ECSA;
 	- Pride Sports Seattle; GSBA's calendar export; EverOut and Out x Out terms.
-- [ ] 8.3 **The GD4 corrections** from §Findings: the dead and hijacked domains, the renamed CC's, Club Z's real domain, and the three gone sources.
+- [ ] 8.3 **The GD4 corrections** from §Findings:
+	- the dead and hijacked domains (Neighbours, Great American Casino);
+	- the renamed CC's and Club Z's real domain;
+	- the gone sources;
+	- the parked Comet site and the unconfirmed Caliente night;
+	- the climb-night rotation (Half Moon's Tuesday, Edgeworks' missing 2nd Wednesday).
+
+	GD4 v0.1.1 carries the first batch.
 
 ### 9. Gates
 
@@ -449,7 +496,8 @@ Doghouse Leathers' RSS is new products, not events.
 
 *(Numbered for inline answers; recommendations included so "agreed" suffices.)*
 
-1. **Honor robots.txt, even where it's just Squarespace's default?** Squarespace blocks its own JSON and ICS links for every crawler on every site. The venues almost certainly never chose that and probably don't know. Ignoring it would be technically easy, and it's one request per venue instead of one per event. But a site that asks venues for trust shouldn't start by ignoring their sites' stated rules. *Rec: honor it. Use the RSS-plus-event-pages path, which robots.txt allows, and ask each venue for JSON permission in RT5's "you're listed" outreach. A yes goes in `feed_permission_note`, and that source switches to the faster path with the same keys.*
+1. **Honor robots.txt, even where it's just Squarespace's default?** Squarespace blocks its own JSON and ICS links for every crawler on every site. The venues almost certainly never chose that and probably don't know. Ignoring it would be technically easy, and it's one request per venue instead of one per event. But a site that asks venues for trust shouldn't start by ignoring their sites' stated rules. *Rec: honor it for every page EV6 reads. Use the RSS-plus-event-pages path, which robots.txt allows, and ask each venue for JSON permission in RT5's "you're listed" outreach. A yes goes in `feed_permission_note`, and that source switches to the faster path with the same keys.*
+	- **The one exception, subscription calendars.** Google's robots.txt says `Disallow: /` for all of `calendar.google.com`, including the public `.ics` links Google itself offers for "subscribe from any calendar app." Every phone's calendar app fetches those links without asking robots.txt, because robots.txt is for crawlers of web pages. *Rec: fetch an `ics` source the way a calendar app does, with no robots check, and only ever enter a whole-calendar subscription link the publisher offers (pin-down 11). If you'd rather be stricter, the cost is losing Rain City, Club Z and Pan Eros until each one says yes.*
 2. **Change honuware, or keep the fetch options in this app?** Safe fetching needs a timeout, a size cap and the private-address check inside curl, and today's honuware HTTP client has none of them. The change is small and additive, and the timeout would also protect the scheduler from a hung server. But it costs a cross-repo bump. *Rec: honuware (§1), bundled with EV4's H13 change into one bump. Fallback: an app-side `FeedHttpClient` implementing the same interface on libcurl, if the bump is inconvenient. It can move to honuware later.*
 3. **Should trusted feeds skip review?** A venue's own calendar is first-party: Kremwerk's 25 events would otherwise be 25 clicks a week. The risk is a feed posting something we wouldn't list. *Rec: build `auto_approve` but leave it off everywhere at launch. Turn it on per source after a month of imports a curator never had to reject.*
 4. **What happens when an event vanishes from a feed?** It might be cancelled, or the feed might just be partial: Squarespace and The Events Calendar both page at 30. Pulling it automatically would pull real events. *Rec: list vanished events in the run's details for a curator, and act only on explicit cancellations (pin-down 8). Revisit after a few weeks of real runs.*
@@ -458,10 +506,34 @@ Doghouse Leathers' RSS is new products, not events.
 	- RT5 signs up as an Evvnt publisher, to measure what it would actually add.
 	- The LeagueApps keys are asked for in 8.2.
 	- An Eventbrite API adapter can be a later small bucket if EV3 submissions show demand.
-6. **CC's Seattle's embedded Wix data.** CC's has the right times only inside the page's hidden data (the visible page is 8 hours off). An adapter would be bespoke, for one bar, on an undocumented structure. *Rec: no adapter. Hand-enter CC's weekly nights as series (GD4 §4.8). If its schedule churns, EV5 reads the page.*
+6. **One-venue undocumented data.** Four venues expose event data that only their own site's code uses:
+	- CC's Seattle's hidden Wix data (the visible page is 8 hours off);
+	- Stoup's events endpoint (no year in its list);
+	- Phoenix's Shopify calendar app (one time field claims UTC but isn't);
+	- West Seattle Bowl's widget (stale, and its host's robots.txt says `Disallow: /`).
+
+	Each adapter would be bespoke, for one venue, on a structure that can change without notice. *Rec: no adapters. Their queer nights are mostly stable rituals (Board Gayme Night, CC's weekly nights), so hand-enter them as series (GD4 §4.8). EV5 reads the pages if a schedule churns.*
 7. **All-day events.** Some calendar entries have a date but no time: 22 of Pan Eros's, for example, and multi-day festivals often come this way. The events pages have no all-day display, so they'd show as midnight. *Rec: skip them at first (counted in the run), and hand-enter the few that matter. An "all day" display is a small EV2 follow-up if they pile up.*
 8. **Cancelled events: disappear or show "Cancelled"?** Pin-down 8 takes a cancelled event off the site by returning it to pending. Someone who planned to go might prefer seeing "Cancelled" on it. *Rec: take it off for now. A public "Cancelled" badge needs a status EV1 doesn't have, and can come with EV2 polish if people ask.*
+9. **Adult events have nowhere to go yet.** The guide's venues, organizations, places and pages each have an 18+ flag and sit behind GD3's 18+ gate. **Events don't**: an approved event shows on `/events`, the home-page strip and the ICS feeds for everyone. Pan Eros's calendar, the richest feed found, is mostly kink and sex-positive education ("Men Tying Men", play parties, Consent Academy). Approving them today would put 18+ listings on the main calendar with no gate. *Rec:*
+	- **leave Pan Eros disabled for now** (8.1). Any other event a curator judges 18+ stays unapproved until the flag exists;
+	- **add an events 18+ flag as a small Stream A follow-up:**
+		- `events.adult` and `series.adult`, with an event inheriting its series' flag;
+		- `event_sources.default_adult` for create-time, like the other defaults;
+		- an "18+" badge on cards, GD3's gate on the event page, and 18+ events left out of the home-page strip and the public ICS feeds.
+
+		It's EV2-sized polish, and GD10 needs it too.
+	- Then turn Pan Eros on, with its events defaulting to 18+.
 
 # Change Log
 
-- **11/1/2026 (v0.1)** — Initial draft, written after Mason asked whether the bars publish RSS or other feeds the AI scanner wouldn't need to read. It draws on three hand research passes over about 60 sources (bars and adult venues; mainstream venues and arts; orgs, leagues, platforms, aggregators and news). The answer: RSS rarely carries event dates. A dozen-odd sources publish real event data as Squarespace collections, calendar (ICS) feeds or event markup, and permission matters more than technology. The design: three deterministic parsers (ICS with real recurrence expansion, JSON-LD, Squarespace) behind one polite, robots-honoring fetcher with a URL guard; EV1's ingest door, plus four create-time rules (venue name match, default tags, series title match, trusted-source auto-approve) and a cancellation flag; a shared `scan_runs` audit table for EV5; an hourly EV4 job with a 60-second budget; and a proposed honuware fetch-options change (H14). Eight open questions.
+- **11/1/2026 (v0.1)** — Initial draft, written after Mason asked whether the bars publish RSS or other feeds the AI scanner wouldn't need to read.
+	- **Research:** three hand research passes over about 80 sources (bars and adult venues; mainstream venues, arts and climbing gyms; orgs, leagues, platforms, aggregators and news).
+	- **The answer:** RSS rarely carries event dates. About fifteen sources publish real event data as Squarespace collections, calendar (ICS) feeds or event markup, and permission matters more than technology.
+	- **The design:**
+		- deterministic readers (ICS with real recurrence expansion; event markup from one page, an RSS feed or sitemap, or Squarespace's RSS) behind one polite fetcher with a URL guard. It honors robots.txt for pages and fetches subscription calendars as a calendar app does;
+		- EV1's ingest door, plus four create-time rules (venue name match, default tags, series title match, trusted-source auto-approve) and a cancellation flag;
+		- a shared `scan_runs` audit table for EV5;
+		- an hourly EV4 job with a 60-second budget;
+		- a proposed honuware fetch-options change (H14).
+	- **Gaps found:** events have no 18+ flag, so Pan Eros waits (OQ9). Nine open questions.

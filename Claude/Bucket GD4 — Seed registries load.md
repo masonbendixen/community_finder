@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen · Levi Kuhn
 Last Updated: 11/1/2026
-Version: 0.1
+Version: 0.1.1
 tags:
 ---
 
@@ -117,21 +117,30 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 - `enabled`;
 - `notes`.
 
-**Check EV6's research table** ([[Bucket EV6 — Structured feed import]] §Findings) before entering a source. Where a machine-readable feed exists, its URL goes in and the kind is `ics_feed`, or whatever EV6 adds.
+**Check EV6's research table** ([[Bucket EV6 — Structured feed import]] §Findings) before entering a source. Where a machine-readable feed exists, its URL goes in, and once EV6's columns land, `feed_format` is set (`ics`, `squarespace` or `json_ld`). `kind` still says what the source is: Kremwerk stays `venue_site` with `feed_format = squarespace`.
+
+> **Corrections from the 11/1 feed research** (EV6 §Findings has the evidence). Apply them while entering:
+> - **Never link `neighboursnightclub.com`.** It now redirects to a gambling site. Neighbours is Instagram/Facebook-only until a new site appears, and whether it's open needs checking.
+> - **CC Attle's is now "CC's Seattle"** at `ccsseattle.com`. Club Z's site is **`thezclub.com`**, not clubzseattle.com (parked).
+> - **Dead sites:** `dieselseattle.com` (host error) and `changesinwallingford.com` (no DNS). Pony's certificate expired again on 11/1.
+> - **Gone:** The Gay Agenda (shut down), Different Spokes (no Seattle club found) and Team Seattle (dormant since about 2018). Enter them as closed if at all.
+> - Of the test Meetup groups, Another Gay Social Club and Seattle Gaymers return "Group not found", and Seattle Queer & Ally Hiking has had no events since 1/31/2026.
+> - Kremwerk's feed runs about 9 weeks ahead, not the appendix's 4 months.
+> - EverOut's robots.txt no longer blocks crawlers. Its terms still need checking, so it stays human-read until RT5 asks.
 
 **Sources never scraped** are still entered (`social`, `enabled = false`), so the registry is the complete map of where events come from and EV5 knows never to visit them.
 
 - **4.1 Venue calendars** *(claimed: ______)*. `venue_site` unless EV6 found a feed:
-	- [ ] Kremwerk + Timbre Room + Cherry complex (the appendix's "clean 4-month feed")
+	- [ ] Kremwerk + Timbre Room + Cherry complex (the appendix's "clean 4-month feed"; about 9 weeks ahead as of 11/1)
 	- [ ] Julia's on Broadway / Le Faux
 	- [ ] Unicorn / Narwhal
-	- [ ] Neighbours
+	- [ ] Neighbours *(its old domain is hijacked: `social` rows only)*
 	- [ ] Wildrose
 	- [ ] The Cuff Complex
 	- [ ] Queer/Bar *(remodeling since 7/2026; check it's reopened)*
 	- [ ] Massive
 	- [ ] Diesel
-	- [ ] CC Attle's
+	- [ ] CC's Seattle (formerly CC Attle's; `ccsseattle.com`)
 	- [ ] Lumber Yard Bar
 	- [ ] Southgate Roller Rink
 	- [ ] Rough & Tumble
@@ -176,7 +185,7 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 - **4.5 Aggregators** *(claimed: ______)*, `aggregator`, **`enabled = false` until permission or credit terms are settled** (RT5's coopetition outreach):
 	- [ ] Sapphie Taffy (consent and credit first; the brainstorm's rule)
 	- [ ] Queer Social Club (Seattle)
-	- [ ] The Gay Agenda (Seattle)
+	- [ ] ~~The Gay Agenda (Seattle)~~ *(shut down by 11/2026; skip)*
 	- [ ] seattleprideguide.com
 	- [ ] Do206
 	- [ ] Evvnt (publisher signup is RT5's)
@@ -184,7 +193,7 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 	- [ ] CHS Capitol Hill Seattle
 	- [ ] Seattle Gay News
 	- [ ] Seattle Gay Scene
-	- [ ] The Stranger / EverOut (read by humans; the brainstorm says they block scrapers, so `enabled = false` for any automated pass)
+	- [ ] The Stranger / EverOut (read by humans; `enabled = false` for any automated pass. The Stranger's RSS feeds are fine for EV5's monitors, and EverOut's robots.txt no longer blocks crawlers, but its terms need checking)
 - **4.7 Never-scrape social leads** *(claimed: ______)*, `social`, `enabled = false`, for humans to check for leads:
 	- [ ] @seattlequeerevents
 	- [ ] @bloom.seattle
@@ -464,4 +473,5 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 
 # Change Log
 
+- **11/1/2026 (v0.1.1)** — §4 picks up the 11/1 feed research from [[Bucket EV6 — Structured feed import]]: set `feed_format` where a feed exists. Plus a corrections callout covering the hijacked Neighbours domain, CC's and Club Z's real sites, dead sites, gone sources and missing Meetup groups, with inline notes on the affected rows.
 - **11/1/2026 (v0.1)** — Initial draft from the outline's GD4 blurb and do-first item, the brainstorm's Appendix A–H, GD1 §4–§8, GD2's tables and EV1's sources and series. The registries are laid out as claimable checklists, with the dropdown slice (§1) first and an optional bulk loader (§3, OQ1). Seven open questions.

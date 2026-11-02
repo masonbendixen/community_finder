@@ -73,7 +73,8 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 	| `cleanup_scaled_photos` | `/api/admin/cleanup_scaled_photos` | 86400 | `ImageHelper::DeleteScaledPhotosOlderThan` (scaled copies regenerate on demand) |
 	| `cleanup_idempotency_keys` | `/api/admin/cleanup_idempotency_keys` | 86400 | `IdempotencyKeys::DeleteExpiredIdempotencyKeys`, mirrored per SUTP Q12 even though CF barely uses keys yet |
 	| `notify_admin_alerts` | `/api/admin/notify_admin_alerts` | 3600 | Mails new `admin_alerts` rows to `admin_alerts_recipient` and stamps `admin_alerts_last_notified_us` forward. An empty recipient makes it a no-op. |
-	| `import_event_feeds` | *(EV6)* | **0** | reserved; EV6 adds the endpoint and flips the default |
+	| `import_event_feeds` | *(EV6)* | **0** | reserved. [[Bucket EV6 — Structured feed import]] §6 adds `/api/admin/import_event_feeds` and sets it to hourly (each tick imports what's due within a 60-second budget) |
+	| `cleanup_scan_runs` | *(EV6)* | *(added by EV6)* | daily once EV6's `scan_runs` table exists: deletes runs older than 180 days |
 	| `run_event_scan` | *(EV5)* | **0** | reserved, as SUTP Phase 12 specified |
 
 - **Two separate sweeps rather than one "archive" job.** They mean different things. An approved past event *happened*; it's history and should stay readable. A pending past event *never got decided*; it was never public and must not become public. Keeping them apart is what lets §3's visibility rule be simple: **archived events only ever come from approved ones.**
@@ -99,6 +100,7 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 - [ ] 1.1 In `components/platform/business_logic/auth/service_account.{h,cpp}`, `EnsureSchedulerServiceAccount` gains a `const std::vector<std::string_view>& permissionNames` parameter. It links the scheduler role to each named permission and throws if one is missing, as it does today for the hard-coded one. **Keep the old signature as a forwarder** that passes `{"manage_subscriptions"}`, with a comment marking it for removal, so knottyyoga compiles unchanged until its batched re-pin (OQ1). **Tests** (honuware): one permission; two; a missing one throws; the forwarder behaves exactly as before.
 - [ ] 1.2 The co-dev loop: CF builds against the local honuware tree (`HONUWARE_SRC_DIR`, the `x64-Debug-local` preset on Windows). Mason pushes honuware, then CF re-pins (`GIT_TAG`) and Claude verifies a strict pinned Linux gate (fresh clone, no override). knottyyoga's re-pin stays batched and isn't required here.
 - [ ] 1.3 Ledger: add the change as **H13** in [[Setting up the project]]'s cross-repo ledger, plus a follow-up to remove the forwarder once knottyyoga moves to the new signature.
+- [ ] 1.4 **Bundle with EV6's H14 if both are near.** [[Bucket EV6 — Structured feed import]] §1 proposes a second small, additive honuware change: fetch options on `HttpRequest` (timeout, size cap, private-address check). Making both in one honuware push saves a bump cycle. Neither needs knottyyoga to move.
 
 ### 2. Permission, account and seed (`business_logic/create_app_tables.cpp`, `database_helper/create_database.cpp`)
 

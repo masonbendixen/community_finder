@@ -459,7 +459,7 @@ Doghouse Leathers' RSS is new products, not events.
 	- The LeagueApps keys are asked for in 8.2.
 	- An Eventbrite API adapter can be a later small bucket if EV3 submissions show demand.
 6. **CC's Seattle's embedded Wix data.** CC's has the right times only inside the page's hidden data (the visible page is 8 hours off). An adapter would be bespoke, for one bar, on an undocumented structure. *Rec: no adapter. Hand-enter CC's weekly nights as series (GD4 §4.8). If its schedule churns, EV5 reads the page.*
-7. **All-day events.** Festivals and multi-day events (SEAF, some Pan Eros entries) come as all-day entries, and the events pages have no all-day display; they'd show as midnight. *Rec: skip them at first (counted in the run), and hand-enter the few that matter. An "all day" display is a small EV2 follow-up if they pile up.*
+7. **All-day events.** Some calendar entries have a date but no time: 22 of Pan Eros's, for example, and multi-day festivals often come this way. The events pages have no all-day display, so they'd show as midnight. *Rec: skip them at first (counted in the run), and hand-enter the few that matter. An "all day" display is a small EV2 follow-up if they pile up.*
 8. **Cancelled events: disappear or show "Cancelled"?** Pin-down 8 takes a cancelled event off the site by returning it to pending. Someone who planned to go might prefer seeing "Cancelled" on it. *Rec: take it off for now. A public "Cancelled" badge needs a status EV1 doesn't have, and can come with EV2 polish if people ask.*
 
 # Change Log

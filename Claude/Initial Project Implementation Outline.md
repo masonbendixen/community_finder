@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Active
 Authors: Mason Bendixen
-Last Updated: 10/29/2026
-Version: 0.4.3
+Last Updated: 11/1/2026
+Version: 0.5
 tags:
 ---
 # Overview
@@ -36,7 +36,8 @@ Five tracks. Sizes: **S** ≈ 1–2 working sessions · **M** ≈ a focused week
 - **EV2 — Events public UI.** SUTP 11 plus the real-usage views: Tonight / This Weekend / By Scene / By Neighborhood, month calendar, event detail, series pages ("T4T, 2nd Saturdays" as a page), per-event add-to-calendar — **plus the events distribution surface: per-category ICS export feeds and Event JSON-LD** (kept in this bucket so the events stream is fully self-contained; site-wide SEO stays in RT4). The manual loop (admin-entered → approved → visible) is the gate. *M · needs EV1.*
 - **EV3 — Submission pipeline.** Public submit form (the single-intake rule stated loudly), pending queue, admin review UI polish, submitter feedback. Light UGC — moderated before publish. *S · needs EV1 + accounts (done).*
 - **EV4 — Scheduled jobs.** SUTP 12: `communityfinder_helper` on `honuware_scheduler` — archive past events, token cleanup/hygiene mirror, admin-alerts digest, scheduler service account. *S · needs EV1; platform work (H9) already done.*
-- **EV5 — AI scanner & freshness verifier.** SUTP 13 plus the brainstorm's verifier role: per-source volatility cadence, scan_runs audit, verify-mode checks (URL alive, dates sane, closure signals) diffing into a review queue — for events *and* guide listings. The month-18 labor answer. *L · needs EV1, EV4; verification of listings also needs GD2.*
+- **EV6 — Structured feed import.** *(Added 11/1 per Mason's question whether the bars publish feeds. Numbered after EV5 but runs before it.)* A deterministic importer for the sources that publish machine-readable events: Squarespace event collections, calendar (ICS) feeds with real recurrence expansion, and schema.org event markup. It's polite (robots.txt honored, permission recorded per source, a URL guard against server-side request forgery) and goes through EV1's ingest door. It creates the `scan_runs` audit table EV5 reuses. The 11/1 research found about a dozen usable sources (four bars, Pan Eros, PFLAG, Rain City Soccer …), and that RSS rarely carries event dates. *M · needs EV1; EV4 for the schedule; one small honuware change (H14).*
+- **EV5 — AI scanner & freshness verifier.** SUTP 13 plus the brainstorm's verifier role: per-source volatility cadence, scan_runs audit, verify-mode checks (URL alive, dates sane, closure signals) diffing into a review queue — for events *and* guide listings. The month-18 labor answer. **EV6 takes every source with a feed, so EV5 scans only the rest, and reuses EV6's `scan_runs`, fetcher and RSS reader.** *L · needs EV1, EV4, EV6; verification of listings also needs GD2.*
 
 ## Track GD — Guide & content (the moat)
 
@@ -94,7 +95,7 @@ graph TB
   P0[Phase 0 — GD1 vocab + contracts + PL1 CI] --> SA & SB & SC & POOL
   subgraph SA[Stream A — Events]
     EV1 --> EV2 --> EV3
-    EV1 --> EV4 --> EV5
+    EV1 --> EV4 --> EV6 --> EV5
   end
   subgraph SB[Stream B — Guide structure]
     GD2 --> GD3 --> GD4b[GD4b seed load]
@@ -153,9 +154,10 @@ The heartbeat end-to-end: schema → endpoints → UI → intake → automation.
 
 - [ ] EV1 doc *(drafted 8/12 → [[Bucket EV1 — Events domain, server]]; approval pending)* · [ ] EV1 done — events domain, server
 - [ ] EV2 doc *(drafted 8/12 → [[Bucket EV2 — Events public UI]]; approval pending)* · [ ] EV2 done — events public UI + ICS/JSON-LD
-- [ ] GD4a done — seed ~40 event sources (rides EV1's admin CRUD; no separate doc)
-- [ ] EV3 doc · [ ] EV3 done — submission pipeline
-- [ ] EV4 doc · [ ] EV4 done — scheduled jobs
+- [ ] GD4a done — seed ~40 event sources (rides EV1's admin CRUD; *now covered by [[Bucket GD4 — Seed registries load]] §1–§4, drafted 11/1*)
+- [ ] EV3 doc *(drafted 11/1 → [[Bucket EV3 — Submission pipeline]]; approval pending)* · [ ] EV3 done — submission pipeline
+- [ ] EV4 doc *(drafted 11/1 → [[Bucket EV4 — Scheduled jobs]]; approval pending)* · [ ] EV4 done — scheduled jobs
+- [ ] EV6 doc *(drafted 11/1 → [[Bucket EV6 — Structured feed import]]; approval pending)* · [ ] EV6 done — structured feed import *(before EV5)*
 - [ ] EV5 doc · [ ] EV5 done — scanner & verifier *(fine to start after M3; it's the post-launch labor relief)*
 
 ## Stream B — Guide & directory structure *(owner: Mason)*
@@ -164,8 +166,8 @@ The moat's skeleton: directory schema → guide UI → data load. The editorial 
 
 - [ ] GD2 doc *(drafted 8/12 → [[Bucket GD2 — Directory data layer, server]]; approval pending)* · [ ] GD2 done — directory data layer (+ `venue_profiles` satellite)
 - [ ] GD3 doc *(drafted 8/12 → [[Bucket GD3 — Guide public UI]]; approval pending)* · [ ] GD3 done — guide public UI (scenes, profiles, neighborhoods, 18+ gate, link-out cards)
-- [ ] GD4b done — seed venues/orgs/health registries
-- [ ] GD8-flow done — the "pick your onramp" interactive bit (light code assist for the Pool's Freeze content)
+- [ ] GD4b done — seed venues/orgs/health registries *(drafted 11/1 → [[Bucket GD4 — Seed registries load]] §5–§9)*
+- [ ] GD8-flow done — the "pick your onramp" interactive bit (light code assist for the Pool's Freeze content) *(drafted 11/1 → [[Bucket GD8 — Freeze directory & pick your onramp]] §3: a client-only chooser at `/guide/onramp`)*
 
 ## Stream C — Launch & trust infra *(owner: John-Michael)*
 
@@ -190,12 +192,14 @@ Everything between "works locally" and "live, legal, findable."
 
 Each item is a standalone mini-doc with no code dependencies on the others; **drafting can start day one** from the research appendices — only *publishing* waits on GD3. Claim by adding a name.
 
-- [ ] GD5 — nightlife & scenes *(claimed: ________)*
-- [ ] GD6 — health & services *(claimed: ________)*
-- [ ] GD7 — new to Seattle *(claimed: ________)*
-- [ ] GD8 — Freeze directory & onramp content *(claimed: ________)*
-- [ ] GD9 — coming-out resources *(claimed: ________)*
-- [ ] GD10 — adult layer *(claimed: ________)*
+*(All six drafted 11/1. Each doc lays its pages out as claimable checklist items, so claim per page there, not only here.)*
+
+- [ ] GD5 — nightlife & scenes *(claimed: ________)* → [[Bucket GD5 — Nightlife & scenes content]]
+- [ ] GD6 — health & services *(claimed: ________)* → [[Bucket GD6 — Health & everyday services content]]
+- [ ] GD7 — new to Seattle *(claimed: ________)* → [[Bucket GD7 — New to Seattle]]
+- [ ] GD8 — Freeze directory & onramp content *(claimed: ________)* → [[Bucket GD8 — Freeze directory & pick your onramp]]
+- [ ] GD9 — "New to…" life-transition guides *(claimed: ________)* → [[Bucket GD9 — New to… life-transition guides]]
+- [ ] GD10 — adult layer *(claimed: ________)* → [[Bucket GD10 — Adult layer]]
 
 # Integration Milestones (sync points, not sequences)
 
@@ -262,6 +266,17 @@ Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can revie
 
 # Change Log
 
+- **11/1/2026 (v0.5)** — **Ten bucket docs drafted** (all awaiting review):
+	- **Events:** [[Bucket EV3 — Submission pipeline]], [[Bucket EV4 — Scheduled jobs]] and the new [[Bucket EV6 — Structured feed import]];
+	- **Guide:** [[Bucket GD4 — Seed registries load]], [[Bucket GD5 — Nightlife & scenes content]], [[Bucket GD6 — Health & everyday services content]], [[Bucket GD7 — New to Seattle]], [[Bucket GD8 — Freeze directory & pick your onramp]], [[Bucket GD9 — New to… life-transition guides]] and [[Bucket GD10 — Adult layer]].
+
+	**EV6 is new**, from Mason's question whether the bars publish RSS or other feeds. Three research passes on 11/1 checked about 60 sources. RSS rarely carries event dates, but about a dozen sources publish real event data (Squarespace collections, calendar feeds, event markup), so a deterministic importer runs before EV5's AI scanner. It's added to Track EV, Stream A and the dependency spine (EV4 → EV6 → EV5), and EV5's blurb now says it scans only what EV6 can't read.
+
+	**Two honuware changes are proposed, both small and additive, so knottyyoga needn't move:**
+	- **H13** (EV4 §1): the scheduler service account's permissions become a parameter;
+	- **H14** (EV6 §1): safe-fetch options on `HttpRequest`.
+
+	Bundling them saves a bump cycle. Stream rows and Pool rows are annotated with their docs, and GD9's row is renamed to match its 8/5 reframe.
 - **10/29/2026 (v0.4.3)** — GD2 OQ9 (f) logged a **do-first item in GD4's blurb:** before registry entry begins, switch the admin editor's fixed-value fields (EV1's and GD2's) to dropdowns.
 - **10/29/2026 (v0.4.2)** — EV2 OQ10 logged a **pre-launch bundle-size pass** in RT4's blurb: the 870 kB production initial bundle (500 kB budget) and the offline demo data every build carries. The future RT4 bucket doc inherits it.
 

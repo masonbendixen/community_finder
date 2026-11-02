@@ -245,12 +245,19 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 1. **Must people sign in to submit an event?** Signing in means registering and confirming an email first. That's a small hurdle for an organizer, but it gives us a real email to reply to, a way to stop a repeat spammer (disable the account), and a "My submissions" page with no extra machinery. The alternative is a no-account form that emails a confirmation link to whatever address is typed. That is friendlier, but it needs its own confirmation tokens, its own spam defenses, and a way to show status without an account. *Rec: signed in with a confirmed email at launch; revisit if the submission numbers say the hurdle is costing us.*
 	- Mason- They need to sign in to submit events.
 2. **Up to 12 dates, no "repeats forever."** A weekly event is listed by adding its next few dates and ticking "This is a regular thing," and a curator then decides whether it deserves a series page. The alternative is letting submitters set up a rule ("every 2nd Saturday"), but EV1 deliberately has no repeat rules (series are labels, not generators). *Rec: 12 dates, with series made by curators.*
+	- Mason- works for me
 3. **Rate limits: 10 dates waiting for review per person, and 5 submissions a day.** Enough for a busy organizer, small enough that one bad account can't flood the queue. *Rec: as stated; both are constants and easy to change.*
+	- Mason- Let's make this configurable in the admin console with bespoke UI.
 4. **One email per submission, when it's fully decided.** It lists each date's outcome and the curator's message. Per-date emails would spam a twelve-date organizer. No email at all would leave submitters guessing, which is how SGN's mail-and-fax calendar feels. *Rec: one email per submission; withdrawals send none.*
+	- Mason- I'll go with your recommendation.
 5. **No edits after submitting.** To fix a typo, a submitter withdraws and resubmits while it's still waiting, or writes to us once it's listed. Letting submitters edit approved events would reopen review every time. Letting them edit pending ones is possible, but it adds a form state and a race with a curator mid-review. *Rec: no edits at launch. CM1's correction flow covers listed events later.*
+	- Mason- I'll go with your recommendation.
 6. **Does submission need the terms of service first?** Submissions are user-generated content, so RT2's terms should say how we use what's submitted. *Rec: build it now. The public launch (M3) already requires RT2, so the terms exist before strangers can reach the form. No feature switch is needed.*
+	- Mason- I'll go with your recommendation.
 7. **Photos from submitters: not yet.** A flyer image would make listings nicer, but photos raise the consent and no-outing questions CM3 exists to answer (a party photo can out someone), and they invite storage abuse. *Rec: no submitter photos in EV3; a curator can add the flyer on review through the existing photo pipeline.*
+	- Mason- I'll go with your recommendation.
 8. **Is a link required?** A link (ticket page, Instagram post, venue page) is the fastest way for a curator to check that an event is real. But some grassroots events have none. *Rec: optional, with the queue flagging "no link" so the curator knows to look harder.*
+	- Mason- I'll go with your recommendation.
 
 # Change Log
 

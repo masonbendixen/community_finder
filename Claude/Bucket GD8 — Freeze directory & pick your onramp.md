@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/1/2026
-Version: 0.1.1
+Version: 0.1.2
 tags:
 ---
 
@@ -91,7 +91,7 @@ The same six steps as every Pool bucket (spelled out in [[Bucket GD5 — Nightli
 - [ ] 2.3 `onramp-nerdy` *(claimed: ______)*: Seattle Gaymers, Board Gayme Night at Stoup, Queer Geek!, Phoenix Comics, trivia nights. Scene `geek`.
 - [ ] 2.4 `onramp-sober` *(claimed: ______)*: gay AA (Gay Men in Recovery; Gay & Lesbian Beginners), linking seattleaa.org's meeting finder for current times rather than listing times that change; Qu-Art's sober artists' night; sober-friendly socials. Scene `sober`. Links GD9's sober lane.
 - [ ] 2.5 `onramp-outdoorsy` *(claimed: ______)*: OutVentures, Queer Mountaineers (the queer night at every climbing gym, the strongest entry point here), SkiBuddies, and Seattle Queer & Ally Hiking. The feed research on 11/1 found that last group's Meetup has had no events since 1/31/2026, so confirm it's active. **Different Spokes is out**: there's no Seattle club now.
-- [ ] 2.6 `onramp-40-plus` *(claimed: ______)*: GenPride, Rainbow Elder Play & Connect, the choruses (a famously multigenerational onramp), Banter Date's age-segmented socials. Scene `elders`. Links GD9's newly-out-older lane.
+- [ ] 2.6 `onramp-40-plus` *(claimed: ______)*: GenPride, Rainbow Elder Play & Connect, the choruses (a famously multigenerational onramp), Banter Date's age-segmented socials, and Mature Friends (a 40+ club, \$40 a year; GD9's research found a full November 2026 calendar). Scene `elders`. Links GD9's out-later-in-life lane (`new-to-out-later`). Leave out Seattle Prime Timers unless someone confirms it's active: its site's certificate has expired.
 - [ ] 2.7 `onramp-bipoc` *(claimed: ______)*: PNW Black Pride's The Gathering, Entre Hermanos, UTOPIA WA, Eastside QTPOC Collective, Beardslee Latin Night. Organizers credited by name; labels as the organizers use them. Scene `bipoc`.
 - [ ] 2.8 `onramp-new-in-town` *(claimed: ______)*: Another Gay Social Club's monthly socials (its Meetup group returned "not found" on 11/1, so find where it organizes now), the two lowest-barrier sports, one volunteer shift, and GD7's first-90-days page.
 - [ ] 2.9 `onramp-eastside` *(claimed: ______)*: the monthly Eastside LGBTQ+ Happy Hour, the East King County All Ages Meetup, VALA figure drawing in Redmond, Rainbow on the Eastside, Eastside QTPOC Collective, and the 2 Line to Capitol Hill for the rest. Links GD7's Eastside page. *Mason's home turf: he's the natural checker.*
@@ -135,6 +135,9 @@ The same six steps as every Pool bucket (spelled out in [[Bucket GD5 — Nightli
 
 # Change Log
 
+- **11/1/2026 (v0.1.2)** — From [[Bucket GD9 — New to… life-transition guides]]'s research:
+	- 2.6 adds Mature Friends and names GD9's lane slug;
+	- Seattle Prime Timers stays off unless someone confirms it's active.
 - **11/1/2026 (v0.1.1)** — Notes from [[Bucket EV6 — Structured feed import]]'s research:
 	- Different Spokes is out (no Seattle club);
 	- Seattle Queer & Ally Hiking's Meetup has been quiet since 1/31/2026, and Another Gay Social Club's Meetup group is gone, so confirm where both organize now;

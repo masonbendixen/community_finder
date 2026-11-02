@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen · Levi Kuhn
 Last Updated: 11/1/2026
-Version: 0.1.1
+Version: 0.1.2
 tags:
 ---
 
@@ -406,6 +406,12 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 	- [ ] White Center Pride
 - **6.8 Sex-positive** *(claimed: ______)*. `adult` = true:
 	- [ ] Pan Eros Foundation / Seattle Erotic Art Festival
+- **6.9 Added by GD9's research.** [[Bucket GD9 — New to… life-transition guides]] §3 lists the groups its lanes name that this list doesn't carry yet. Enter them with 6.3–6.5:
+	- parenting: GFAS, Seattle Gay Dads, PEPS's LGBTQIA+ Parents group;
+	- faith and secular: Emerald City MCC, Tikvah Chadashah, Dharma Buddies, Sunday Assembly Seattle, Seattle Atheists;
+	- 40+: Mature Friends.
+
+	It also suggests making Pride Across the Bridge the organization, with figure drawing as one of its series. The same research couldn't confirm Queer Dharma (6.4); check it on entry.
 
 ### 7. GD4b — Places (Stream B)
 
@@ -482,6 +488,7 @@ So **nothing is entered from the appendix as-is**. Every row is checked against 
 
 # Change Log
 
+- **11/1/2026 (v0.1.2)** — Added §6.9, which points at GD9 §3's new organization rows (parenting, faith and secular, 40+) from GD9's 11/1 research.
 - **11/1/2026 (v0.1.1)** — §4 picks up the 11/1 feed research from [[Bucket EV6 — Structured feed import]]: set `feed_format` where a feed exists. Plus a corrections callout covering:
 	- the hijacked Neighbours and Great American Casino domains (the casino closed 11/1);
 	- CC's and Club Z's real sites;

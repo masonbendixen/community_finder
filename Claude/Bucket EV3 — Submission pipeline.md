@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 11/1/2026
-Version: 0.1
+Last Updated: 11/2/2026
+Version: 0.2
 tags:
 ---
 
@@ -38,6 +38,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 - Submitter endpoints under `/api/event_submissions*`, plus an extension of the review endpoint.
 - The `/events/submit` page and the `/account/submissions` page.
 - Queue polish in `/admin/events`.
+- The **Submission limits** admin page and its endpoint, so curators can change the rate limits without a deploy (OQ3).
 - test_helper commands and tests at every layer.
 
 **Out (explicit non-goals):**
@@ -77,11 +78,14 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- **Venue:** an unknown `venue_id` is a 400.
 	- **Error codes:** `TITLE_LENGTH`, `START_TOO_SOON`, `START_TOO_FAR`, `END_BEFORE_START`, `TOO_LONG`, `TOO_MANY_DATES`, `DUPLICATE_DATE`, `BAD_URL`, `FIELD_TOO_LONG`, `VENUE_NOT_FOUND`, `RATE_LIMITED`, `EMAIL_NOT_VERIFIED`.
 - **Place:** pick a venue from the list (type-ahead over the public `venues` read, which is already in `allowed_tables`), or type a place name and address into `location_text`. A curator can attach or create the venue while reviewing.
-- **Rate limits (OQ3):**
-	- at most **10 pending dates** per person across all their submissions;
-	- at most **5 submissions** per rolling 24 hours.
+- **Rate limits (OQ3: admin-configurable, with a page of their own):**
+	- at most **10 pending dates** per person across all their submissions, by default;
+	- at most **5 submissions** per rolling 24 hours, by default.
 
-	Exceeding either is a 429 with a plain message ("You have 10 dates waiting for review. We'll get to them soon."). The counts come from the tables, so they need no new infrastructure.
+	Exceeding either is a 429 with a plain message that uses the current number ("You have 10 dates waiting for review. We'll get to them soon."). The counts come from the tables, so they need no new infrastructure.
+	- **Where the numbers live:** two app keys in `config_secrets`, with their defaults (10 and 5) in `app_secret_values.cpp`. That is honuware's store for site settings, and the seam `app_secret_keys.h` reserves for "a domain feature [that] needs a tunable." The generic table editor can't reach `config_secrets`, so the only way to change them is a dedicated endpoint that validates what it writes. honuware's Site Theme editor works the same way. There's no new table and no migration: a key missing from an older database reads as its default.
+	- **Allowed ranges:** pending dates 1–100, and submissions per 24 hours 1–50. A stored value that is blank, not a number, or out of range reads as the default, so a bad value can never switch a limit off.
+	- **The page:** `/admin/events/settings`, titled "Submission limits" and linked from the `/admin/events` header. It has two number fields, each with a one-line explanation and its default shown beside it, plus Save and "Reset to defaults." Anyone with `manage_events` can open it (OQ9).
 - **Duplicate hints, never blocks.** For each date, the server looks for approved or pending events that start within ±3 hours and either have the same venue or the same normalized title (lower-cased, punctuation stripped). Matches come back to the submitter ("Is it one of these?") and show in the queue as "possible duplicate of #123." Nothing is refused for being similar.
 - **Abuse basics:**
 	- a hidden honeypot field: if it's filled in, the server answers 200 and writes nothing;
@@ -114,7 +118,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- `submitter_note` (text, default `''`)
 	- `relationship` (CHECK `IN ('organizer','venue','performer','attendee','other')`, default `'other'`)
 	- `regular_thing` (bool, default false)
-	- `reject_reason` (nullable; CHECK in the six reasons plus `withdrawn`)
+	- `reject_reason` (nullable; CHECK in the six reasons plus `withdrawn` and `expired`, the last for EV4's expiry sweep, so "My submissions" can say "the date passed before we reviewed it")
 	- `message_to_submitter` (default `''`)
 	- `decision_notified_us` (nullable)
 	- `created_us`, `updated_us`
@@ -125,11 +129,12 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- **Pre-launch, a `--recreate_database` covers it.** Once real data exists, a column on an existing table needs a migration in `BuildAllMigrations`. Note it in the PR.
 - [ ] 1.3 `create_app_tables.cpp` (the three-place rule):
 	- admin metadata for `event_submissions`: top-level, friendly names, display template `Submission #{id}`, and column info with the person id and timestamps read-only;
-	- nest it under `events`;
+	- ~~nest it under `events`~~ **top-level only, not nested.** The editor nests a table under the tables it has an FK onto. Here the FK runs from `events` to `event_submissions`, so the only way to nest would be marking `events` itself as nested, which would also put it under venues, series and sources. *(Corrected in v0.2.)*
+	- `events.submission_id` gets column info too, read-only: the pipeline sets it, and a curator never should;
 	- add `event_submissions` to the events-domain `admin_table_permissions` list, which becomes 12 tables;
 	- **not** in `allowed_tables`.
 
-	**Tests:** `make_database_info_test.cpp` (columns, CHECKs, the FK, the index) and `create_app_tables_test.cpp` (the metadata, the twelve-table permission map, and staying off the public list).
+	**Tests:** `make_database_info_test.cpp` (columns, CHECKs, the FK) and `create_app_tables_test.cpp` (the metadata, the twelve-table permission map, staying off the public list, not nested, the read-only pipeline columns). The two indexes are live-only, as EV1's are (the harness builds tables from `MakeDatabaseInfo`), so §7.3's live seed check covers them.
 
 ### 2. table_helpers
 
@@ -145,7 +150,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 ### 3. business_logic (`src/business_logic/events/`)
 
 - [ ] 3.1 `submission_helper.{h,cpp}`, in the knottyyoga style: request/result structs and error-code strings, no exceptions.
-	- `Submit(Transaction&, const SubmissionRequest&, personId) → SubmitResult`, in two passes like `IngestEvents`. The first validates everything and checks the rate limits. The second writes the envelope, the dates and the tag assignments. The result carries the ids, any ignored slugs, and the duplicate hints per date.
+	- `Submit(Transaction&, const SubmissionRequest&, personId) → SubmitResult`, in two passes like `IngestEvents`. The first validates everything and checks the rate limits, read through §3.3 on every call so a change on the settings page applies to the very next submission. The second writes the envelope, the dates and the tag assignments. The result carries the ids, any ignored slugs, and the duplicate hints per date.
 	- `GetMySubmissions(Transaction&, personId) → std::vector<SubmissionView>`, with each date's status, and reason and message where decided.
 	- `Withdraw(Transaction&, submissionId, personId)`: `NOT_YOURS`, `NOTHING_PENDING`.
 	- `OnDateReviewed(Transaction&, eventId) → std::optional<DecisionNotice>`. When the event belongs to a submission with no pending dates left and no notice sent yet, it returns the notice (recipient, per-date outcomes, message).
@@ -153,7 +158,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 	**Tests** (`submission_helper_test.cpp`):
 	- every validation code;
-	- both rate limits, at the boundary;
+	- both rate limits, at the boundary, at the defaults and at a lowered setting;
 	- the honeypot writing nothing;
 	- dates landing `pending`/`user_submitted` with the creator set and no source;
 	- the 13th date refused;
@@ -162,6 +167,19 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- `OnDateReviewed` returning a notice only after the last pending date, and only once;
 	- an unverified account refused.
 - [ ] 3.2 `submission_email.{h,cpp}`: `RenderDecisionEmail(notice, siteName, siteUrl) → {subject, body}`, using `FormatString` placeholders and `NormalizeCrLf`. **Test:** all listed, all not listed, a mix, the message included, no message.
+- [ ] 3.3 `submission_settings.{h,cpp}` (OQ3), the rate limits as settings:
+	- **Keys:** `kEventSubmissionMaxPendingDates` (`"event_submission_max_pending_dates"`) and `kEventSubmissionMaxPerDay` (`"event_submission_max_per_day"`) go in `app_secret_keys.h`, the app's first keys of its own. Their defaults, `"10"` and `"5"`, go in `app_secret_values.cpp`.
+	- `struct SubmissionLimits { int64_t maxPendingDates; int64_t maxSubmissionsPerDay; }`, plus each limit's default and range as constants, so the endpoint and the page never hard-code them.
+	- `LoadSubmissionLimits(SecretsHelper&, Transaction&) → SubmissionLimits`. A blank, non-numeric or out-of-range stored value reads as the default.
+	- `SaveSubmissionLimits(SecretsHelper&, Transaction&, partial) → SaveLimitsResult`. Only the fields present are written. Any out-of-range field refuses the whole save with `LIMIT_OUT_OF_RANGE` and the field's name, and nothing is written (the Site Theme rule: a half-saved form is worse than a refused one).
+
+	**Tests** (`submission_settings_test.cpp`):
+	- the defaults with nothing stored;
+	- save then load;
+	- blank, junk and out-of-range stored values each read as the default;
+	- a save with one bad field writes neither field;
+	- saving one field leaves the other alone;
+	- `AppSecretValuesTest.FrameworkAndAppKeySetsDoNotOverlap` still green with the two new keys.
 
 ### 4. endpoints (EV1 §5 conventions: PascalCase methods, volatile anchors, `handle_full` tests with `ThreadPool::Shutdown()`)
 
@@ -182,7 +200,12 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 	The fake mail sender is the framework's test hook. Check `util/mail/` for the exact seam before writing these.
 - [ ] 4.3 The queue needs to read submissions. Rather than a new endpoint, `event_submissions` goes into the generic CRUD access through its `manage_events` table permission (§1.3), the way EV2 §3.7 reads `events`. **Test:** `crud_test.cpp`, where an admin reads it and a signed-out caller is refused.
-- [ ] 4.4 Shared-file one-liners: the anchor, the CMakeLists sources.
+- [ ] 4.4 Shared-file one-liners: the anchors, the CMakeLists sources.
+- [ ] 4.5 `admin_event_submission_settings.cpp` (OQ3), one TU and one anchor, gated by `manage_events` (OQ9):
+	- `GET /api/admin/event_submission_settings` → `{max_pending_dates: {value, default, min, max}, max_submissions_per_day: {…}}`;
+	- `PUT /api/admin/event_submission_settings` with `{max_pending_dates?, max_submissions_per_day?}` → the same shape, as saved.
+
+	**Tests:** 401 signed out · 403 without `manage_events` · GET returns the defaults and ranges · PUT one field leaves the other · 400 `LIMIT_OUT_OF_RANGE` names the field and writes nothing · after lowering the pending limit to 2, the next `POST /api/event_submissions` over it is a 429 whose message says 2.
 
 ### 5. client (`ui/src/app/`)
 
@@ -215,6 +238,15 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- the in-page reject panel (reason, curator note, message to the submitter), replacing `window.prompt`.
 
 	**Specs:** grouping; approve-all calls the group route once; the reject panel sends all three fields; non-submitted events look as before.
+- [ ] 5.6 **Submission limits page** (OQ3): `pages/admin/submission-settings.*` at `/admin/events/settings`, registered ahead of any `/admin/events/:id` route, with a "Submission limits" link in the `/admin/events` header.
+	- `getSubmissionSettings` and `saveSubmissionSettings` go on `events-admin-access` (interface, HTTP and mock).
+	- **The page:**
+		- "Dates one person can have waiting for review" and "Submissions one person can send in 24 hours";
+		- each a number field with its default and allowed range shown beside it, taken from the GET rather than hard-coded;
+		- Save (enabled only when something changed) and "Reset to defaults";
+		- a server `LIMIT_OUT_OF_RANGE` shown next to the field it names.
+
+	**Specs:** loads and shows the values; Save sends only the changed fields; reset fills in the defaults; a server range error lands on the right field; signed-out and non-curator visitors are redirected, the same as `/admin/events`.
 
 ### 6. test_helper (`src/test_helper/commands/submission_commands.{h,cpp}`)
 
@@ -228,7 +260,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 - [ ] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit (EV1 §7.2 policy).
 - [ ] 7.2 `ng build` for local, development and production; vitest green, with the new count recorded.
-- [ ] 7.3 Live seed check after §1 (destructive, announced): `event_submissions` present with its CHECKs and index, `events.submission_id` FK present, twelve tables mapped to `manage_events`, nothing new in `allowed_tables`.
+- [ ] 7.3 Live seed check after §1 (destructive, announced): `event_submissions` present with its CHECKs and index, `events.submission_id` FK and `events_submission_idx` present, twelve tables mapped to `manage_events`, nothing new in `allowed_tables`. The rate-limit keys need no seed check: a database without them reads the defaults (§3.3).
 - [ ] 7.4 **Manual loop (Mason or Levi):**
 	1. Register a fresh account and confirm its email. The form refuses it before confirmation.
 	2. Submit a three-date event.
@@ -237,6 +269,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	5. "My submissions" shows Listed, Listed, Not listed with the message.
 	6. Submit again and withdraw it.
 	7. Push past the pending limit and read the 429 message.
+	8. On the Submission limits page, lower the pending limit to 2. The next submission that would go over 2 gets a 429 that says 2. Reset to defaults.
 
 # Open Questions
 
@@ -244,21 +277,42 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 1. **Must people sign in to submit an event?** Signing in means registering and confirming an email first. That's a small hurdle for an organizer, but it gives us a real email to reply to, a way to stop a repeat spammer (disable the account), and a "My submissions" page with no extra machinery. The alternative is a no-account form that emails a confirmation link to whatever address is typed. That is friendlier, but it needs its own confirmation tokens, its own spam defenses, and a way to show status without an account. *Rec: signed in with a confirmed email at launch; revisit if the submission numbers say the hurdle is costing us.*
 	- Mason- They need to sign in to submit events.
+	- Claude- Decided (11/2) — signed in with a confirmed email, as pinned ("Who can submit"); no body change.
 2. **Up to 12 dates, no "repeats forever."** A weekly event is listed by adding its next few dates and ticking "This is a regular thing," and a curator then decides whether it deserves a series page. The alternative is letting submitters set up a rule ("every 2nd Saturday"), but EV1 deliberately has no repeat rules (series are labels, not generators). *Rec: 12 dates, with series made by curators.*
 	- Mason- works for me
+	- Claude- Decided (11/2) — 1–12 dates, with series made by curators, as pinned; no body change.
 3. **Rate limits: 10 dates waiting for review per person, and 5 submissions a day.** Enough for a busy organizer, small enough that one bad account can't flood the queue. *Rec: as stated; both are constants and easy to change.*
 	- Mason- Let's make this configurable in the admin console with bespoke UI.
+	- Claude- Decided (11/2) — configurable, with a page of its own. 10 and 5 stay as the defaults.
+		- **Storage:** two app keys in `config_secrets`, honuware's store for site settings. It's out of the generic editor's reach, so only the new endpoint can change it. This is the Site Theme editor's pattern, and it needs no new table or migration.
+		- **Ranges:** 1–100 and 1–50. A bad stored value reads as the default.
+		- **The page:** "Submission limits," at `/admin/events/settings`.
+		- **Where it's in the doc:** the "Rate limits" pin-down, new items §3.3, §4.5 and §5.6, and step 8 of the manual loop.
+		- Two follow-ups are new questions: OQ9 (who can change the limits) and OQ10 (a pause switch).
 4. **One email per submission, when it's fully decided.** It lists each date's outcome and the curator's message. Per-date emails would spam a twelve-date organizer. No email at all would leave submitters guessing, which is how SGN's mail-and-fax calendar feels. *Rec: one email per submission; withdrawals send none.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (11/2) — one email per submission, sent when it's fully decided; withdrawals send none. As pinned; no body change.
 5. **No edits after submitting.** To fix a typo, a submitter withdraws and resubmits while it's still waiting, or writes to us once it's listed. Letting submitters edit approved events would reopen review every time. Letting them edit pending ones is possible, but it adds a form state and a race with a curator mid-review. *Rec: no edits at launch. CM1's correction flow covers listed events later.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (11/2) — no edits after submitting; withdraw and resubmit instead. As pinned; no body change.
 6. **Does submission need the terms of service first?** Submissions are user-generated content, so RT2's terms should say how we use what's submitted. *Rec: build it now. The public launch (M3) already requires RT2, so the terms exist before strangers can reach the form. No feature switch is needed.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (11/2) — build it now. RT2's terms gate the public launch, not this bucket. No body change.
 7. **Photos from submitters: not yet.** A flyer image would make listings nicer, but photos raise the consent and no-outing questions CM3 exists to answer (a party photo can out someone), and they invite storage abuse. *Rec: no submitter photos in EV3; a curator can add the flyer on review through the existing photo pipeline.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (11/2) — no submitter photos; a curator adds the flyer on review. As scoped; no body change.
 8. **Is a link required?** A link (ticket page, Instagram post, venue page) is the fastest way for a curator to check that an event is real. But some grassroots events have none. *Rec: optional, with the queue flagging "no link" so the curator knows to look harder.*
 	- Mason- I'll go with your recommendation.
+	- Claude- Decided (11/2) — optional, with the "no link" flag in the queue. As pinned; no body change.
+9. **Who can change the submission limits?** Anyone with `manage_events` (the curators reviewing the queue), or full admins only? The curators are the people who feel a flood first and who know when a big weekend needs more room. A full admin can already do everything a curator can. The risk of letting curators change them is small: the ranges are capped (100 dates, 50 submissions a day), and a curator can already approve or reject anything. *Rec: anyone with `manage_events`.*
+10. **Should the limits page also have a "pause submissions" switch?** If a spam wave hits from many new accounts at once, the per-person limits don't help, and today the only fix is disabling accounts one by one. A switch would close the form for everyone with a "we're not taking submissions right now" notice. It's about an hour's work on the same page, but it's one more thing that can be left on by accident. *Rec: not at launch. Add it the first time a wave happens, since the page and endpoint will already exist. The minimum of 1 means the limits themselves can't be used to close the form.*
 
 # Change Log
 
+- **11/2/2026 (v0.2)** — Mason answered OQ1–OQ8, and all but OQ3 went with the recommendation.
+	- **OQ3:** the rate limits become admin-configurable on a "Submission limits" page. This adds the Scope line, the rewritten "Rate limits" pin-down, new items §3.3, §4.5 and §5.6, and step 8 of the manual loop. It also raises two new questions, OQ9 and OQ10.
+	- **Two §1 corrections found while implementing it:**
+		- `event_submissions` is top-level, not nested under `events`, because the FK runs the other way (1.3);
+		- `reject_reason` also allows `expired`, for EV4's expiry sweep (1.1).
+	- **§1 (db_schema) implemented.**
 - **11/1/2026 (v0.1)** — Initial draft from the outline's EV3 blurb, the brainstorm's intake stack, EV1's reserved `user_submitted` origin and review endpoint, and EV2 §3.7's queue (including its OQ9 (j) hand-off of the reject pop-up). Eight open questions.

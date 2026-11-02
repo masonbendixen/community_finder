@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 11/1/2026
-Version: 0.1
+Last Updated: 11/2/2026
+Version: 0.1.1
 tags:
 ---
 
@@ -79,6 +79,7 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 
 - **Two separate sweeps rather than one "archive" job.** They mean different things. An approved past event *happened*; it's history and should stay readable. A pending past event *never got decided*; it was never public and must not become public. Keeping them apart is what lets §3's visibility rule be simple: **archived events only ever come from approved ones.**
 - **Expired submissions get their email.** When `expire_unreviewed_events` closes the last pending date of an EV3 submission, it calls EV3's `OnDateReviewed` and sends the decision email with a "we didn't get to this in time, sorry" line. If EV3 hasn't landed, the hook is a no-op stub that EV3 fills in. Whichever bucket lands second wires it.
+	- **The reason it records** *(added 11/2, EV3 v0.2)*: EV3's `event_submissions.reject_reason` allows `expired` for this sweep. When the sweep rejects a submitted date and the submission has no reason yet, it sets `expired`, so "My submissions" can say "the date passed before we reviewed it." A reason a curator already set stays as it is.
 - **Archived means "past and settled," not "hidden" (OQ3).** Today, public reads mean `status = 'approved'`, so archiving an event would empty the past days of the month calendar and turn every old event's link into a 404. That breaks shared links and search results. The rule becomes **public = `approved` or `archived`**:
 	- **The upcoming list and the ICS feeds don't change.** Their windows start at "now" (the feed at now − 1 day), so they still show what's coming.
 	- **The calendar's past days keep their events.**
@@ -190,4 +191,5 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 
 # Change Log
 
+- **11/2/2026 (v0.1.1)** — The expiry sweep now sets EV3's new `expired` reject reason on a submission that has none yet (the "Expired submissions get their email" pin-down). From EV3 v0.2 §1.1.
 - **11/1/2026 (v0.1)** — Initial draft. It supersedes SUTP Phase 12, grounded in the honuware scheduler at the pinned SHA, knottyyoga's catalog and hygiene endpoints, and CF's deferred service-account comment. Found while drafting: honuware's `EnsureSchedulerServiceAccount` still requires knottyyoga's `manage_subscriptions`, so a small honuware change comes first (§1, proposed ledger item H13). Also proposed: past events stay publicly readable once archived (§3, OQ3), and unreviewed past events are rejected rather than archived (OQ4). Six open questions.

@@ -187,6 +187,8 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 - *1 in `app_secret_values_test.cpp`;*
 - *1 in `event_submissions_test.cpp`, for `GetSubmissionForUpdate`.*
 
+*§3.4 done 11/2, together with §4.6 and §6.1 — Windows: 2324 passed. Linux: 2324 passed. That is 12 new tests: 2 here (§3.4), 4 in §4.6 and 6 in §6.1.*
+
 - [x] 3.1 `submission_helper.{h,cpp}`, in the knottyyoga style: request/result structs and error-code strings, no exceptions.
 	- `Submit(Transaction&, const SubmissionRequest&, personId) → SubmitResult`, in two passes like `IngestEvents`. The first validates everything and checks the rate limits, read through §3.3 on every call so a change on the settings page applies to the very next submission. The second writes the envelope, the dates and the tag assignments. The result carries the ids, any ignored slugs, and the duplicate hints per date.
 	- `GetMySubmissions(Transaction&, personId) → std::vector<SubmissionView>`, with each date's status, and reason and message where decided.
@@ -269,6 +271,8 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 - *4 in `admin_review_submission_test.cpp`;*
 - *3 more in `admin_review_event_test.cpp`;*
 - *1 more in `crud_test.cpp`.*
+
+*§4.6 done 11/2, together with §3.4 and §6.1 — Windows: 2324 passed. Linux: 2324 passed. 4 of the 12 new tests are here.*
 
 *The tests share two new helpers in `events_endpoint_test_support`: `SwitchTo` (sign back in as a person already created) and `AddSubmission` (a sample submission written through `SubmissionHelper`).*
 
@@ -410,6 +414,8 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 6. test_helper (`src/test_helper/commands/submission_commands.{h,cpp}`)
 
+*§6.1 done 11/2, together with §3.4 and §4.6 — Windows: 2324 passed. Linux: 2324 passed. 6 of the 12 new tests are here.*
+
 - [x] 6.1 Two commands:
 	- `submit-event [se] --as=<email> --title=… --starts_in_hours=N [--dates=3] [--venue_id=N]`, which creates a verified non-admin demo person if the email is new;
 	- `list-submissions [ls] [--as=<email>]`.
@@ -498,6 +504,11 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 # Change Log
 
+- **11/2/2026 (v0.6)** — **The pause switch (§3.4, §4.6) and the test_helper commands (§6.1) implemented.** Windows: 2324 passed. Linux: 2324 passed (12 new tests). The as-built notes are under each item. The decisions worth knowing:
+	- **Renamed:** the §3.3 limits types and functions became "settings" (`SubmissionSettings`, `LoadSubmissionSettings`, `SaveSubmissionSettings`, …), since they now carry the switch too.
+	- **The switch is checked before the honeypot and every field,** so a paused form always gets the notice.
+	- **A third command, `submission-settings [ss]`:** it shows or changes the limits and the switch from the command line. It's the way to pause without the page (§5.6 isn't built yet), and the tests use it to prove the limits reach `submit-event`.
+	- **`submit-event` prints a new demo submitter's random password once,** so you can sign in as them and see "My submissions."
 - **11/2/2026 (v0.5)** — Mason answered OQ9 and OQ10.
 	- **OQ9:** anyone with `manage_events` can change the submission settings, as built. No code change.
 	- **OQ10:** the pause switch is now in scope; Mason decided against the recommendation to wait. It adds the "Pause switch" pin-down, the Scope line, new items §3.4 and §4.6, additions to §5.1, §5.2, §5.5 and §5.6, §7.3, and step 9 of the manual loop.

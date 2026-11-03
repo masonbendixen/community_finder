@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/2/2026
-Version: 0.5
+Version: 0.6
 tags:
 ---
 
@@ -237,7 +237,8 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- `AppSecretValuesTest.FrameworkAndAppKeySetsDoNotOverlap` still green with the two new keys.
 
 	*As built:* as planned. Two tests were added: the registered defaults ("10" and "5") match the code's defaults, and the range ends (1 and 100, 1 and 50) save.
-- [ ] 3.4 **The pause switch** (OQ10, added v0.5; see "Pause switch"):
+	- *Renamed in §3.4 (v0.6):* once the switch joined the limits, the names above became `SubmissionSettings`, `SubmissionSettingsUpdate`, `SaveSettingsResult`, `LoadSubmissionSettings` and `SaveSubmissionSettings` (`result.settings`). Nothing else changed.
+- [x] 3.4 **The pause switch** (OQ10, added v0.5; see "Pause switch"):
 	- the key `kEventSubmissionsPaused` (`"event_submissions_paused"`) in `app_secret_keys.h`, with its default `"false"` in `app_secret_values.cpp`;
 	- the §3.3 load and save gain a third field, `submissionsPaused`. Only `"true"` reads as paused. A save writes `"true"` or `"false"`, and it is part of the same all-or-nothing save as the limits;
 	- `Submit` returns `SUBMISSIONS_PAUSED` (with the notice as its message) right after the verified-email check.
@@ -248,6 +249,17 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- saving the switch leaves the limits alone, and saving a limit leaves the switch alone;
 	- a paused `Submit` writes nothing, and the same request goes through once it's unpaused;
 	- the registered default matches the code's default.
+
+	*As built:*
+	- **Where the check sits:** right after the verified-email check, before the honeypot and every field. A paused form gets the notice even when a field is wrong; a bot gets it too.
+	- **All or nothing:** a save with an out-of-range limit writes neither the limits nor the switch.
+	- **Tests:**
+		- `OnlyTrueStoredPausesSubmissions` (new): `""`, `"false"`, `"yes"`, `"TRUE"`, `"True"`, `"1"`, `" true"` and `"true "` all read as open;
+		- `SaveThenLoad` now pauses and then resumes, and checks the stored `"true"` / `"false"`;
+		- `SavingOneFieldLeavesTheOthers` covers the switch alone and a limit alone;
+		- `OneBadFieldWritesNothing` checks the switch isn't written either;
+		- `AppSecretDefaultsMatchTheCodeDefaults` (renamed from `…TheLimitDefaults`) covers the switch's `"false"`, and so does `AppSecretValuesTest.RegistersTheSubmissionSettingDefaults` (renamed);
+		- `SubmissionHelperTest.APausedSubmitWritesNothing` (new): refused while paused, a bad form hears "paused" too, "My submissions" and withdraw still work, and the same request goes through once unpaused.
 
 ### 4. endpoints (EV1 §5 conventions: PascalCase methods, volatile anchors, `handle_full` tests with `ThreadPool::Shutdown()`)
 
@@ -321,7 +333,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- a field that isn't a whole number (`"ten"`, `2.5`), which names the field;
 	- a body with neither field;
 	- a body that isn't JSON.
-- [ ] 4.6 **The pause switch** (OQ10, added v0.5; see "Pause switch"):
+- [x] 4.6 **The pause switch** (OQ10, added v0.5; see "Pause switch"):
 	- `POST /api/event_submissions` answers `SUBMISSIONS_PAUSED` with a 503, its notice as `detail`;
 	- new public route `GET /api/event_submissions/status` → `{accepting_submissions}`, with no sign-in needed. It is in the same TU, so it rides the existing anchor;
 	- the settings GET and PUT gain `submissions_paused: {value, default}`. A PUT accepts `true` or `false`; anything else is a 400 that names the field. A PUT with only the switch is allowed.
@@ -331,6 +343,19 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- the status route answers signed out, both paused and open;
 	- the PUT flips the switch and leaves the limits alone, and a non-boolean is a 400;
 	- the 401 and 403 cases cover the switch too.
+
+	*As built:* as planned.
+	- **The 503's body** carries `error_code` and `detail`, and no `field`.
+	- **The status route** is `GetEventSubmissionStatus` in `event_submissions.cpp`. It rides the `PostEventSubmission` anchor.
+	- **The PUT:**
+		- `submissions_paused` must be a JSON boolean. `"true"`, `1`, `0` and `"yes"` are each a 400, "submissions_paused must be true or false", naming the field.
+		- `null` means "leave it," as for the limits.
+		- A body with nothing to change is a 400, "No submission settings in the request."
+		- An out-of-range limit sent beside the switch writes neither.
+	- **Tests:**
+		- in `event_submissions_test.cpp`, two new: `APausedSubmitIs503ButMineAndWithdrawStillWork` and `TheStatusRouteAnswersSignedOut`;
+		- in `admin_event_submission_settings_test.cpp`, two new: `ThePauseSwitchFlipsOnItsOwn` and `PausingAppliesToTheNextSubmission` (pause by PUT, the next submit is a 503, resume, it goes through);
+		- the existing five now check the switch in every response; the 401/403 test also sends a switch-only PUT, and `BadValuesAre400AndWriteNothing` covers the non-booleans.
 
 ### 5. client (`ui/src/app/`)
 
@@ -385,11 +410,27 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 6. test_helper (`src/test_helper/commands/submission_commands.{h,cpp}`)
 
-- [ ] 6.1 Two commands:
+- [x] 6.1 Two commands:
 	- `submit-event [se] --as=<email> --title=… --starts_in_hours=N [--dates=3] [--venue_id=N]`, which creates a verified non-admin demo person if the email is new;
 	- `list-submissions [ls] [--as=<email>]`.
 
 	**Tests** (`submission_commands_test.cpp`): rows created as that person; the limits enforced through the command too. *The "Demo:" title prefix convention from EV1 §7.4 applies.*
+
+	*As built:* three commands, in a new "Submissions" category.
+	- **`submit-event`** goes through `SubmissionHelper::Submit` with the helper's real settings, so the pause switch and both limits apply exactly as on the form.
+		- The dates are weekly, the first N hours from now. "Demo: " is added to the title unless it's already there.
+		- A new email becomes a verified member named "Demo Submitter," with no roles. Its random password is printed once, so you can sign in as them and see "My submissions."
+		- A refusal prints the error code, the field, the date, and the message, and exits 1.
+	- **`list-submissions`** shows each submission and each date's state. Without `--as`, it shows the logged-in person's.
+	- **New: `submission-settings [ss] [--paused=true|false] [--max_pending_dates=N] [--max_submissions_per_day=N]`.** With no flags, it shows the settings. With flags, it saves them through `SaveSubmissionSettings`, with the same checks as the page. It's the command-line way to pause submissions during a spam wave, and the tests use it to prove the limits reach `submit-event`.
+	- **One-shot mode:** `main.cpp` gains `--as`, `--dates`, `--paused`, `--max_pending_dates` and `--max_submissions_per_day`.
+	- **Tests** (6 in `submission_commands_test.cpp`):
+		- the submitter created verified, with the dates pending, weekly, titled "Demo: …" and made by them;
+		- a second submit reusing the person, with no double prefix;
+		- the command's own flag checks and the form's checks (too soon, 13 dates, unknown venue) refusing with nothing written;
+		- a lowered pending limit and the pause switch, both set with `submission-settings`, holding `submit-event`;
+		- `submission-settings` showing the values, and refusing a bad value without saving the good one beside it;
+		- `list-submissions` showing "listed" and "waiting," the same with `--as` or logged in.
 
 ### 7. Gates
 

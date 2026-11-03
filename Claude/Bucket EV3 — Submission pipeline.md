@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/3/2026
-Version: 0.8
+Version: 0.9
 tags:
 ---
 
@@ -420,6 +420,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 			- The control announces only readable values, so clearing a box or typing something unreadable wouldn't reach the form. The page also reads the picker's own value as it's typed in.
 			- A picker takes its starting value once. Feeding each pick back in would rewrite the box mid-typing. When the form comes back after a pause, the date rows are rebuilt, so the pickers show what was typed.
 			- The control's own date-adapter import doesn't reach it inside another page, so the page provides Material's native adapter. It also sets the outline look so the pickers match the other fields.
+		- *Added v0.9:* a row whose end time is earlier than its start, with no end date, says so underneath ("Ends the next day: Sat, Oct 31, 2:00 AM."). The note appears only in that case. It's the event editor's `nextDayEndNote`.
 	- **Specs:** 7 for the form rules (including both 2026 DST nights in one submission), 28 for the page and 5 for the picker conversions. Among the page's: every refusal code in its place; the 503 bringing the form back with the title, description, venue and dates intact; and typing, picking and clearing in the pickers.
 - [x] 5.3 `pages/account/my-submissions.*` (`/account/submissions`, signed in): cards per submission with date rows and status chips, the reason and message when not listed, a link when listed, and Withdraw while pending, with a confirm in the page, not a browser pop-up. **Specs:** each status renders; withdraw updates in place.
 	- *As built:*
@@ -463,6 +464,23 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 		- the header also has the "Submission limits" button (§5.6);
 		- if the settings can't be read, the banner stays hidden rather than the page failing.
 	- **Specs:** the queue's 3 existing tests rewritten for the panel and the seeded submissions, plus 10 new. Among the new: approve-all is one `reviewSubmission` call and no `reviewEvent`; the panel's three fields reach the request and the stored submission; the email note appears only on the last date.
+	- **Reworked v0.9, at Mason's request** ("hard to see," and the title came after who sent it):
+		- **Each entry is a card.** It's white on the cream page, raised with the site's card shadow, with space between cards.
+		- **The top line is what a decision needs:**
+			- the title first, a size up, in the heading font;
+			- the date and time ("Fri, Aug 14 · 10:00 PM – 12:00 AM"), plus ", and 1 more date" for a submission;
+			- the flags (possible duplicate, no link);
+			- Approve and Reject, or Approve all and Reject all.
+		- **Kept on the top line on purpose:** the flags, so a curator sees a likely duplicate without opening the card.
+		- **"Details" opens the rest, closed by default:**
+			- who sent it, the relationship, "A regular thing," and the note;
+			- Where, Cost, Link (opens in a new tab) and Description;
+			- for one date, Edit and "See its page";
+			- for a submission, each date with its own Approve, Reject, Edit and "See its page."
+		- **The title is no longer a link.** It used to open the public page, which has no Approve or Reject. That page is now "See its page" in the details.
+		- **Edit** opens the event in the Edit Event tab (EV2 §3.7) and scrolls to it.
+		- **The sample submissions now have descriptions,** so the details show offline.
+		- **Specs:** the queue's tests updated for the new fields, plus 7 for the cards: the order of the top line, the summed-up dates, closed until asked, the submitter in the details, each date's own buttons, the curator's own event, and Edit.
 - [x] 5.6 **Submission limits page** (OQ3): `pages/admin/submission-settings.*` at `/admin/events/settings`, registered ahead of any `/admin/events/:id` route, with a "Submission limits" link in the `/admin/events` header.
 	- `getSubmissionSettings` and `saveSubmissionSettings` go on `events-admin-access` (interface, HTTP and mock).
 	- **The page:**
@@ -593,9 +611,26 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 # Change Log
 
+- **11/3/2026 (v0.9)** — **The review queue and the event editor reworked**, from Mason's walk-through of `/admin/events`.
+	- **The queue (§5.5):**
+		- each entry is a raised card with the title first;
+		- the top line has the date, the flags and Approve / Reject;
+		- the rest sits behind "Details," closed by default.
+	- **The editor (EV2 §3.7):**
+		- it moved into its own component, `pages/admin/event-editor.*`;
+		- New Event and Edit Event are now two tabs, each with its own form;
+		- dates and times use `hw-simple-date`;
+		- the always-on "Earlier than the start… means the next morning" hint is now a note that appears only when the end really is the next day;
+		- the Cost hint no longer runs into the field below.
+	- **The submit form (§5.2)** shows the same next-day note.
+	- **Results:**
+		- vitest: 65 files, 448 passed (was 64 and 427);
+		- `ng build` local, development and production all succeed; the initial bundle is 911.04 kB;
+		- no C++ changed;
+		- not yet looked at in a browser.
 - **11/3/2026 (v0.8)** — **The submit form's dates and times use honuware's picker** (`hw-simple-date`), at Mason's request, in place of the browser's own date and time boxes. The details are in §5.2's as-built notes.
 	- vitest: 64 files, 427 passed (was 63 and 419). `ng build` local, development and production all succeed; the initial bundle is 909.96 kB. No C++ changed.
-	- The curator's event editor (`/admin/events`, EV2) still uses the browser's boxes. Switching it is a follow-up, if Mason wants it.
+	- The curator's event editor (`/admin/events`, EV2) still uses the browser's boxes. Switching it is a follow-up, if Mason wants it. *(Done in v0.9.)*
 - **11/3/2026 (v0.7)** — **§5 (client) implemented, and §7.2 done.**
 	- **Results:**
 		- vitest: 63 files, 419 passed (was 53 and 303).

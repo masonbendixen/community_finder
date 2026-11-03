@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 10/30/2026
-Version: 0.11
+Last Updated: 11/3/2026
+Version: 0.12
 tags:
 ---
 
@@ -462,6 +462,12 @@ A stand-in look until RT1 (Stream C's brand and design system) lands. Before thi
 
 # Change Log
 
+- **11/3/2026 (v0.12)** — **§3.7's editor reworked, at Mason's request.** The details are in [[Bucket EV3 — Submission pipeline]]'s v0.9 change log.
+	- The form is its own component, `pages/admin/event-editor.*`.
+	- `/admin/events` shows it on two tabs, New Event and Edit Event, each with its own form.
+	- Dates and times use honuware's `hw-simple-date` instead of the browser's boxes.
+	- The always-on "next morning" hint is now a note that appears only when the end time falls on the next day.
+	- A loaded event's end date stays blank when the end time alone implies it.
 - **10/30/2026 (v0.11)** — **Two additions, at Mason's ask after first running the site.**
 	- **§5, an interim restyle:** brand tokens under the catalog's names, a plum header and footer, a home-page banner with quick links, and lists as cards. vitest 303/303, all three builds succeed, and it was checked in headless-Chrome screenshots at desktop and phone width.
 	- **§6, `database_helper --populate_sample_data`:** a small made-up guide and four weeks of events from the day it runs. Windows 2231/2231 and Linux 2231/2231 (floor 2215 → 2221). It ran live once on the dev database.

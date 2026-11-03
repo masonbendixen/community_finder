@@ -621,13 +621,14 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 		- New Event and Edit Event are now two tabs, each with its own form;
 		- dates and times use `hw-simple-date`;
 		- the always-on "Earlier than the start… means the next morning" hint is now a note that appears only when the end really is the next day;
-		- the Cost hint no longer runs into the field below.
+		- the Cost hint no longer runs into the field below;
+		- an opened event's end date is filled in only when the end time alone wouldn't say it. A same-evening or 10 PM – 2 AM event loads with it blank, matching the form's hint; a festival keeps it.
 	- **The submit form (§5.2)** shows the same next-day note.
 	- **Results:**
-		- vitest: 65 files, 448 passed (was 64 and 427);
+		- vitest: 65 files, 449 passed (was 64 and 427);
 		- `ng build` local, development and production all succeed; the initial bundle is 911.04 kB;
 		- no C++ changed;
-		- not yet looked at in a browser.
+		- checked in headless-Chrome screenshots of the mock build, at desktop and phone width: cards closed and open, both tabs, and the note.
 - **11/3/2026 (v0.8)** — **The submit form's dates and times use honuware's picker** (`hw-simple-date`), at Mason's request, in place of the browser's own date and time boxes. The details are in §5.2's as-built notes.
 	- vitest: 64 files, 427 passed (was 63 and 419). `ng build` local, development and production all succeed; the initial bundle is 909.96 kB. No C++ changed.
 	- The curator's event editor (`/admin/events`, EV2) still uses the browser's boxes. Switching it is a follow-up, if Mason wants it. *(Done in v0.9.)*

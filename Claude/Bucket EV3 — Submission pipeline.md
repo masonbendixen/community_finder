@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/2/2026
-Version: 0.3
+Version: 0.4
 tags:
 ---
 

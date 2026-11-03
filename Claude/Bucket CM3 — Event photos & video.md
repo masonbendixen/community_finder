@@ -257,19 +257,26 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Rec: submitters may give a video link* (it points at something already public, and a curator sees it before anyone else does).
 	- *Rec: the flyer waits.* Curators add the main photo and gallery in this bucket. A submitter's flyer upload is a follow-up that needs H15 first, so a stranger's image is never public before a curator approves it.
 	- *Alternative:* do H15 now and let submitters attach one flyer.
+	- Mason- Let's do H15 now.
 2. **When an event has no photo of its own, should it borrow one?** First from its series, then from its venue. A weekly night then looks right without someone uploading to every date.
 	- *Rec: yes.* It turns on photos for series.
+	- Mason- I like this recommendation.
 3. **Which video sites?**
 	- *Rec: YouTube and Vimeo,* played from YouTube's no-cookie address and Vimeo's do-not-track player.
 	- Instagram, TikTok and Facebook embeds only work by loading their own scripts on our page, which the "never trackers" rule rules out. Their links can still go in the event's Link field.
+	- Mason- YouTube and Vimeo are fine.
 4. **Click-to-play, or load the player right away?**
 	- *Rec: click-to-play.* Nothing from YouTube loads, and nobody is tracked, until someone chooses to watch. It also keeps pages fast.
+	- Mason- This sounds good.
 5. **How many gallery photos per event or series?**
 	- *Rec: 12,* enough to market a night without becoming an archive. Easy to raise later.
+	- Mason- This sounds good but let's make this configurable via the admin portal.
 6. **Record who vouched for consent on each photo?**
 	- *Rec: yes.* A required "everyone recognizable agreed" box on upload, stored with who ticked it and when. When a removal request comes in, we can see who added the photo and on what understanding.
+	- Mason- This sounds good to me.
 7. **Galleries on series pages too?**
 	- *Rec: yes, and the same for video.* A recurring night's pictures belong to the series, because each dated instance drops off the calendar once it's past. An event shows its own gallery, or else its series'.
+	- Mason- This sounds good.
 8. **Where does the removal-request link go before CM1 exists?**
 	- *Rec: the site's contact address,* with the photo's page in the subject, and a curator acts within a day. CM1's report flag replaces it.
 9. **Which stream owns it, and when?** The outline puts CM3 in Stream D, gated on traction. But almost every file is Stream A's (the events tables, the event pages, the curator editor, the submit form), and Mason wants it for marketing now.

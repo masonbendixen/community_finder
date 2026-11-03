@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/2/2026
-Version: 0.2
+Version: 0.3
 tags:
 ---
 
@@ -140,9 +140,11 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 2. table_helpers
 
-- [ ] 2.1 `event_submissions.{h,cpp}`: `AddSubmission`, `GetSubmission`, `GetSubmissionsForPerson(personId)` (newest first, `id` tiebreak), `CountSubmissionsSince(personId, sinceUs)` (the window includes `sinceUs`), `UpdateSubmission` (bumps `updated_us`), `MarkDecisionNotified(id, nowUs)`. **Test.**
+*Done 11/2 — Windows: 2248 passed. Linux: 2248 passed (+15 new tests: 10 in `event_submissions_test.cpp`, 5 in `events_test.cpp`).*
+
+- [x] 2.1 `event_submissions.{h,cpp}`: `AddSubmission`, `GetSubmission`, `GetSubmissionsForPerson(personId)` (newest first, `id` tiebreak), `CountSubmissionsSince(personId, sinceUs)` (the window includes `sinceUs`), `UpdateSubmission` (bumps `updated_us`), `MarkDecisionNotified(id, nowUs)`. **Test.**
 	- *As built:* `MarkDecisionNotified` returns a `bool`. It stamps only while `decision_notified_us` is still empty (`UPDATE … WHERE decision_notified_us IS NULL RETURNING id`) and says whether this call did the stamping. Only the caller that wins the stamp sends the email. So if two curators decide a submission's last two dates at the same moment, the second waits on the row lock, finds it stamped, and sends nothing. A failed send clears the stamp again (see "Mail" above).
-- [ ] 2.2 `events.{h,cpp}` additions:
+- [x] 2.2 `events.{h,cpp}` additions:
 	- `GetEventsBySubmission(submissionId)`;
 	- `GetEventsBySubmissions(ids)` (batch, ordered by submission, then start);
 	- ~~`CountPendingForCreator(personId)`~~ **`CountPendingSubmittedBy(personId)`**. It counts through `event_submissions.submitted_by_person_id` rather than `events.created_by_person_id`, so an admin's own ingested or hand-entered pending events never count against their submission limit. *(Renamed in v0.3.)*
@@ -312,6 +314,9 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 # Change Log
 
+- **11/2/2026 (v0.3)** — **§2 (table_helpers) implemented.** Two refinements made while building it:
+	- `CountPendingForCreator` became `CountPendingSubmittedBy`. It counts through the submission, so an admin's other pending events don't count against them.
+	- `MarkDecisionNotified` became a claim that returns whether it stamped. The decision email now goes out exactly once even when two curators finish a submission at the same moment. The "Mail" pin-down says how a failed send releases the claim.
 - **11/2/2026 (v0.2)** — Mason answered OQ1–OQ8, and all but OQ3 went with the recommendation.
 	- **OQ3:** the rate limits become admin-configurable on a "Submission limits" page. This adds the Scope line, the rewritten "Rate limits" pin-down, new items §3.3, §4.5 and §5.6, and step 8 of the manual loop. It also raises two new questions, OQ9 and OQ10.
 	- **Two §1 corrections found while implementing it:**

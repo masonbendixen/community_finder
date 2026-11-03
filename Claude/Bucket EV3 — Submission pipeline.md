@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 11/2/2026
-Version: 0.6
+Last Updated: 11/3/2026
+Version: 0.7
 tags:
 ---
 
@@ -363,9 +363,24 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 5. client (`ui/src/app/`)
 
-- [ ] 5.1 Access layer: `core/event-submissions-access/` (interface, HTTP, mock, providers; the `events-admin-access` precedent), with `submit`, `getMine` and `withdraw`. The mock keeps submissions in memory and fakes duplicate hints. **Spec:** URLs and bodies, and the mock's behavior.
+*§5 done 11/3. Client only, so no C++ run. vitest: 63 files, 419 passed (was 53 files, 303). `ng build` local, development and production all succeed; see §7.2.*
+
+- [x] 5.1 Access layer: `core/event-submissions-access/` (interface, HTTP, mock, providers; the `events-admin-access` precedent), with `submit`, `getMine` and `withdraw`. The mock keeps submissions in memory and fakes duplicate hints. **Spec:** URLs and bodies, and the mock's behavior.
 	- *Added v0.5:* `getStatus` (the public `GET /api/event_submissions/status`, §4.6). The mock can be paused.
-- [ ] 5.2 `pages/events/submit-event.*` (`/events/submit`, ahead of `:id` in `events.routes.ts`).
+	- *As built:*
+		- **Errors.** Every call errors with a `SubmissionProblem` (`status`, `error_code`, `field`, `date_index`, `detail`), read from the server's problem body by `toSubmissionProblem`. Pages never see a raw HTTP error. A reply with no problem body gets a plain "Something went wrong" message.
+		- **The offline loop works end to end.** The mock writes into the same in-memory store the `/admin/events` queue reads: an `event_submissions` row, plus pending `events` rows with `origin user_submitted` and their tags. So a form sent offline shows up in the queue, and a decision there shows up on "My submissions."
+		- **The mock runs the server's checks with the server's messages,** in the server's order: signed in, the pause switch, the honeypot, the fields, the venue, then both limits. Its duplicate hints come from approved events only, by the same two rules (`core/utils/duplicate-hints.ts`, which the queue uses too).
+		- **One settings store for the whole offline app** (`SubmissionSettingsMockStore`). Pausing on the Submission limits page closes the offline form too.
+		- **The offline demo now seeds two submissions,** so the queue's grouping and flags show without sending one:
+			- Ada's two-date "Queer Craft Night," a regular thing with a note and no link;
+			- Grace's "Leather Night!", an hour after the listed Leather Night at the same venue, so it's flagged as a possible duplicate.
+		- **`events-admin-access` changed too** (for §5.5 and §5.6):
+			- `reviewEvent` takes a decision (`notes`, plus `reason` and `message_to_submitter` for a submitted event);
+			- new `reviewSubmission`, `getSubmissionSettings` and `saveSubmissionSettings`;
+			- the responses carry `decision_emailed`.
+		- **Specs:** 10 for the HTTP side (URLs, bodies, `withCredentials`, the problem mapping, the 503, filling in missing fields), 12 for the mock (the rows it writes, hints, the 503, the honeypot, the field checks, both limits, each date state, withdraw), 6 + 8 for `events-admin-access`, 4 for the duplicate rules.
+- [x] 5.2 `pages/events/submit-event.*` (`/events/submit`, ahead of `:id` in `events.routes.ts`).
 	- Signed out: a short explainer with sign-in and register buttons that return here.
 	- Unverified: "confirm your email" with a resend link.
 		- *Note from §3–4 (v0.4):* honuware's sign-in refuses an unconfirmed account, so this state is nearly unreachable. Keep it as a small fallback that also handles the server's 403 `EMAIL_NOT_VERIFIED`, not as a designed screen.
@@ -385,9 +400,35 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- **After sending:** "Thanks, it's waiting for review. We'll email you when it's decided," any possible duplicates with links ("if it's already listed, you can withdraw yours"), and links to "My submissions" and "Submit another."
 
 	**Specs:** Seattle time to `_us` for several dates (reuse the form-rule tests' DST fixtures); the 12-date cap; each server error code shown next to the right field; signed-out and unverified states; duplicates shown; the honeypot never visible; the paused notice on load, and on a 503 with the typed text kept.
-- [ ] 5.3 `pages/account/my-submissions.*` (`/account/submissions`, signed in): cards per submission with date rows and status chips, the reason and message when not listed, a link when listed, and Withdraw while pending, with a confirm in the page, not a browser pop-up. **Specs:** each status renders; withdraw updates in place.
-- [ ] 5.4 Links: a "Submit an event" button on the events list header and the empty state; the header's account menu gets "My submissions"; the footer gets "Submit an event." **Specs:** the existing header and footer specs updated.
-- [ ] 5.5 Queue polish in `pages/admin/manage-events.*`:
+
+	*As built:*
+	- **The form's rules are in `submit-event-form.ts`** (`composeSubmission`), tested on their own. Each date row reuses the event editor's Seattle-time rule: an end time earlier than the start, with no end date, means the next morning.
+	- **Additions to the spec:**
+		- **An optional "End date, if another day" on each row,** so a festival spanning several days fits. The spec listed only an end time.
+		- **The browser asks for a place:** a venue from the list, or "Somewhere else" with text. The server accepts neither, so this is the browser being stricter.
+		- **"Check again" on the paused notice** re-reads the status, so nobody has to reload. A status that can't be read counts as open; the send says if it isn't.
+	- **Sign-in returns here.** `/events` joined the app's `returnUrlAllowlist` so `/login?returnUrl=/events/submit` is honored.
+		- **Register can't return here:** honuware's register page takes no return address. The notice says to confirm the email, then sign in and come back.
+	- **Unverified:** a plain message, with no resend link. honuware has no resend-confirmation call, and the state is a fallback anyway (v0.4 note).
+	- **A refusal shows in its place.** One with a field and a `date_index` shows under that date row. One with a form field shows under the field. Anything else (a rate limit) shows above Send. `EMAIL_NOT_VERIFIED` switches to the unverified notice, and `SUBMISSIONS_PAUSED` to the paused one, keeping what was typed.
+	- **Tags:** once 3 of a kind are picked, the rest of that kind's chips are disabled.
+	- **The honeypot** is a "Website" field moved off-screen by the stylesheet, with `aria-hidden`, `tabindex=-1` and `autocomplete=off`. It's sent only when something filled it in.
+	- **After sending,** a possible duplicate says which of your dates it matches ("your date 2") when there's more than one. A note appears if some tags weren't available.
+	- **Specs:** 7 for the form rules (including both 2026 DST nights in one submission) and 25 for the page. Among the page's: every refusal code in its place, and the 503 bringing the form back with the title, description and venue intact.
+- [x] 5.3 `pages/account/my-submissions.*` (`/account/submissions`, signed in): cards per submission with date rows and status chips, the reason and message when not listed, a link when listed, and Withdraw while pending, with a confirm in the page, not a browser pop-up. **Specs:** each status renders; withdraw updates in place.
+	- *As built:*
+		- **The route** sits behind `AuthGuard`, beside `/account`. The page is in the initial bundle like the other account pages (see §7.2).
+		- **Each card** has the title (with "(3 dates)" when there are several), when it was sent, the relationship, "A regular thing," and a row per date with its state chip. A listed date has a "See it" link.
+		- **The reason** uses the decision email's words. It shows only when a date was turned down or went past (`not_listed`, `past`), so a withdrawal gets no "Why." The curator's message shows as a quote.
+		- **Withdraw** appears while any date is waiting. Its confirm says how many dates it takes out, and that anything listed stays listed. On success, those dates turn to Withdrawn in place. A refusal toasts the server's message.
+		- **No submissions** shows a link to the form.
+		- **Specs:** 10 (each state, the reason and message, the link, Withdraw only while waiting, confirm and cancel, the in-place update, a refusal, empty, a failed load).
+- [x] 5.4 Links: a "Submit an event" button on the events list header and the empty state; the header's account menu gets "My submissions"; the footer gets "Submit an event." **Specs:** the existing header and footer specs updated.
+	- *As built:*
+		- **The footer also gets a line:** "Know of an event? Submit it here. It's the only way we take listings." That repeats the single-intake message where people look for contact details.
+		- **There was no footer spec,** so `footer.spec.ts` is new (3 tests). The header spec gains the menu test. The events list spec checks the button and the empty-state link.
+		- **The header and footer are Stream C's files.** The PR should say so.
+- [x] 5.5 Queue polish in `pages/admin/manage-events.*`:
 	- the origin badge and submitter;
 	- the note and relationship;
 	- grouping by `submission_id` with Approve all / Reject all;
@@ -401,7 +442,22 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- *Added v0.5 (OQ10):* while submissions are paused, a banner at the top reads "Submissions are paused," with a link to the Submission limits page to turn them back on.
 
 	**Specs:** grouping; approve-all calls the group route once; the reject panel sends all three fields; non-submitted events look as before; the banner shows only while paused.
-- [ ] 5.6 **Submission limits page** (OQ3): `pages/admin/submission-settings.*` at `/admin/events/settings`, registered ahead of any `/admin/events/:id` route, with a "Submission limits" link in the `/admin/events` header.
+
+	*As built:*
+	- **Grouping:** the queue stays in start order. A submission's dates sit together in one box, where its first date falls. A curator's or a feed's event stands alone and looks as it did. Approve all / Reject all appear only for a submission with more than one date waiting.
+	- **The box's header:** "Submitted by Ada Lovelace," the relationship, "A regular thing," and the note as a quote.
+		- **Names** come from the generic editor's people lookup. If that can't be read, it falls back to "member #2."
+	- **The duplicate flag** applies to submitted events only. It compares against the rest of the queue and the latest 500 approved events, never the submission's own dates. Each flag links to the event it points at ("Possible duplicate of #103 Leather Night"). "No link" shows when the URL is blank.
+	- **The reject panel** opens under the event, or under the submission for Reject all.
+		- **The reason** (six choices: Already listed, Not a fit, Missing details, Already over, Spam, Other, or none) and **the message to the submitter** appear only for submitted events. For a curator's own event the panel is just the note, as before.
+		- **A blank reason or message is left out of the request.**
+	- **The toast** adds "The submitter has been emailed." when `decision_emailed` is true. For example: "Approved all 2 dates of "Queer Craft Night". The submitter has been emailed."
+	- **The paused banner** links to the Submission limits page ("Turn them back on").
+	- **Other details:**
+		- the header also has the "Submission limits" button (§5.6);
+		- if the settings can't be read, the banner stays hidden rather than the page failing.
+	- **Specs:** the queue's 3 existing tests rewritten for the panel and the seeded submissions, plus 10 new. Among the new: approve-all is one `reviewSubmission` call and no `reviewEvent`; the panel's three fields reach the request and the stored submission; the email note appears only on the last date.
+- [x] 5.6 **Submission limits page** (OQ3): `pages/admin/submission-settings.*` at `/admin/events/settings`, registered ahead of any `/admin/events/:id` route, with a "Submission limits" link in the `/admin/events` header.
 	- `getSubmissionSettings` and `saveSubmissionSettings` go on `events-admin-access` (interface, HTTP and mock).
 	- **The page:**
 		- "Dates one person can have waiting for review" and "Submissions one person can send in 24 hours";
@@ -411,6 +467,18 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 		- *added v0.5 (OQ10):* at the top, a **"Taking submissions / Paused"** switch. It saves on its own, apart from the limits' Save. Pausing asks for an in-page confirmation ("Nobody will be able to submit an event until you turn this back on"); unpausing doesn't. "Reset to defaults" resets the limits only, never the switch.
 
 	**Specs:** loads and shows the values; Save sends only the changed fields; reset fills in the defaults; a server range error lands on the right field; signed-out and non-curator visitors are redirected, the same as `/admin/events`; pausing confirms first and sends only the switch; reset leaves the switch alone.
+
+	*As built:*
+	- **Each limit's hint** reads "Default 10 · allowed 1 to 100," from the GET.
+	- **Save** sends only the limits that differ from what's saved.
+		- **The browser checks the range first,** so a value out of range never leaves the page.
+		- **A server `LIMIT_OUT_OF_RANGE`** shows under the field it names, in the page's own words ("Enter a whole number from 1 to 50."), not the server's.
+	- **"Reset to defaults"** only fills in the fields. Save applies them, so a slip can be undone.
+	- **The switch** saves on its own and sends only `submissions_paused`.
+		- **Turning it off** shows the in-page confirm. The switch stays on until "Pause submissions" is pressed.
+		- **The save updates only the switch,** so a limit being typed isn't lost.
+	- **Access:** the route is under `/admin`, so it has `/admin`'s guards (`AuthGuard` + `AdminGuard`). A signed-out visitor goes to sign in, then back here. A signed-in non-admin goes home. That's the same as `/admin/events`, which is what the spec asks. (The server checks `manage_events`, per OQ9.)
+	- **Specs:** 12, including the redirects through the app's real `/admin` route.
 
 ### 6. test_helper (`src/test_helper/commands/submission_commands.{h,cpp}`)
 
@@ -441,7 +509,22 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 ### 7. Gates
 
 - [ ] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit (EV1 §7.2 policy).
-- [ ] 7.2 `ng build` for local, development and production; vitest green, with the new count recorded.
+- [x] 7.2 `ng build` for local, development and production; vitest green, with the new count recorded.
+	- *Done 11/3:*
+		- **vitest:** 63 files, 419 passed (was 53 and 303; +116 tests in 10 new spec files and 7 extended ones).
+		- **Builds:** local, development and production all build.
+		- **Production budget warning:** it's the old one; the initial bundle has been over its 500 kB budget since before EV2 (OQ10 there). RT4's pre-launch pass owns it.
+		- **Initial bundle:** 882.65 kB at `c30000b`, built from a copy of that commit, and 911.77 kB now. That's +29.1 kB, or +6.6 kB compressed. Almost all of it is in `main`:
+			- the "My submissions" page (eager, like the other account pages);
+			- the submissions access layer, with its offline mock;
+			- the larger review-access layer.
+			- As with EV2, the mock is demo code that production carries. Making "My submissions" load lazily would save a few kB; that's left for RT4's pass.
+		- **The submit form loads separately.** The lazy `events-routes` file grew from 43 kB to 152 kB, mostly the Material form controls (autocomplete, chips, radio, select).
+	- **A test-runner quirk, and the rule it sets.** The unit-test runner rewrites imports in its own way (Vite's SSR transform). It leaves an imported constant unrewritten when it's a class field's whole initializer, as in `readonly maxDates = MAX_SUBMISSION_DATES`.
+		- **The symptom:** when the spec files are bundled together and the constant lands in another chunk, the field reads `undefined`. Here, the 12-date cap's button never disabled in the full run, though it passed alone.
+		- **The app build is unaffected.** This was checked in the production bundle.
+		- **The fix:** the three such fields (`maxDates`, `relationships`, `rejectReasons`) are now getters.
+		- **The rule for client code:** expose an imported constant to a template through a getter, not a field. A constant from the component's own file is fine as a field.
 - [ ] 7.3 Live seed check after §1 (destructive, announced): `event_submissions` present with its CHECKs and index, `events.submission_id` FK and `events_submission_idx` present, twelve tables mapped to `manage_events`, nothing new in `allowed_tables`. The rate-limit keys and the pause key need no seed check: a database without them reads the defaults (§3.3, §3.4).
 - [ ] 7.4 **Manual loop (Mason or Levi):**
 	1. Register a fresh account and confirm its email. The form refuses it before confirmation.
@@ -504,6 +587,30 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 # Change Log
 
+- **11/3/2026 (v0.7)** — **§5 (client) implemented, and §7.2 done.**
+	- **Results:**
+		- vitest: 63 files, 419 passed (was 53 and 303).
+		- `ng build` local, development and production all succeed.
+		- The production budget warning predates EV2.
+		- The initial bundle is +29.1 kB (+6.6 kB compressed).
+	- No C++ changed, so there was no Windows or Linux run.
+	- The as-built notes are under each item. The decisions worth knowing:
+	- **The offline demo runs the whole loop.**
+		- The submissions mock writes into the store the review queue reads, so an offline submission can be reviewed and then seen on "My submissions."
+		- The demo seeds two sample submissions, so the grouping and flags show.
+		- One settings store links the limits page, the pause switch and the form.
+	- **Sign-in returns to the form;** `/events` joined the return-address allowlist. Register can't return there, and there's no resend link, because honuware has neither.
+	- **The form is a little stricter and roomier than specified:**
+		- it asks for a place;
+		- each date row can end on another day;
+		- the paused notice has "Check again."
+	- **The queue's duplicate flag** checks the rest of the queue and the latest 500 approved events.
+	- **The footer gained a single-intake line.** The header and footer are Stream C's files, so the PR should say so.
+	- **A test-runner quirk sets a client rule:** expose an imported constant to a template through a getter, not a class field (§7.2).
+	- **Still to do:**
+		- 7.1's floor at bucket exit;
+		- 7.3's live seed check (destructive, needs Mason's go-ahead);
+		- 7.4's manual loop.
 - **11/2/2026 (v0.6)** — **The pause switch (§3.4, §4.6) and the test_helper commands (§6.1) implemented.** Windows: 2324 passed. Linux: 2324 passed (12 new tests). The as-built notes are under each item. The decisions worth knowing:
 	- **Renamed:** the §3.3 limits types and functions became "settings" (`SubmissionSettings`, `LoadSubmissionSettings`, `SaveSubmissionSettings`, …), since they now carry the switch too.
 	- **The switch is checked before the honeypot and every field,** so a paused form always gets the notice.

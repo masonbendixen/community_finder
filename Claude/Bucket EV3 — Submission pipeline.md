@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/2/2026
-Version: 0.4
+Version: 0.5
 tags:
 ---
 
@@ -38,7 +38,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 - Submitter endpoints under `/api/event_submissions*`, plus an extension of the review endpoint.
 - The `/events/submit` page and the `/account/submissions` page.
 - Queue polish in `/admin/events`.
-- The **Submission limits** admin page and its endpoint, so curators can change the rate limits without a deploy (OQ3).
+- The **Submission limits** admin page and its endpoint, so curators can change the rate limits without a deploy (OQ3). The page also has a **pause switch** that closes the form for everyone (OQ10).
 - test_helper commands and tests at every layer.
 
 **Out (explicit non-goals):**
@@ -94,6 +94,15 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- **Where the numbers live:** two app keys in `config_secrets`, with their defaults (10 and 5) in `app_secret_values.cpp`. That is honuware's store for site settings, and the seam `app_secret_keys.h` reserves for "a domain feature [that] needs a tunable." The generic table editor can't reach `config_secrets`, so the only way to change them is a dedicated endpoint that validates what it writes. honuware's Site Theme editor works the same way. There's no new table and no migration: a key missing from an older database reads as its default.
 	- **Allowed ranges:** pending dates 1–100, and submissions per 24 hours 1–50. A stored value that is blank, not a number, or out of range reads as the default, so a bad value can never switch a limit off.
 	- **The page:** `/admin/events/settings`, titled "Submission limits" and linked from the `/admin/events` header. It has two number fields, each with a one-line explanation and its default shown beside it, plus Save and "Reset to defaults." Anyone with `manage_events` can open it (OQ9).
+- **Pause switch (OQ10, decided v0.5):** one switch that closes the submit form for everyone. It's for a spam wave from many new accounts, which the per-person limits can't stop.
+	- **Where it lives:** a third app key next to the two limits, `event_submissions_paused`, `"false"` by default. Only the exact value `"true"` pauses submissions. A missing, blank or garbled value reads as open, so a bad value can never close the form by accident.
+	- **What it stops:** while paused, `POST /api/event_submissions` refuses every submission with a **503**, `error_code` `SUBMISSIONS_PAUSED`, and the notice *"We're not taking event submissions right now. Please check back soon."*
+		- It is checked right after "signed in and verified," before any field. Someone who sends a form gets the notice, not a list of field errors.
+		- 503 means "not right now," the same status honuware uses when sign-in is temporarily unavailable.
+	- **What keeps working:** "My submissions," withdraw, and curator review. Pausing closes the front door only. The queue still drains.
+	- **How the form knows up front:** a public `GET /api/event_submissions/status` → `{accepting_submissions: true|false}`, with no sign-in needed. The submit page checks it on load and shows the notice instead of the form, so nobody fills in twelve dates for nothing.
+	- **Who can flip it:** anyone with `manage_events`, on the Submission limits page (OQ9).
+	- **So it isn't left on by accident:** while paused, `/admin/events` shows a banner, "Submissions are paused," with a link to turn them back on. Pausing asks for an in-page confirmation; unpausing doesn't.
 - **Duplicate hints, never blocks.** For each date, the server looks for approved or pending events that start within ±3 hours and either have the same venue or the same normalized title (lower-cased, punctuation stripped). Matches come back to the submitter ("Is it one of these?") and show in the queue as "possible duplicate of #123." Nothing is refused for being similar.
 	- *As built:* the hints sent back to the submitter cover **approved events only**. Another person's pending submission isn't theirs to see, and listing it would reveal what someone else sent in. The queue's "possible duplicate" flag (§5.5) is worked out in the browser from the queue's own rows, which include pending ones, so curators still see both kinds. The server's matching is `FindDuplicateHints`, a pure function; §5.5 mirrors its two rules.
 - **Abuse basics:**
@@ -171,7 +180,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 3. business_logic (`src/business_logic/events/`)
 
-*Done 11/2, together with §4 — Windows: 2312 passed. Linux: 2312 passed. That is 64 new tests, 42 of them here:*
+*§3.1–3.3 done 11/2, together with §4.1–4.5 (§3.4 was added in v0.5) — Windows: 2312 passed. Linux: 2312 passed. That is 64 new tests, 42 of them here:*
 - *25 in `submission_helper_test.cpp`;*
 - *8 in `submission_email_test.cpp`;*
 - *7 in `submission_settings_test.cpp`;*
@@ -228,10 +237,21 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- `AppSecretValuesTest.FrameworkAndAppKeySetsDoNotOverlap` still green with the two new keys.
 
 	*As built:* as planned. Two tests were added: the registered defaults ("10" and "5") match the code's defaults, and the range ends (1 and 100, 1 and 50) save.
+- [ ] 3.4 **The pause switch** (OQ10, added v0.5; see "Pause switch"):
+	- the key `kEventSubmissionsPaused` (`"event_submissions_paused"`) in `app_secret_keys.h`, with its default `"false"` in `app_secret_values.cpp`;
+	- the §3.3 load and save gain a third field, `submissionsPaused`. Only `"true"` reads as paused. A save writes `"true"` or `"false"`, and it is part of the same all-or-nothing save as the limits;
+	- `Submit` returns `SUBMISSIONS_PAUSED` (with the notice as its message) right after the verified-email check.
+
+	**Tests:**
+	- the switch reads as open with nothing stored, and with a blank or junk value;
+	- save then load;
+	- saving the switch leaves the limits alone, and saving a limit leaves the switch alone;
+	- a paused `Submit` writes nothing, and the same request goes through once it's unpaused;
+	- the registered default matches the code's default.
 
 ### 4. endpoints (EV1 §5 conventions: PascalCase methods, volatile anchors, `handle_full` tests with `ThreadPool::Shutdown()`)
 
-*Done 11/2, together with §3 — Windows: 2312 passed. Linux: 2312 passed. 22 of the new tests are here:*
+*§4.1–4.5 done 11/2, together with §3.1–3.3 (§4.6 was added in v0.5) — Windows: 2312 passed. Linux: 2312 passed. 22 of the new tests are here:*
 - *9 in `event_submissions_test.cpp`;*
 - *5 in `admin_event_submission_settings_test.cpp`;*
 - *4 in `admin_review_submission_test.cpp`;*
@@ -301,14 +321,26 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- a field that isn't a whole number (`"ten"`, `2.5`), which names the field;
 	- a body with neither field;
 	- a body that isn't JSON.
+- [ ] 4.6 **The pause switch** (OQ10, added v0.5; see "Pause switch"):
+	- `POST /api/event_submissions` answers `SUBMISSIONS_PAUSED` with a 503, its notice as `detail`;
+	- new public route `GET /api/event_submissions/status` → `{accepting_submissions}`, with no sign-in needed. It is in the same TU, so it rides the existing anchor;
+	- the settings GET and PUT gain `submissions_paused: {value, default}`. A PUT accepts `true` or `false`; anything else is a 400 that names the field. A PUT with only the switch is allowed.
+
+	**Tests:**
+	- while paused, a submit is a 503 with `SUBMISSIONS_PAUSED`, and `mine` and withdraw still work;
+	- the status route answers signed out, both paused and open;
+	- the PUT flips the switch and leaves the limits alone, and a non-boolean is a 400;
+	- the 401 and 403 cases cover the switch too.
 
 ### 5. client (`ui/src/app/`)
 
 - [ ] 5.1 Access layer: `core/event-submissions-access/` (interface, HTTP, mock, providers; the `events-admin-access` precedent), with `submit`, `getMine` and `withdraw`. The mock keeps submissions in memory and fakes duplicate hints. **Spec:** URLs and bodies, and the mock's behavior.
+	- *Added v0.5:* `getStatus` (the public `GET /api/event_submissions/status`, §4.6). The mock can be paused.
 - [ ] 5.2 `pages/events/submit-event.*` (`/events/submit`, ahead of `:id` in `events.routes.ts`).
 	- Signed out: a short explainer with sign-in and register buttons that return here.
 	- Unverified: "confirm your email" with a resend link.
 		- *Note from §3–4 (v0.4):* honuware's sign-in refuses an unconfirmed account, so this state is nearly unreachable. Keep it as a small fallback that also handles the server's 403 `EMAIL_NOT_VERIFIED`, not as a designed screen.
+	- **Paused** (*added v0.5*, OQ10): the page checks `getStatus` on load. When submissions are paused, it shows the notice, plus the single-intake line so nobody sends the event another way, instead of the form, whether the visitor is signed in or not. A 503 `SUBMISSIONS_PAUSED` on send (paused while the form was open) shows the same notice and keeps what was typed.
 	- **The form:**
 		- the single-intake banner;
 		- title;
@@ -323,7 +355,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 		- the hidden honeypot.
 	- **After sending:** "Thanks, it's waiting for review. We'll email you when it's decided," any possible duplicates with links ("if it's already listed, you can withdraw yours"), and links to "My submissions" and "Submit another."
 
-	**Specs:** Seattle time to `_us` for several dates (reuse the form-rule tests' DST fixtures); the 12-date cap; each server error code shown next to the right field; signed-out and unverified states; duplicates shown; the honeypot never visible.
+	**Specs:** Seattle time to `_us` for several dates (reuse the form-rule tests' DST fixtures); the 12-date cap; each server error code shown next to the right field; signed-out and unverified states; duplicates shown; the honeypot never visible; the paused notice on load, and on a 503 with the typed text kept.
 - [ ] 5.3 `pages/account/my-submissions.*` (`/account/submissions`, signed in): cards per submission with date rows and status chips, the reason and message when not listed, a link when listed, and Withdraw while pending, with a confirm in the page, not a browser pop-up. **Specs:** each status renders; withdraw updates in place.
 - [ ] 5.4 Links: a "Submit an event" button on the events list header and the empty state; the header's account menu gets "My submissions"; the footer gets "Submit an event." **Specs:** the existing header and footer specs updated.
 - [ ] 5.5 Queue polish in `pages/admin/manage-events.*`:
@@ -337,16 +369,19 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- the in-page reject panel (reason, curator note, message to the submitter), replacing `window.prompt`.
 		- *Note from §3–4 (v0.4):* use the review responses' `decision_emailed` to confirm the email went, e.g. "Decided; the submitter has been emailed."
 
-	**Specs:** grouping; approve-all calls the group route once; the reject panel sends all three fields; non-submitted events look as before.
+	- *Added v0.5 (OQ10):* while submissions are paused, a banner at the top reads "Submissions are paused," with a link to the Submission limits page to turn them back on.
+
+	**Specs:** grouping; approve-all calls the group route once; the reject panel sends all three fields; non-submitted events look as before; the banner shows only while paused.
 - [ ] 5.6 **Submission limits page** (OQ3): `pages/admin/submission-settings.*` at `/admin/events/settings`, registered ahead of any `/admin/events/:id` route, with a "Submission limits" link in the `/admin/events` header.
 	- `getSubmissionSettings` and `saveSubmissionSettings` go on `events-admin-access` (interface, HTTP and mock).
 	- **The page:**
 		- "Dates one person can have waiting for review" and "Submissions one person can send in 24 hours";
 		- each a number field with its default and allowed range shown beside it, taken from the GET rather than hard-coded;
 		- Save (enabled only when something changed) and "Reset to defaults";
-		- a server `LIMIT_OUT_OF_RANGE` shown next to the field it names.
+		- a server `LIMIT_OUT_OF_RANGE` shown next to the field it names;
+		- *added v0.5 (OQ10):* at the top, a **"Taking submissions / Paused"** switch. It saves on its own, apart from the limits' Save. Pausing asks for an in-page confirmation ("Nobody will be able to submit an event until you turn this back on"); unpausing doesn't. "Reset to defaults" resets the limits only, never the switch.
 
-	**Specs:** loads and shows the values; Save sends only the changed fields; reset fills in the defaults; a server range error lands on the right field; signed-out and non-curator visitors are redirected, the same as `/admin/events`.
+	**Specs:** loads and shows the values; Save sends only the changed fields; reset fills in the defaults; a server range error lands on the right field; signed-out and non-curator visitors are redirected, the same as `/admin/events`; pausing confirms first and sends only the switch; reset leaves the switch alone.
 
 ### 6. test_helper (`src/test_helper/commands/submission_commands.{h,cpp}`)
 
@@ -360,7 +395,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 - [ ] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit (EV1 §7.2 policy).
 - [ ] 7.2 `ng build` for local, development and production; vitest green, with the new count recorded.
-- [ ] 7.3 Live seed check after §1 (destructive, announced): `event_submissions` present with its CHECKs and index, `events.submission_id` FK and `events_submission_idx` present, twelve tables mapped to `manage_events`, nothing new in `allowed_tables`. The rate-limit keys need no seed check: a database without them reads the defaults (§3.3).
+- [ ] 7.3 Live seed check after §1 (destructive, announced): `event_submissions` present with its CHECKs and index, `events.submission_id` FK and `events_submission_idx` present, twelve tables mapped to `manage_events`, nothing new in `allowed_tables`. The rate-limit keys and the pause key need no seed check: a database without them reads the defaults (§3.3, §3.4).
 - [ ] 7.4 **Manual loop (Mason or Levi):**
 	1. Register a fresh account and confirm its email. The form refuses it before confirmation.
 	2. Submit a three-date event.
@@ -370,6 +405,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	6. Submit again and withdraw it.
 	7. Push past the pending limit and read the 429 message.
 	8. On the Submission limits page, lower the pending limit to 2. The next submission that would go over 2 gets a 429 that says 2. Reset to defaults.
+	9. Pause submissions (confirm the prompt). `/admin/events` shows the banner, and `/events/submit` shows the notice instead of the form, signed in and signed out. "My submissions" and withdraw still work. Turn submissions back on from the banner's link, and the form returns.
 
 # Open Questions
 
@@ -406,11 +442,24 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- Claude- Decided (11/2) — optional, with the "no link" flag in the queue. As pinned; no body change.
 9. **Who can change the submission limits?** Anyone with `manage_events` (the curators reviewing the queue), or full admins only? The curators are the people who feel a flood first and who know when a big weekend needs more room. A full admin can already do everything a curator can. The risk of letting curators change them is small: the ranges are capped (100 dates, 50 submissions a day), and a curator can already approve or reject anything. *Rec: anyone with `manage_events`.*
 	- Claude- Built as recommended (11/2) so §4.5 wasn't blocked: both settings routes check `manage_events`. If you'd rather limit it to full admins, it's a one-line change in each route plus its test. Please confirm.
+	- Mason- manage events seems like the better choice.
+	- Claude- Decided (11/2) — anyone with `manage_events`, as built in §4.5. The pause switch (OQ10) uses the same gate. No code change.
 10. **Should the limits page also have a "pause submissions" switch?** If a spam wave hits from many new accounts at once, the per-person limits don't help, and today the only fix is disabling accounts one by one. A switch would close the form for everyone with a "we're not taking submissions right now" notice. It's about an hour's work on the same page, but it's one more thing that can be left on by accident. *Rec: not at launch. Add it the first time a wave happens, since the page and endpoint will already exist. The minimum of 1 means the limits themselves can't be used to close the form.*
 	- Claude- Built as recommended (11/2): there's no pause switch. Please confirm.
+	- Mason- Let's add this in the admin console. This seems like if we need it, we would really need to have it.
+	- Claude- Decided (11/2) — build it now, on the Submission limits page. The full design is the "Pause switch" pin-down. In short:
+		- a third app key, where only `"true"` pauses;
+		- a paused submit is a 503 `SUBMISSIONS_PAUSED`;
+		- a public status read lets the form show the notice up front;
+		- "My submissions," withdraw and review keep working;
+		- a banner on `/admin/events` while paused, so it isn't left on.
+		- **Where it's in the doc:** the Scope line, new items §3.4 and §4.6, additions to §5.1, §5.2, §5.5 and §5.6, §7.3, and step 9 of the manual loop.
 
 # Change Log
 
+- **11/2/2026 (v0.5)** — Mason answered OQ9 and OQ10.
+	- **OQ9:** anyone with `manage_events` can change the submission settings, as built. No code change.
+	- **OQ10:** the pause switch is now in scope; Mason decided against the recommendation to wait. It adds the "Pause switch" pin-down, the Scope line, new items §3.4 and §4.6, additions to §5.1, §5.2, §5.5 and §5.6, §7.3, and step 9 of the manual loop.
 - **11/2/2026 (v0.4)** — **§3 (business_logic) and §4 (endpoints) implemented.** Windows: 2312 passed. Linux: 2312 passed (64 new tests). The as-built notes are under each item and in the pin-downs. The decisions worth knowing:
 	- **The curator's side lives in `SubmissionHelper`** (`ReviewDate`, `ReviewSubmission`, `SendDecisionNotice`), so the review endpoints stay thin.
 	- **A row lock makes the email reliable when two curators work at once.** Every path that decides dates first locks the submission (`GetSubmissionForUpdate`, added to §2.1). That way, two curators finishing a submission at the same moment can't both miss the email.

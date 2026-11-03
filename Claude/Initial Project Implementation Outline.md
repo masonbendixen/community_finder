@@ -67,7 +67,7 @@ Five tracks. Sizes: **S** ≈ 1–2 working sessions · **M** ≈ a focused week
 
 - **CM1 — Feedback loops.** "Report stale / closed / new info" flags on every listing → admin queue; org/venue self-service claim + edit-suggestion flow (admin-approved); reader-tips lane. Community-powered freshness — the cheapest real community feature. *S–M · needs GD3.*
 - **CM2 — Crowd recommendations.** *(New — your 8/5 comment on the services layer.)* Crowdsourced "who's actually good": logged-in users suggest a business and **recommend** existing ones; listings show recommendation counts ("14 people recommend this barber"); optional short moderated tips. Structurally positive (votes, not rants) so the defamation/moderation surface stays tiny; **free-text reviews deferred** to a later go/no-go with counsel; health-category recommendations shown as **unattributed aggregates only** (MHMDA — a user's name must never attach publicly to "recommends this HIV clinic"). This is the scalable answer to the GSBA gap. Mason's caution ("we need to be very careful how we do this," OQ7) is codified as bucket-doc requirements: a design-review gate with Mason before build, a counsel touch on the referral framing, and anti-gaming basics (one recommendation per account per listing, account-age threshold, no self-recommendation by claimed businesses). *M · needs GD2/GD3 + accounts · shape confirmed-with-care, OQ7.*
-- **CM3 — Event photos.** Platform photo pipeline is built; this adds galleries on events/venues + the consent/no-outing policy. Metro Weekly's proven engagement moat. *S · needs EV2.*
+- **CM3 — Event photos.** Platform photo pipeline is built; this adds galleries on events/venues + the consent/no-outing policy. Metro Weekly's proven engagement moat. *S · needs EV2.* **(11/3, Mason: plus an embedded video. Drafted as [[Bucket CM3 — Event photos & video]], now M: galleries on events and series, YouTube/Vimeo click-to-play, a main photo with a series-then-venue fallback.)**
 - **CM4 — Circles (+ looking-for-group).** The Q7 model as drafted: bounded member-visible rooms, stewards, no global feed, admin-approved creation, never-empty rule, LFG posts inside circles. Counsel gate + traction gate first. *L · needs CM1 maturity + counsel · last.*
 
 ## Track PL — Platform & ops
@@ -185,7 +185,7 @@ Everything between "works locally" and "live, legal, findable."
 
 - [ ] CM1 doc · [ ] CM1 done — feedback loops (flags / claims / tips)
 - [ ] CM2 doc · [ ] CM2 done — crowd recommendations (votes + suggestions; free-text reviews stay a separate go/no-go)
-- [ ] CM3 doc · [ ] CM3 done — event photos
+- [ ] CM3 doc *(drafted 11/3 → [[Bucket CM3 — Event photos & video]]; approval pending; its OQ9 proposes running it in Stream A)* · [ ] CM3 done — event photos & video
 - [ ] CM4 go/no-go · [ ] CM4 doc · [ ] CM4 done — Circles (+LFG), counsel + traction gates
 
 ## The Content Pool *(farmable to anyone, page-by-page- This will be a group effort)*
@@ -266,6 +266,11 @@ Naming: `Claude\Bucket <ID> — <Name>.md`. Standard structure (so you can revie
 
 # Change Log
 
+- **11/3/2026 (v0.5.1)** — **[[Bucket CM3 — Event photos & video]] drafted** (awaiting review), from Mason's ask for a main photo, a gallery and an embedded video on events.
+	- It grows from S to M.
+	- Its OQ9 proposes moving it to Stream A, since nearly all its files are Stream A's.
+	- It proposes one honuware change, **H15** (per-row photo visibility), needed only if submitters may upload a photo.
+	- It hands PL2 a content-security-policy requirement: the page must allow the YouTube and Vimeo players.
 - **11/1/2026 (v0.5)** — **Ten bucket docs drafted** (all awaiting review):
 	- **Events:** [[Bucket EV3 — Submission pipeline]], [[Bucket EV4 — Scheduled jobs]] and the new [[Bucket EV6 — Structured feed import]];
 	- **Guide:** [[Bucket GD4 — Seed registries load]], [[Bucket GD5 — Nightlife & scenes content]], [[Bucket GD6 — Health & everyday services content]], [[Bucket GD7 — New to Seattle]], [[Bucket GD8 — Freeze directory & pick your onramp]], [[Bucket GD9 — New to… life-transition guides]] and [[Bucket GD10 — Adult layer]].

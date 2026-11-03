@@ -105,7 +105,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- If EV4's archive job closes a submission because its dates passed unreviewed, EV4 sends the same email with a "we didn't get to this in time, sorry" line (EV4 §2.3).
 - **Withdraw:** a submitter can withdraw a submission while any of its dates are pending. Those dates become `rejected`, with reason `withdrawn` and the submitter recorded as reviewer. Approved dates stay listed, and the submitter asks a curator through the site's contact address to remove one.
 - **After approval the event is the curators'.** The submitter's view is read-only (OQ5).
-- **Mail:** the decision email uses the framework mail path that account verification uses (`util/mail/mail_helper.h`), with the From address resolved by `::Mail::LoadSenderAddress(secrets, txn)`. The body is built with `FormatString` templates and wrapped in `NormalizeCrLf`. A send failure writes an `admin_alerts` row and leaves `decision_notified_us` empty, so the next decision on that submission, or EV4's digest, surfaces it. It never fails the review.
+- **Mail:** the decision email uses the framework mail path that account verification uses (`util/mail/mail_helper.h`), with the From address resolved by `::Mail::LoadSenderAddress(secrets, txn)`. The body is built with `FormatString` templates and wrapped in `NormalizeCrLf`. The sender claims `decision_notified_us` first (`MarkDecisionNotified`, §2.1) and sends only if it won the claim. A send failure writes an `admin_alerts` row and clears the stamp, leaving `decision_notified_us` empty, so the next decision on that submission, or EV4's digest, surfaces it. It never fails the review.
 
 # Layered work items
 
@@ -140,14 +140,15 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 2. table_helpers
 
-- [ ] 2.1 `event_submissions.{h,cpp}`: `AddSubmission`, `GetSubmission`, `GetSubmissionsForPerson(personId)` (newest first, `id` tiebreak), `CountSubmissionsSince(personId, sinceUs)`, `UpdateSubmission` (bumps `updated_us`), `MarkDecisionNotified(id, nowUs)`. **Test.**
+- [ ] 2.1 `event_submissions.{h,cpp}`: `AddSubmission`, `GetSubmission`, `GetSubmissionsForPerson(personId)` (newest first, `id` tiebreak), `CountSubmissionsSince(personId, sinceUs)` (the window includes `sinceUs`), `UpdateSubmission` (bumps `updated_us`), `MarkDecisionNotified(id, nowUs)`. **Test.**
+	- *As built:* `MarkDecisionNotified` returns a `bool`. It stamps only while `decision_notified_us` is still empty (`UPDATE … WHERE decision_notified_us IS NULL RETURNING id`) and says whether this call did the stamping. Only the caller that wins the stamp sends the email. So if two curators decide a submission's last two dates at the same moment, the second waits on the row lock, finds it stamped, and sends nothing. A failed send clears the stamp again (see "Mail" above).
 - [ ] 2.2 `events.{h,cpp}` additions:
 	- `GetEventsBySubmission(submissionId)`;
-	- `GetEventsBySubmissions(ids)` (batch);
-	- `CountPendingForCreator(personId)`;
-	- `GetEventsStartingBetween(fromUs, toUs, statuses)`, the duplicate-hint scan, which reuses the `(status, starts_at_us)` index.
+	- `GetEventsBySubmissions(ids)` (batch, ordered by submission, then start);
+	- ~~`CountPendingForCreator(personId)`~~ **`CountPendingSubmittedBy(personId)`**. It counts through `event_submissions.submitted_by_person_id` rather than `events.created_by_person_id`, so an admin's own ingested or hand-entered pending events never count against their submission limit. *(Renamed in v0.3.)*
+	- `GetEventsStartingBetween(fromUs, toUs, statuses)`, the duplicate-hint scan, half-open like `GetEventsInRange`, which reuses the `(status, starts_at_us)` index.
 
-	**Tests** for each, including the cascade (deleting a submission deletes its dates).
+	**Tests** for each, including the cascade (deleting a submission deletes its dates and nothing else).
 
 ### 3. business_logic (`src/business_logic/events/`)
 

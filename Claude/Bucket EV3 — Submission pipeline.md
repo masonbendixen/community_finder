@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/3/2026
-Version: 0.7
+Version: 0.8
 tags:
 ---
 
@@ -414,7 +414,13 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 	- **Tags:** once 3 of a kind are picked, the rest of that kind's chips are disabled.
 	- **The honeypot** is a "Website" field moved off-screen by the stylesheet, with `aria-hidden`, `tabindex=-1` and `autocomplete=off`. It's sent only when something filled it in.
 	- **After sending,** a possible duplicate says which of your dates it matches ("your date 2") when there's more than one. A note appears if some tags weren't available.
-	- **Specs:** 7 for the form rules (including both 2026 DST nights in one submission) and 25 for the page. Among the page's: every refusal code in its place, and the 503 bringing the form back with the title, description and venue intact.
+	- **Dates and times use honuware's picker** (`hw-simple-date` from `@honuware/ui/controls`; *changed v0.8*, at Mason's request). Each row has a calendar for the start date, a time list for the start time (every 15 minutes, and any time can be typed), then the same for the end time and end date.
+		- **The form still holds text** ("2026-10-31", "22:00"), so `composeSubmission` is unchanged. `core/utils/date-picker-values.ts` converts both ways by reading the picker's local date and clock time, so what the picker shows is what's sent, whatever the browser's time zone.
+		- **Three things the page handles around the control:**
+			- The control announces only readable values, so clearing a box or typing something unreadable wouldn't reach the form. The page also reads the picker's own value as it's typed in.
+			- A picker takes its starting value once. Feeding each pick back in would rewrite the box mid-typing. When the form comes back after a pause, the date rows are rebuilt, so the pickers show what was typed.
+			- The control's own date-adapter import doesn't reach it inside another page, so the page provides Material's native adapter. It also sets the outline look so the pickers match the other fields.
+	- **Specs:** 7 for the form rules (including both 2026 DST nights in one submission), 28 for the page and 5 for the picker conversions. Among the page's: every refusal code in its place; the 503 bringing the form back with the title, description, venue and dates intact; and typing, picking and clearing in the pickers.
 - [x] 5.3 `pages/account/my-submissions.*` (`/account/submissions`, signed in): cards per submission with date rows and status chips, the reason and message when not listed, a link when listed, and Withdraw while pending, with a confirm in the page, not a browser pop-up. **Specs:** each status renders; withdraw updates in place.
 	- *As built:*
 		- **The route** sits behind `AuthGuard`, beside `/account`. The page is in the initial bundle like the other account pages (see §7.2).
@@ -587,6 +593,9 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 # Change Log
 
+- **11/3/2026 (v0.8)** — **The submit form's dates and times use honuware's picker** (`hw-simple-date`), at Mason's request, in place of the browser's own date and time boxes. The details are in §5.2's as-built notes.
+	- vitest: 64 files, 427 passed (was 63 and 419). `ng build` local, development and production all succeed; the initial bundle is 909.96 kB. No C++ changed.
+	- The curator's event editor (`/admin/events`, EV2) still uses the browser's boxes. Switching it is a follow-up, if Mason wants it.
 - **11/3/2026 (v0.7)** — **§5 (client) implemented, and §7.2 done.**
 	- **Results:**
 		- vitest: 63 files, 419 passed (was 53 and 303).

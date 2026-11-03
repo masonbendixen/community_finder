@@ -279,8 +279,10 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- Mason- This sounds good.
 8. **Where does the removal-request link go before CM1 exists?**
 	- *Rec: the site's contact address,* with the photo's page in the subject, and a curator acts within a day. CM1's report flag replaces it.
+	- Mason- Your recommendation is fine.
 9. **Which stream owns it, and when?** The outline puts CM3 in Stream D, gated on traction. But almost every file is Stream A's (the events tables, the event pages, the curator editor, the submit form), and Mason wants it for marketing now.
 	- *Rec: run it in Stream A after EV3's gates, with Levi or Mason as owner.* Update the outline's Stream D row to point here.
+	- Mason- Sounds good.
 
 # Change Log
 

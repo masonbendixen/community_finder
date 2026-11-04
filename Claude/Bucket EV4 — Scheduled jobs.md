@@ -178,7 +178,7 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 	- *As built (11/3):*
 		- **The flags:** `import_event_feeds_interval` and `run_event_scan_interval` exist, default 0, with "reserved, leave at 0" help. Nothing stops a non-zero value, but those endpoints don't exist yet, so the log would show a 404.
 		- **The header** reads `HONUWARE_ORIGIN_SECRET`, falling back to `KNOTTYYOGA_ORIGIN_SECRET`, the same lookup as the server's origin guard.
-		- **The startup log** never prints the password. A failed first login asks whether the server is running and whether the database was seeded with the same `SCHEDULER_SERVICE_ACCOUNT_PASSWORD`.
+		- **The startup log** never prints the password. A failed first login, refused or unreachable, gives the reason and asks whether the server is running and whether the database was seeded with the same `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` (see §8.4).
 - [x] 6.3 CMake: the `communityfinder_helper` target links `communityfinder_core` and `honuware_scheduler`. Update the app-superset `cmake/honuware_layering.cmake` so the helper target may link the scheduler side branch. Add a VS launch entry and a `launch_defaults.local.json` example (the password goes in the git-ignored local file only).
 	- *As built (11/3):*
 		- **No allow-list change was needed.** The layering check governs only the DAG components, and the helper is a leaf executable like the test_helper, so only its comment changed. The catalog and its test also build into `communityfinder_test_cases`, which was already allowed to link `honuware_scheduler`.
@@ -196,6 +196,7 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 	- *As built (11/3):*
 		- `run-job` goes through `Jobs::RunScheduledJob` (§4.3), the same path as the endpoints. A missing or unknown name prints the seven job names.
 		- `age-event` keeps the event's length: the end moves with the start.
+		- **One-shot mode:** `--command=run-job --name=…`, `--command=create-alert --description=…` and `--command=age-event --id=… --hours_ago=…` all work. The flags were added to `main.cpp` during §8.4.
 		- **Mail:** `run-job --name=notify_admin_alerts` sends a real email only when the test_helper was started with `--send_real_email`. Otherwise it goes to the capturing test mailer.
 		- **Tests:** registration and aliases; `run-job`'s output and a repeat; `create-alert` feeding the digest; `age-event` then both sweeps; `age-event`'s flag checks.
 
@@ -204,7 +205,7 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 - [x] 8.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."). §1 runs the honuware suite as well, and knottyyoga's only at its own batched re-pin. Raise the floor at bucket exit.
 	- *Result (11/3), against the local honuware tree:* **Windows: 2390 passed. Linux: 2390 passed.** The floor in `build_and_test.sh` was raised from 2314 to **2380**.
 	- The four executables (server, helper, test_helper, database_helper) also build on Linux. The gate builds only the test binary.
-	- honuware's own Linux suite: HONUWARE_RESULT.
+	- honuware's own Linux suite: **1913 passed** (floor 1700). Its Windows coverage of H13 comes from CF's Windows run, which links honuware's component tests.
 	- **Still to come (§1.2):** the strict pinned gate after Mason's push.
 - [x] 8.2 vitest green and `ng build` for all three configurations (for §3.3). *Result (11/3):* vitest **452 passed** (65 files). `ng build` passes for production, development and local. Prettier is clean after reformatting `event-detail.spec.ts`. The production bundle-size warning (912 kB against a 500 kB budget) was there before EV4.
 - [x] 8.3 Live seed check (announced, destructive) with `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` set:
@@ -256,6 +257,8 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 	- **Added:** §4.3, one shared entry point for the jobs, used by the endpoints and the test_helper. The endpoints log their counts server-side, because honuware's engine logs only the status code.
 	- **Ledger:** item H13 added to [[Setting up the project]].
 	- **Open questions:** OQ1–OQ6 built as recommended and awaiting confirmation; OQ7 is new (past days on the month calendar).
-	- **Still waiting:** Mason's honuware push, then the re-pin and strict pinned gate (§1.2).
+	- **Gates:** §8.1–§8.3 pass. §8.4 passes except the real email: Gmail refuses the dev mail credentials, a configuration issue rather than EV4 code.
+	- **Two fixes found by the gate:** the test_helper's missing one-shot flags, and the helper's silent abort when the server is down.
+	- **Still waiting:** Mason's honuware push, then the re-pin and strict pinned gate (§1.2); and the real-email step once the dev mail credentials are fixed.
 - **11/2/2026 (v0.1.1)** — The expiry sweep now sets EV3's new `expired` reject reason on a submission that has none yet (the "Expired submissions get their email" pin-down). From EV3 v0.2 §1.1.
 - **11/1/2026 (v0.1)** — Initial draft. It supersedes SUTP Phase 12, grounded in the honuware scheduler at the pinned SHA, knottyyoga's catalog and hygiene endpoints, and CF's deferred service-account comment. Found while drafting: honuware's `EnsureSchedulerServiceAccount` still requires knottyyoga's `manage_subscriptions`, so a small honuware change comes first (§1, proposed ledger item H13). Also proposed: past events stay publicly readable once archived (§3, OQ3), and unreviewed past events are rejected rather than archived (OQ4). Six open questions.

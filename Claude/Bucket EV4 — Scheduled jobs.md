@@ -201,19 +201,35 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 
 ### 8. Gates
 
-- [ ] 8.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."). §1 runs the honuware suite as well, and knottyyoga's only at its own batched re-pin. Raise the floor at bucket exit.
-- [ ] 8.2 vitest green and `ng build` for all three configurations (for §3.3).
-- [ ] 8.3 Live seed check (announced, destructive) with `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` set:
+- [x] 8.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."). §1 runs the honuware suite as well, and knottyyoga's only at its own batched re-pin. Raise the floor at bucket exit.
+	- *Result (11/3), against the local honuware tree:* **Windows: 2390 passed. Linux: 2390 passed.** The floor in `build_and_test.sh` was raised from 2314 to **2380**.
+	- The four executables (server, helper, test_helper, database_helper) also build on Linux. The gate builds only the test binary.
+	- honuware's own Linux suite: HONUWARE_RESULT.
+	- **Still to come (§1.2):** the strict pinned gate after Mason's push.
+- [x] 8.2 vitest green and `ng build` for all three configurations (for §3.3). *Result (11/3):* vitest **452 passed** (65 files). `ng build` passes for production, development and local. Prettier is clean after reformatting `event-detail.spec.ts`. The production bundle-size warning (912 kB against a 500 kB budget) was there before EV4.
+- [x] 8.3 Live seed check (announced, destructive) with `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` set:
 	- the scheduler person exists, `email_verified` is set, and it has the scheduler role holding only `run_scheduled_jobs`;
 	- Administrator holds `run_scheduled_jobs` too.
 
 	Then once more with the variable unset: the seed prints the skip line and exits 0.
+	- *Result (11/3).* Run on a throwaway `communityfinder`, with Mason's dev database renamed aside and then restored unchanged.
+		- **Unset:** the seed printed the skip line and exited 0. No scheduler person or role was created; `run_scheduled_jobs` was still seeded.
+		- **Set:** the person exists with `email_verified_at` set. Its only role is `scheduler`, which holds only `run_scheduled_jobs`. The Administrator role (named `admin` in the database) holds it too.
 - [ ] 8.4 **The phase gate (SUTP Phase 12's):**
 	1. Run `communityfinder_helper --archive_past_events_interval=60 --expire_unreviewed_events_interval=60` against the local server.
 	2. Its log shows the login, then a 200 with counts each minute.
 	3. In the test_helper, `create-event --past --status=approved` and a pending `create-event` that you then `age-event` into the past.
 	4. Within a minute, the first is `archived`, and its page still loads with "This event has passed"; the second is `rejected` with "Date passed before review."
 	5. `create-alert` and then `run-job --name=notify_admin_alerts` with a recipient configured: one email arrives.
+	- *Result (11/3): everything passes except the real email.* Same throwaway database, with a server on port 18091 so 18081 stayed free.
+		1. **The helper** logged in once, then called both jobs every minute. Each answered 200, and the counts appear in the server log: `{"archived":1}`, then `{"decision_emails_sent":0,"expired":1}`, then zeros on later ticks.
+		2. **The events.** Within a minute, the approved past event was `archived`; anonymous `GET /api/events/<id>` still returns 200. The aged pending event was `rejected` with "Date passed before review" and no reviewer; anonymous reads 404. The "This event has passed" note is client-side and covered by the §3.3 spec. Nobody looked at it in a browser.
+		3. **The digest** works end to end with the capturing mailer: `{"alerts_count":1,"mail_sent":true}`, then a repeat gives `{"alerts_count":0,"mail_sent":false}` with the same stamp.
+		4. **The real send was refused** by Gmail ("Mail sender rejection"). This happened with the throwaway's own seeded settings, and again after copying in **Mason's dev mail settings**, so his dev database has the same problem. Per the comment in `create_database.cpp`, Gmail returns this error when the app password doesn't belong to the sender address. **Mason: check that `HONUWARE_MAIL_APP_PASSWORD` (in `launch_defaults.local.json`) belongs to the configured sender, then re-run step 5.**
+		5. **The refused send is handled correctly.** It left the stamp alone, so the next run retried the same alert, as §4.2 intends.
+	- **Fixed during the gate (11/3):**
+		- **The test_helper's one-shot mode** lacked flags for the new commands. `--id`, `--hours_ago` and `--description` are now declared in `main.cpp` (§7.1's tests call the commands through the registry, so they never noticed).
+		- **The helper aborted silently when the server wasn't reachable.** libcurl's error reaches `main` as an exception from `Initialize()`. knottyyoga's `main` catches it, but CF's didn't. Uncaught, the helper aborted; in a Windows Debug build it sat at a hidden abort dialog that looked like a hang. It now catches the error like knottyyoga does, and exits in about 2 seconds with "… could not log in as … : CURL error: Could not connect to server). Is the server running, and was the database seeded … with the same SCHEDULER_SERVICE_ACCOUNT_PASSWORD?" A wrong password gives "… the login was refused …".
 
 # Open Questions
 

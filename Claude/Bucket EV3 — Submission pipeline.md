@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/3/2026
-Version: 0.9
+Version: 0.9.1
 tags:
 ---
 
@@ -611,6 +611,19 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 # Change Log
 
+- **11/3/2026 (v0.9.1)** — **The New Event / Edit Event tabs look like tabs,** at Mason's request ("just text items next to each other with an underline").
+	- They're folder tabs now:
+		- each tab is a box with rounded top corners;
+		- the unselected tab is lavender;
+		- the selected tab is white, with a plum top edge and bold label, and opens into the white panel below it;
+		- the panel is raised like the queue cards.
+	- The styles are a global `.folder-tabs` class in `styles.scss`, so another page's tab group can use it.
+	- **Fixed along the way:** Edit on a queue card scrolled the tabs under the sticky header. The editor now stops below the header.
+	- **Results:**
+		- vitest: 65 files, 449 passed;
+		- `ng build` local, development and production all succeed; the initial bundle is 912.40 kB;
+		- no C++ changed;
+		- checked in headless-Chrome screenshots at desktop and phone width: both tabs, hover, and the scroll from a queue card.
 - **11/3/2026 (v0.9)** — **The review queue and the event editor reworked**, from Mason's walk-through of `/admin/events`.
 	- **The queue (§5.5):**
 		- each entry is a raised card with the title first;

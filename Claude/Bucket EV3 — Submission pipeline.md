@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/3/2026
-Version: 0.9.1
+Version: 0.10
 tags:
 ---
 
@@ -532,7 +532,18 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 7. Gates
 
-- [ ] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit (EV1 §7.2 policy).
+*(Bucket-exit gates run 11/3. 7.1–7.3 passed. The floor change is uncommitted (Mason commits). Remaining: 7.4, Mason's or Levi's manual loop.)*
+
+- [x] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit (EV1 §7.2 policy).
+	- *Per slice:* each slice above records its run, and each was green on both platforms.
+	- *Bucket exit, 11/3* (on `55f7a5f`, with the floor change below):
+		- **Windows:** x64-Debug, 2324 passed. The tree was already current ("no work to do").
+		- **Linux:** a strictly pinned Release gate:
+			- no `HONUWARE_SRC_DIR`, so FetchContent cloned honuware at the pin, `04f88ee…`;
+			- no build-cache volume, so all 807 sources compiled from scratch;
+			- it printed `tests executed: 2324 (floor: 2314)` and `[communityfinder] OK`, and 2324/2324 passed.
+	- **The floor** (`MIN_EXPECTED_TESTS` in `server/docker/build_and_test.sh`) went from 2221 to **2314**: the 2324 actual, minus 10. The header comment records the EV3 bucket-exit count. Uncommitted; Mason commits it.
+	- The count hasn't moved since v0.6 (2324): §5 and the later client work added no C++ tests.
 - [x] 7.2 `ng build` for local, development and production; vitest green, with the new count recorded.
 	- *Done 11/3:*
 		- **vitest:** 63 files, 419 passed (was 53 and 303; +116 tests in 10 new spec files and 7 extended ones).
@@ -637,6 +648,12 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 # Change Log
 
+- **11/3/2026 (v0.10)** — **The bucket-exit gates (§7) run, at Mason's request.** 7.1 and 7.3 passed; 7.2 was already done.
+	- **7.1:** Windows: 2324 passed. Linux: 2324 passed, in a strictly pinned Release gate (a fresh clone of honuware `04f88ee`, no override, no build cache) against the raised floor. The floor went from 2221 to 2314 in `build_and_test.sh`. That change is uncommitted, for Mason to commit.
+	- **7.3:** the live seed check passed on a fresh `--recreate_database`. Everything §7.3 lists is present, and a rolled-back insert test confirmed the defaults, the cascade and each refusal.
+		- **Mason's dev database was kept, not wiped.** It was renamed aside for the check and renamed back, and a before-and-after fingerprint matched.
+		- **A correction:** the three submission settings keys *are* seeded, with the code's defaults. That's by design (`app_secret_values`), and it matches a database without them.
+	- **Remaining:** 7.4, the manual loop, which is Mason's or Levi's. After that, EV3 is complete.
 - **11/3/2026 (v0.9.1)** — **The New Event / Edit Event tabs look like tabs,** at Mason's request ("just text items next to each other with an underline").
 	- They're folder tabs now:
 		- each tab is a box with rounded top corners;
@@ -695,6 +712,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 		- 7.1's floor at bucket exit;
 		- 7.3's live seed check (destructive, needs Mason's go-ahead);
 		- 7.4's manual loop.
+		- *(7.1's floor and 7.3 done in v0.10.)*
 - **11/2/2026 (v0.6)** — **The pause switch (§3.4, §4.6) and the test_helper commands (§6.1) implemented.** Windows: 2324 passed. Linux: 2324 passed (12 new tests). The as-built notes are under each item. The decisions worth knowing:
 	- **Renamed:** the §3.3 limits types and functions became "settings" (`SubmissionSettings`, `LoadSubmissionSettings`, `SaveSubmissionSettings`, …), since they now carry the switch too.
 	- **The switch is checked before the honeypot and every field,** so a paused form always gets the notice.

@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 11/2/2026
-Version: 0.1.1
+Last Updated: 11/3/2026
+Version: 0.2
 tags:
 ---
 
@@ -98,28 +98,38 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 
 ### 1. honuware: parameterize the service account (cross-repo bump-point)
 
-- [ ] 1.1 In `components/platform/business_logic/auth/service_account.{h,cpp}`, `EnsureSchedulerServiceAccount` gains a `const std::vector<std::string_view>& permissionNames` parameter. It links the scheduler role to each named permission and throws if one is missing, as it does today for the hard-coded one. **Keep the old signature as a forwarder** that passes `{"manage_subscriptions"}`, with a comment marking it for removal, so knottyyoga compiles unchanged until its batched re-pin (OQ1). **Tests** (honuware): one permission; two; a missing one throws; the forwarder behaves exactly as before.
+- [x] 1.1 In `components/platform/business_logic/auth/service_account.{h,cpp}`, `EnsureSchedulerServiceAccount` gains a `const std::vector<std::string_view>& permissionNames` parameter. It links the scheduler role to each named permission and throws if one is missing, as it does today for the hard-coded one. **Keep the old signature as a forwarder** that passes `{"manage_subscriptions"}`, with a comment marking it for removal, so knottyyoga compiles unchanged until its batched re-pin (OQ1). **Tests** (honuware): one permission; two; a missing one throws; the forwarder behaves exactly as before.
+	- *As built (11/3):*
+		- **The old function did a bit more than this doc said.** It also granted `manage_class_schedule` when that permission existed. The forwarder keeps doing exactly that, and keeps knottyyoga's original role description.
+		- **The new form** describes the role generically and checks every name **before writing anything**, so a missing permission throws with no half-made account. It also reuses an existing `scheduler` role without duplicating its links.
+		- **Tests:** five new ones in `service_account_test.cpp` (one permission, two, a missing one throws and writes nothing, idempotent, reuses an existing role), plus `ForwarderKeepsTheLegacyRoleDescription`. The old tests still pass, so the forwarder behaves as before.
 - [ ] 1.2 The co-dev loop: CF builds against the local honuware tree (`HONUWARE_SRC_DIR`, the `x64-Debug-local` preset on Windows). Mason pushes honuware, then CF re-pins (`GIT_TAG`) and Claude verifies a strict pinned Linux gate (fresh clone, no override). knottyyoga's re-pin stays batched and isn't required here.
-- [ ] 1.3 Ledger: add the change as **H13** in [[Setting up the project]]'s cross-repo ledger, plus a follow-up to remove the forwarder once knottyyoga moves to the new signature.
-- [ ] 1.4 **Bundle with EV6's H14 if both are near.** [[Bucket EV6 — Structured feed import]] §1 proposes a second small, additive honuware change: fetch options on `HttpRequest` (timeout, size cap, private-address check). Making both in one honuware push saves a bump cycle. Neither needs knottyyoga to move.
+	- *Status (11/3):* the local half is done; CF builds and tests against the local tree on both platforms (§8.1). **Waiting on Mason's honuware push.** Then Claude re-pins `GIT_TAG` and runs the strict pinned gate.
+- [x] 1.3 Ledger: add the change as **H13** in [[Setting up the project]]'s cross-repo ledger, plus a follow-up to remove the forwarder once knottyyoga moves to the new signature. *Added 11/3, with OQ6's extraction note as a second follow-up.*
+- [x] 1.4 **Bundle with EV6's H14 if both are near.** [[Bucket EV6 — Structured feed import]] §1 proposes a second small, additive honuware change: fetch options on `HttpRequest` (timeout, size cap, private-address check). Making both in one honuware push saves a bump cycle. Neither needs knottyyoga to move. *Not bundled (11/3): EV6 hasn't started, so H13 goes alone rather than waiting.*
 
 ### 2. Permission, account and seed (`business_logic/create_app_tables.cpp`, `database_helper/create_database.cpp`)
 
-- [ ] 2.1 `PopulateAppPermissions` gains `run_scheduled_jobs`, granted to Administrator by name. The constant `kPermissionRunScheduledJobs` lives in a new `db_schema/scheduled_jobs.h`. It gates endpoints, not a table, so it has no `admin_table_permissions` rows. **Test:** `create_app_tables_test.cpp`, where the permission exists and Administrator holds it.
-- [ ] 2.2 `create_database.cpp`: replace the "DEFERRED to Phase 12" comment with the provisioning call. If `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` is set, call `EnsureSchedulerServiceAccount(..., App::kSchedulerServiceAccountEmail, password, {kPermissionRunScheduledJobs})`. If not, print "Scheduler service account skipped: set SCHEDULER_SERVICE_ACCOUNT_PASSWORD to create it." The call goes after `PopulateAppTables`, since the permission must exist. **Test:** the provisioning moves into a reachable function (`ProvisionSchedulerAccount` in `create_app_tables.cpp`, the EV1 §1.6 lesson that the exe's anonymous namespace is untestable) with tests for set (account plus role plus the one permission), unset (skipped, nothing written) and re-run (idempotent).
+- [x] 2.1 `PopulateAppPermissions` gains `run_scheduled_jobs`, granted to Administrator by name. The constant `kPermissionRunScheduledJobs` lives in a new `db_schema/scheduled_jobs.h`. It gates endpoints, not a table, so it has no `admin_table_permissions` rows. **Test:** `create_app_tables_test.cpp`, where the permission exists and Administrator holds it.
+- [x] 2.2 `create_database.cpp`: replace the "DEFERRED to Phase 12" comment with the provisioning call. If `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` is set, call `EnsureSchedulerServiceAccount(..., App::kSchedulerServiceAccountEmail, password, {kPermissionRunScheduledJobs})`. If not, print "Scheduler service account skipped: set SCHEDULER_SERVICE_ACCOUNT_PASSWORD to create it." The call goes after `PopulateAppTables`, since the permission must exist. **Test:** the provisioning moves into a reachable function (`ProvisionSchedulerAccount` in `create_app_tables.cpp`, the EV1 §1.6 lesson that the exe's anonymous namespace is untestable) with tests for set (account plus role plus the one permission), unset (skipped, nothing written) and re-run (idempotent).
+	- *As built (11/3):* `ProvisionSchedulerAccount(tx, db, password)` returns false for an empty password, and the seed prints the skip line. honuware's example JSON says "seeding throws if unset." That is knottyyoga's behavior, not CF's (OQ2).
+	- **Mason's dev database** gains the permission and the account only on its next `--recreate_database`. No migration was written, since nothing is deployed yet.
 
 ### 3. Past events stay readable (EV1 and EV2 code, Stream A)
 
-- [ ] 3.1 `EventHelper`: public reads accept `approved` or `archived`. That covers `GetUpcomingPublic`'s range query, `GetEventDetail` for anonymous callers, and `GetSeriesDetail`'s instance list. `TableHelpers::Events::GetEventsInRange` takes a status list instead of one status. **Tests:**
+- [x] 3.1 `EventHelper`: public reads accept `approved` or `archived`. That covers `GetUpcomingPublic`'s range query, `GetEventDetail` for anonymous callers, and `GetSeriesDetail`'s instance list. `TableHelpers::Events::GetEventsInRange` takes a status list instead of one status. **Tests:**
 	- an archived event appears in a past-dated window and in its detail;
 	- it never appears in the default upcoming window once it's in the past;
 	- pending and rejected stay hidden.
-- [ ] 3.2 ICS (`get_events_ics_feed.cpp`): the now − 1 day window now also carries yesterday's archived events, so a subscriber's calendar doesn't lose the event they went to last night. **Test.**
-- [ ] 3.3 Client: `EventDetailPage` shows "This event has passed" when its end (or start + 2 hours) is in the past, and hides add-to-calendar. **Spec.** The calendar needs no change; it already shows whatever the month window returns.
+	- *As built (11/3):*
+		- The rule lives in one place: `Events::IsPublicEventStatus` / `PublicEventStatuses()`. The detail endpoint and the single-event `.ics` both use it.
+		- **One rename.** `GetEventsInRange` was dropped rather than widened. EV3 had already added `GetEventsStartingBetween(…, statuses)`, the same query with a status list, so the calendar now uses that.
+- [x] 3.2 ICS (`get_events_ics_feed.cpp`): the now − 1 day window now also carries yesterday's archived events, so a subscriber's calendar doesn't lose the event they went to last night. **Test.** *As built: no change to the endpoint itself. It reads through `GetUpcomingPublic`, so 3.1 covers it; the new test is in `get_events_ics_feed_test.cpp`.*
+- [x] 3.3 Client: `EventDetailPage` shows "This event has passed" when its end (or start + 2 hours) is in the past, and hides add-to-calendar. **Spec.** The calendar needs no change; it already shows whatever the month window returns. *As built: the event types and the mock community-access layer also accept `archived`, so the mock-data build behaves like the server.*
 
 ### 4. business_logic (`src/business_logic/jobs/`, new; house `PRIVATE`/`PUBLIC` CMake split)
 
-- [ ] 4.1 `event_lifecycle_jobs.{h,cpp}`:
+- [x] 4.1 `event_lifecycle_jobs.{h,cpp}`:
 	- `ArchivePastEvents(Transaction&, nowUs, limit) → {archived}`;
 	- `ExpireUnreviewedEvents(Transaction&, nowUs, limit) → {expired, submissionNotices}`, where the notices go to EV3's mailer.
 
@@ -131,36 +141,63 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 	- an expired event's note and empty reviewer;
 	- re-running is a no-op;
 	- an ingest of an archived key reports `archived_kept`, as EV1 OQ10 (d) promised, now with a real archive in the loop.
-- [ ] 4.2 `admin_alerts_digest.{h,cpp}`: the knottyyoga digest logic, moved out of the endpoint so it can be tested: render the lines, find the max `created_us`, read and stamp the secret. The subject defaults to "{site name} admin alerts" when `admin_alerts_digest_subject` is empty. **Tests:** no new alerts means no mail; new alerts produce one mail and a stamp; a second run sends nothing; an empty recipient is a no-op.
+	- *As built (11/3):*
+		- **Each event is re-read under its row lock before it changes** (`GetEventForUpdate`), so a curator's decision made after the sweep's scan wins. For a submitted date, the submission is locked first, the same order EV3 uses.
+		- `GetApprovedEndedBefore` also requires the start to be before the cutoff, so a bad end time (before the start) can't archive a future event.
+		- **The email.** The expiry sweep returns the claimed decision notices, and the caller sends each with EV3's `SubmissionHelper::SendDecisionNotice`. A failed send records an admin alert, which the digest mails, and never fails the job.
+		- A curator's existing reject reason is kept; only an empty one becomes `expired`.
+		- **Tests:** 10 in `event_lifecycle_jobs_test.cpp`, covering the bullets above plus "one of two dates expiring sends no email yet."
+- [x] 4.2 `admin_alerts_digest.{h,cpp}`: the knottyyoga digest logic, moved out of the endpoint so it can be tested: render the lines, find the max `created_us`, read and stamp the secret. The subject defaults to "{site name} admin alerts" when `admin_alerts_digest_subject` is empty. **Tests:** no new alerts means no mail; new alerts produce one mail and a stamp; a second run sends nothing; an empty recipient is a no-op. *As built: also tested are that a configured subject wins and that a failed send leaves the stamp, so the next run retries the same alerts.*
+- [x] 4.3 *(added while building)* `scheduled_jobs.{h,cpp}`: **one entry point for all seven jobs.** `Jobs::RunScheduledJob(tx, db, secrets, mail, name)` runs a job by name and returns its counts as JSON, or nothing for an unknown name. The endpoints (§5) and the test_helper's `run-job` (§7) both call it, so curl, the helper process and the test_helper can't drift apart.
+	- `LookupRetentionUs` reads a retention secret. When the secret is missing, malformed or not positive, it uses 30 days, knottyyoga's default. It reads `auth_login_attempts_retention_in_micros` and `scaled_photo_max_age_us`.
+	- **Tests:** every job runs on an empty database and reports exactly its count keys; an unknown name gives nothing; the retention fallbacks.
 
 ### 5. endpoints (`src/endpoints/`, EV1 §5 conventions)
 
-- [ ] 5.1 Seven thin TUs, one per job (`admin_archive_past_events`, `admin_expire_unreviewed_events`, the four `admin_cleanup_*`, `admin_notify_admin_alerts`). Each checks `run_scheduled_jobs`, runs one transaction, and returns its counts. **Tests** per endpoint:
+- [x] 5.1 Seven thin TUs, one per job (`admin_archive_past_events`, `admin_expire_unreviewed_events`, the four `admin_cleanup_*`, `admin_notify_admin_alerts`). Each checks `run_scheduled_jobs`, runs one transaction, and returns its counts. **Tests** per endpoint:
 	- 401 signed out; 403 without the permission (grant it to another user first, the EV1 OQ11 pattern);
 	- 200 with counts for the service-account-shaped caller;
 	- calling twice is safe.
-- [ ] 5.2 Seven volatile anchors in `web_app.cpp` (own lines, alphabetized) and the CMakeLists sources. *A missing anchor 404s in Release only.* The floor raise in §8 is the alarm.
+	- *As built (11/3):*
+		- **Shared code.** The seven TUs share `scheduled_job_endpoint.{h,cpp}`: `PostScheduledJob` runs the permission check and `Jobs::RunScheduledJob` in one transaction. Each TU is its route plus one line.
+		- **The counts are logged server-side.** honuware's engine logs only `job_success job=… status=200 duration_ms=…`, not the response body, so a 200 also writes `[scheduled_job] event=job_ran path=/api/admin/<job> result={…}` to the **server's** log. That is where §8.4's "a 200 with counts" shows up.
+		- **Tests.** The shared 401/403 checks loop over all seven jobs in `scheduled_job_endpoint_test.cpp`, which also covers a 200 for every job on an empty database and an Administrator-style holder running one by hand. Each endpoint's own test file proves its effect and that a repeat finds nothing.
+		- **The caller in tests** is the real scheduler account: `JobsEndpointTest::SignInAsScheduler` provisions it through `ProvisionSchedulerAccount`.
+- [x] 5.2 Seven volatile anchors in `web_app.cpp` (own lines, alphabetized) and the CMakeLists sources. *A missing anchor 404s in Release only.* The floor raise in §8 is the alarm.
 
 ### 6. The helper process (`src/scheduler/`, new)
 
-- [ ] 6.1 `communityfinder_job_catalog.{h,cpp}`:
+- [x] 6.1 `communityfinder_job_catalog.{h,cpp}`:
 	- `JobTarget` and `JobIntervals` (one field per table row);
 	- `BuildCommunityFinderJobs(target, intervals)`, which skips zero intervals;
 	- `ValidateCommunityFinderConfig`;
 	- `ResolveServiceAccountPassword`.
 
 	knottyyoga's file, with CF's jobs. **Test** (`communityfinder_job_catalog_test.cpp`): every enabled job present with path and interval; zero intervals dropped; the two reserved jobs absent at their default of 0; validation messages for an empty URL, email or password and negative intervals.
-- [ ] 6.2 `main.cpp`: ABSL flags `server_url` (default `http://localhost:18081`), `service_account_email` (default `scheduler@communityfinder.local`), `service_account_password` (falls back to the env var), and one `*_interval` flag per job. It also adds the `X-Origin-Secret` header when `HONUWARE_ORIGIN_SECRET` is set (knottyyoga's `MaybeAddOriginSecretHeader`, needed once PL2 puts CloudFront in front). Fixed mode only; control mode is PL4.
-- [ ] 6.3 CMake: the `communityfinder_helper` target links `communityfinder_core` and `honuware_scheduler`. Update the app-superset `cmake/honuware_layering.cmake` so the helper target may link the scheduler side branch. Add a VS launch entry and a `launch_defaults.local.json` example (the password goes in the git-ignored local file only).
+- [x] 6.2 `main.cpp`: ABSL flags `server_url` (default `http://localhost:18081`), `service_account_email` (default `scheduler@communityfinder.local`), `service_account_password` (falls back to the env var), and one `*_interval` flag per job. It also adds the `X-Origin-Secret` header when `HONUWARE_ORIGIN_SECRET` is set (knottyyoga's `MaybeAddOriginSecretHeader`, needed once PL2 puts CloudFront in front). Fixed mode only; control mode is PL4.
+	- *As built (11/3):*
+		- **The flags:** `import_event_feeds_interval` and `run_event_scan_interval` exist, default 0, with "reserved, leave at 0" help. Nothing stops a non-zero value, but those endpoints don't exist yet, so the log would show a 404.
+		- **The header** reads `HONUWARE_ORIGIN_SECRET`, falling back to `KNOTTYYOGA_ORIGIN_SECRET`, the same lookup as the server's origin guard.
+		- **The startup log** never prints the password. A failed first login asks whether the server is running and whether the database was seeded with the same `SCHEDULER_SERVICE_ACCOUNT_PASSWORD`.
+- [x] 6.3 CMake: the `communityfinder_helper` target links `communityfinder_core` and `honuware_scheduler`. Update the app-superset `cmake/honuware_layering.cmake` so the helper target may link the scheduler side branch. Add a VS launch entry and a `launch_defaults.local.json` example (the password goes in the git-ignored local file only).
+	- *As built (11/3):*
+		- **No allow-list change was needed.** The layering check governs only the DAG components, and the helper is a leaf executable like the test_helper, so only its comment changed. The catalog and its test also build into `communityfinder_test_cases`, which was already allowed to link `honuware_scheduler`.
+		- **Launch config.** `sync_launch_targets.ps1` added the `x64-Debug-local` launch entry, and `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` is in Mason's git-ignored `launch_defaults.local.json` (`all.env`), so the seed and the helper both see it.
+		- The VS `x64-Debug` config gets its entry the next time the script runs for that config.
 
 ### 7. test_helper (`src/test_helper/commands/jobs_commands.{h,cpp}`)
 
-- [ ] 7.1 Three commands, all calling the business logic in-process, so no running server is needed:
+- [x] 7.1 Three commands, all calling the business logic in-process, so no running server is needed:
 	- `run-job [rj] --name=<job>` prints the counts;
 	- `create-alert [ca] --description="…"` writes an `admin_alerts` row to exercise the digest;
 	- `age-event [ae] --id=N --hours_ago=N` moves an event's start and end into the past, so archive and expire can be tried on demand.
 
 	`create-event --past` already exists from EV1. **Tests** (`jobs_commands_test.cpp`).
+	- *As built (11/3):*
+		- `run-job` goes through `Jobs::RunScheduledJob` (§4.3), the same path as the endpoints. A missing or unknown name prints the seven job names.
+		- `age-event` keeps the event's length: the end moves with the start.
+		- **Mail:** `run-job --name=notify_admin_alerts` sends a real email only when the test_helper was started with `--send_real_email`. Otherwise it goes to the capturing test mailer.
+		- **Tests:** registration and aliases; `run-job`'s output and a repeat; `create-alert` feeding the digest; `age-event` then both sweeps; `age-event`'s flag checks.
 
 ### 8. Gates
 
@@ -183,13 +220,26 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 *(Numbered for inline answers; recommendations included so "agreed" suffices.)*
 
 1. **How to change honuware without forcing a knottyyoga re-pin.** The service-account setup needs to accept the permission names instead of assuming knottyyoga's `manage_subscriptions`. If we just change the function, knottyyoga stops compiling the next time it re-pins, and you batch those re-pins deliberately. *Rec: add the new version and keep the old one as a thin forwarder, marked for removal. knottyyoga then moves over whenever its batch happens. The cost is one extra function in honuware for a while.*
+	- **Built as recommended, please confirm.** (11/3)
 2. **What if the scheduler password isn't set when the database is rebuilt?** knottyyoga's seed fails outright. For CF, that would mean every developer needs the variable even if they never run the helper. *Rec: skip the account with a printed warning. The helper will then fail to log in, with an obvious message, which is easy to diagnose.*
+	- **Built as recommended, please confirm.** (11/3)
 3. **Should past events stay visible?** Today "archived" would mean hidden. Archiving would then empty the past days of the month calendar and turn every old event link into "not found," which hurts anyone who shared a link and anything a search engine indexed. *Rec: archived events stay readable (their page, and the calendar's past days). The upcoming list and calendar feeds still only show what's coming, because their date windows start at now. "Archived" keeps its real job: a re-scan can't reopen the event, and it drops out of the review screens.*
+	- **Built as recommended, please confirm.** (11/3)
 4. **Unreviewed events whose date passes are marked "not listed," not archived.** They were never public, so they mustn't become visible on the way out. Rejecting them with "Date passed before review" keeps "archived" meaning "happened and was listed." *Rec: as stated. EV3's submitter gets the "sorry, we didn't get to it in time" email.*
+	- **Built as recommended, please confirm.** (11/3)
 5. **Default intervals.** Archive and expire hourly; hygiene daily; the alerts digest hourly (it only mails when there's something new). *Rec: as in the table. All are flags, so a deployment can change them without code.*
+	- **Built as recommended, please confirm.** (11/3)
 6. **Where the jobs' code lives.** knottyyoga's hygiene and digest endpoints are app code over platform helpers. The tidier home is honuware itself (SUTP's H8 note floated the digest as an extraction candidate), but that's another cross-repo change and another knottyyoga clean-up. *Rec: CF writes its own thin endpoints now, over the platform helpers, with the digest logic tested in `business_logic/jobs/`. Add a ledger note that the hygiene endpoints are extraction candidates once both apps carry copies.*
+	- **Built as recommended, please confirm.** (11/3) The note is follow-up (2) on ledger item H13.
+7. *(New, 11/3)* **Should the month calendar show past days at all?** With OQ3, the calendar's past days now fill with archived events. That's useful for "what happened last week," but it also means the first thing someone sees on the 28th is a month of finished events above the few still coming. *Rec: leave it as it is for now. The upcoming list is the "what's next" view, and the calendar is the month at a glance. Revisit if testers find the past days distracting. One option then is to dim past days rather than hide them.*
 
 # Change Log
 
+- **11/3/2026 (v0.2)**
+	- **Built:** all eight sections. Each section's as-built notes record where the code differs from the plan.
+	- **Added:** §4.3, one shared entry point for the jobs, used by the endpoints and the test_helper. The endpoints log their counts server-side, because honuware's engine logs only the status code.
+	- **Ledger:** item H13 added to [[Setting up the project]].
+	- **Open questions:** OQ1–OQ6 built as recommended and awaiting confirmation; OQ7 is new (past days on the month calendar).
+	- **Still waiting:** Mason's honuware push, then the re-pin and strict pinned gate (§1.2).
 - **11/2/2026 (v0.1.1)** — The expiry sweep now sets EV3's new `expired` reject reason on a submission that has none yet (the "Expired submissions get their email" pin-down). From EV3 v0.2 §1.1.
 - **11/1/2026 (v0.1)** — Initial draft. It supersedes SUTP Phase 12, grounded in the honuware scheduler at the pinned SHA, knottyyoga's catalog and hygiene endpoints, and CF's deferred service-account comment. Found while drafting: honuware's `EnsureSchedulerServiceAccount` still requires knottyyoga's `manage_subscriptions`, so a small honuware change comes first (§1, proposed ledger item H13). Also proposed: past events stay publicly readable once archived (§3, OQ3), and unreviewed past events are rejected rather than archived (OQ4). Six open questions.

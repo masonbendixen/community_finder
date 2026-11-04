@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/3/2026
-Version: 0.3
+Version: 0.4
 tags:
 ---
 
@@ -103,8 +103,10 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 		- **The old function did a bit more than this doc said.** It also granted `manage_class_schedule` when that permission existed. The forwarder keeps doing exactly that, and keeps knottyyoga's original role description.
 		- **The new form** describes the role generically and checks every name **before writing anything**, so a missing permission throws with no half-made account. It also reuses an existing `scheduler` role without duplicating its links.
 		- **Tests:** five new ones in `service_account_test.cpp` (one permission, two, a missing one throws and writes nothing, idempotent, reuses an existing role), plus `ForwarderKeepsTheLegacyRoleDescription`. The old tests still pass, so the forwarder behaves as before.
+		- **Superseded by §9.1 (v0.4):** the forwarder was removed (OQ1).
 - [ ] 1.2 The co-dev loop: CF builds against the local honuware tree (`HONUWARE_SRC_DIR`, the `x64-Debug-local` preset on Windows). Mason pushes honuware, then CF re-pins (`GIT_TAG`) and Claude verifies a strict pinned Linux gate (fresh clone, no override). knottyyoga's re-pin stays batched and isn't required here.
 	- *Status (11/3):* the local half is done; CF builds and tests against the local tree on both platforms (§8.1). **Waiting on Mason's honuware push.** Then Claude re-pins `GIT_TAG` and runs the strict pinned gate.
+	- *Update (11/3, v0.4):* §9 widened the push and removed the forwarder (OQ1), so **knottyyoga re-pins in the same cycle**; its re-pin no longer waits for a batch. The push now carries H13 as widened in §9.
 - [x] 1.3 Ledger: add the change as **H13** in [[Setting up the project]]'s cross-repo ledger, plus a follow-up to remove the forwarder once knottyyoga moves to the new signature. *Added 11/3, with OQ6's extraction note as a second follow-up.*
 - [x] 1.4 **Bundle with EV6's H14 if both are near.** [[Bucket EV6 — Structured feed import]] §1 proposes a second small, additive honuware change: fetch options on `HttpRequest` (timeout, size cap, private-address check). Making both in one honuware push saves a bump cycle. Neither needs knottyyoga to move. *Not bundled (11/3): EV6 hasn't started, so H13 goes alone rather than waiting.*
 
@@ -232,49 +234,114 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 		- **The test_helper's one-shot mode** lacked flags for the new commands. `--id`, `--hours_ago` and `--description` are now declared in `main.cpp` (§7.1's tests call the commands through the registry, so they never noticed).
 		- **The helper aborted silently when the server wasn't reachable.** libcurl's error reaches `main` as an exception from `Initialize()`. knottyyoga's `main` catches it, but CF's didn't. Uncaught, the helper aborted; in a Windows Debug build it sat at a hidden abort dialog that looked like a hang. It now catches the error like knottyyoga does, and exits in about 2 seconds with "… could not log in as … : CURL error: Could not connect to server). Is the server running, and was the database seeded … with the same SCHEDULER_SERVICE_ACCOUNT_PASSWORD?" A wrong password gives "… the login was refused …".
 
-### 9. *(Proposed 11/3, from OQ1 + OQ6; waiting on OQ6)* Shared jobs move to honuware; knottyyoga moves over
+### 9. Shared jobs move to honuware; knottyyoga moves over *(from OQ1 + OQ6)*
 
 One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 
-- [ ] 9.1 **honuware: the service account.**
+**Status (11/3):** built and green against the local honuware tree in all three repos. **Waiting on two things from Mason:** the `git rm` of the files that left the build (the list is in Claude's handoff), and the honuware push. Then Claude re-pins CF and knottyyoga and runs the strict pinned gates (§1.2).
+
+- [x] 9.1 **honuware: the service account.**
 	- Drop the forwarder (OQ1). `EnsureSchedulerServiceAccount` takes only the permission list, and always adds `run_scheduled_jobs`.
 	- **Tests:** the existing parameterized tests, minus the forwarder's.
-- [ ] 9.2 **honuware: the permission.** The framework seed creates `run_scheduled_jobs` and grants it to Administrator. CF's `db_schema/scheduled_jobs.h` constant and its seed lines go away.
+	- *As built (11/3):*
+		- **The signature** is `EnsureSchedulerServiceAccount(tx, db, email, password, permissionNames)`. The role always holds `run_scheduled_jobs` plus each named permission. An app whose jobs all check `run_scheduled_jobs` passes `{}`.
+		- **Checks before writing.** Every name is still checked first, so a missing one throws and writes nothing.
+		- **What went away:** the forwarder, its test, and honuware's `kManageSubscriptionsPermission` constant (the knottyyoga name has no business in the framework). The role description is now generic.
+- [x] 9.2 **honuware: the permission.** The framework seed creates `run_scheduled_jobs` and grants it to Administrator. CF's `db_schema/scheduled_jobs.h` constant and its seed lines go away.
 	- **Tests:** the framework-seed test, plus CF's `create_app_tables_test` updated.
-- [ ] 9.3 **honuware: the five jobs.**
+	- *As built (11/3):*
+		- **The constant** is `DbSchema::kPermissionRunScheduledJobs` in honuware's `db_schema/permissions.h`.
+		- **CF:** its seed no longer adds the permission. `create_app_tables_test` now checks that the framework seed supplies it and that Administrator holds it.
+		- **The old header:** CF's `db_schema/scheduled_jobs.h` is out of the build and waiting for `git rm`.
+- [x] 9.3 **honuware: the five jobs.**
 	- **Logic:** the four cleanups plus the digest, in platform business logic. CF's `admin_alerts_digest` and `LookupRetentionUs` move up with their tests.
 	- **Endpoints:** five platform endpoints at the same URLs, gated by `run_scheduled_jobs`, each anchored in honuware's registration.
 	- **Tests:** CF's per-job endpoint tests move up and are rewritten against honuware's schema.
 	- *Optional:* a scheduler helper that appends the five standard jobs to a catalog.
-- [ ] 9.4 **CF:**
+	- *As built (11/3):*
+		- **Logic:** `components/platform/business_logic/scheduled_jobs/`. `PlatformJobs::RunPlatformJob(tx, db, secrets, mail, name)` runs a job by name and returns its counts (the same keys as before). It sits beside `admin_alerts_digest` and `LookupRetentionUs`.
+		- **Endpoints:** the five TUs are in `components/platform/endpoints/`, registered and anchored by `RegisterFrameworkEndpoints()`.
+		- **Shared handler.** `endpoints/scheduled_job_handler.h` is CF's old `scheduled_job_endpoint`, moved up. `PostScheduledJob(…, name, runner)` applies the 401/403 gate, runs one transaction, and logs the counts server-side. The runner is a parameter, so an app's own job endpoints use the same handler.
+		- **README:** step 3 (the seed and the account) and step 4 (the framework's job routes and the handler) are updated.
+		- **The optional catalog helper wasn't built.** Each app's catalog still lists the five jobs, with the same interval flags.
+		- **honuware's own Linux suite: 1926 passed** (1913 before).
+- [x] 9.4 **CF:**
 	- delete the five endpoint TUs, their tests and their anchors;
 	- `Jobs::RunScheduledJob` calls honuware for those five;
 	- re-pin.
 	- **Gates:** both suites, with the floor adjusted for the moved tests; a seed check.
-- [ ] 9.5 **knottyyoga:**
+	- *As built (11/3):*
+		- **What stays.** `Jobs::RunScheduledJob` still runs all seven names: archive and expire itself, the other five through `PlatformJobs::RunPlatformJob`. The test_helper's `run-job` and the helper's catalog are unchanged.
+		- **Endpoints:** archive and expire now use honuware's `PostScheduledJob`. `scheduled_job_routes_test.cpp` checks the 401/403 gate across all seven routes.
+		- **Out of the build, waiting for Mason's `git rm`:** the five endpoint TUs and their tests, CF's `scheduled_job_endpoint.*`, `business_logic/jobs/admin_alerts_digest.*`, and `db_schema/scheduled_jobs.h`.
+		- **Gates:** §9 and §10 were gated together (§10.5). **The live helper run** passed on a fresh `--recreate_database`. The scheduler account logged in, and all seven jobs (the five moved ones included) answered 200 for four rounds at a 5-second interval. That proves the seed gives the account `run_scheduled_jobs` through honuware.
+		- **Re-pin:** waiting on Mason's push (§1.2).
+- [x] 9.5 **knottyyoga:**
 	- delete its five endpoints and tests;
 	- its seed calls the new `EnsureSchedulerServiceAccount` with `manage_subscriptions` (plus `manage_class_schedule`);
 	- re-pin;
 	- *suggested:* switch the calendar feed to `refreshInterval`.
 	- **Gates:** both knottyyoga suites, a seed check, and the five jobs run through its helper.
-- [ ] 9.6 **Ledger:** H13 is widened to the extraction. Its follow-ups (1) and (2) close.
+	- *As built (11/3):*
+		- **The seed** passes `{"manage_subscriptions", kPermissionManageClassSchedule}`, which is what its own 14 jobs check.
+		- **Endpoints:** the five TUs and their anchors are out of `CMakeLists.txt` and `web_app.cpp`. The files wait for Mason's `git rm`.
+		- **One test comment** in `staff_search_people_test.cpp` was updated; it described the old permission requirement.
+		- **The feed:** `PersonalICalFeedHelper::kFeedRefreshInterval = "PT1H"` is written into the document as `REFRESH-INTERVAL` and `X-PUBLISHED-TTL`. `get_my_ical_feed.cpp` stopped sending `X-PUBLISHED-TTL` as an HTTP header, where calendar apps ignore it. A test covers both properties.
+		- **Gates:** Linux **5447 passed** (floor 4800). Windows: KY_WINDOWS_RESULT. The seed check and its helper run are still to do.
+		- **Re-pin:** waiting on Mason's push. It no longer waits for a batch.
+- [x] 9.6 **Ledger:** H13 is widened to the extraction. Its follow-ups (1) and (2) close. *Done 11/3 in [[Setting up the project]].*
 
-### 10. *(Proposed 11/3, from OQ3 + OQ7; waiting on OQ8 and OQ9)* Past events
+### 10. Past events *(from OQ3, OQ7, OQ8 and OQ9)*
 
-- [ ] 10.1 **The window.**
+- [x] 10.1 **The window.**
 	- A site setting `archived_events_visible_days`, default 365 (OQ8). An archived event is public only while it ended within that many days. After that it's hidden, not deleted, so a feed can't re-import it.
 	- This applies everywhere `IsPublicEventStatus` is used: the detail page, the `.ics`, the calendar range, and series instances.
 	- **Tests:** an event inside the window, one just outside it, and the setting missing or malformed.
-- [ ] 10.2 **The past-events read.** `GET /api/events/past`: public past events in the window, newest first, paged, with the list's filters.
+	- *As built (11/3):*
+		- **One rule:** `EventHelper::IsPublicEvent` means a public status (approved or archived) **and** an end (`EventEndUs`: `ends_at_us`, or start + 2 hours) within the window. `MakePublicEventHelper` loads the setting once per request, and the five public endpoints use it.
+		- **Approved events count too.** An approved event that ended before the window also hides. Otherwise an event the archive job hadn't reached yet (or one approved late) would show past its time.
+		- **Range: 1–730 days.** A missing, malformed or out-of-range stored value reads as 365 (`LoadPastEventSettings`).
+		- **The calendar's earliest date** is clamped to now − the window. Before this, the clamp started at now, so **the calendar's past days were always empty**, despite §3.3's note. The fix came with this section.
+		- **Mason's dev database needs no reseed.** A missing key reads as the default.
+- [x] 10.2 **The past-events read.** `GET /api/events/past`: public past events in the window, newest first, paged, with the list's filters.
 	- **Tests:** ordering, paging, the window edge, and pending or rejected events never appearing.
-- [ ] 10.3 **The default.** A site setting `events_show_past_by_default` (default off, OQ9), served with the site info the client already loads.
+	- *As built (11/3):*
+		- **The response:** `{items, has_more, since_us}`. `since_us` is the window's start, so the client can say how far back the list goes.
+		- **Paging:** 20 per page, at most 50. Ties are ordered by id, so paging never skips or repeats an event.
+		- **The query:** `TableHelpers::Events::GetStartedBeforeEndingSince`.
+- [x] 10.3 **The default.** A site setting `events_show_past_by_default` (default off, OQ9), served with the site info the client already loads.
 	- **Test.**
-- [ ] 10.4 **Client.**
+	- *As built (11/3):*
+		- **A different route.** Both settings are served by a new public `GET /api/events/settings`, sent uncached, not through site info. Site-info blocks can't read the encrypted `config_secrets` rows that hold the settings.
+		- **Admin editing:** `GET`/`PUT /api/admin/past_event_settings`, gated on `manage_events`. An out-of-range value is refused with `DAYS_OUT_OF_RANGE` on the field `archived_events_visible_days`.
+		- **Seeding:** both keys are in the app's secret defaults (`app_secret_values.*`).
+- [x] 10.4 **Client.**
 	- **Events list:** an "Upcoming / Past events" choice.
 	- **Calendar:** a "Show past events" switch, starting from the site setting and remembered per browser. Past events use a muted color in both views.
 	- **Home page:** unchanged.
 	- **Specs.**
-- [ ] 10.5 **Gates:** both suites, vitest, `ng build` ×3, and a live check that an event older than the window 404s while a recent one shows muted.
+	- *As built (11/3):*
+		- **Events list:** a "Past events" link (with a history icon) opens `/events?view=past`, keeping the filters; "Upcoming" goes back. The past view groups events by month, newest first, with a "Show more" button. The preset chips and the subscribe link are hidden there, and the page title and canonical URL say "Past …".
+			- *Why a link and not a switch:* the two views order differently (soonest first vs. newest first) and page differently, so they're separate views that can be bookmarked.
+		- **The calendar:** a "Show past events" switch.
+			- **Its starting position** is the visitor's last choice (`cf_calendar_show_past` in local storage), or else the site setting.
+			- **Turned off,** ended events disappear. If you're on a past month, the calendar returns to this month. A month with nothing left says "Turn on 'Show past events' to see what's been."
+			- **Turned on,** the calendar can go back as far as the window.
+		- **Muted style:** an ended event's row (list) or chip (calendar) gets a quieter background, a grayscale photo and a dimmer time.
+		- **The admin page** is retitled **"Event settings"**. It gains a "Past events" section with the window (Save, Reset to default, client-side 1–730 check) and a "Calendar shows past events at first" switch that saves on its own. The Manage Events link was renamed to match.
+		- **The offline mock** follows the same rules, with four archived sample events. One is over a year old, to show the window.
+- [x] 10.5 **Gates:** both suites, vitest, `ng build` ×3, and a live check that an event older than the window 404s while a recent one shows muted.
+	- *Result (11/3), against the local honuware tree, with §9:*
+		- **Windows: 2417 passed. Linux: 2417 passed.** The floor in `build_and_test.sh` was raised from 2380 to **2407**.
+		- vitest **487 passed**; `ng build` passes for production, development and local; prettier is clean on the changed files.
+		- **Live check** on a fresh `--recreate_database`, with Mason's dev database renamed aside and then restored:
+			- `/api/events/settings` returned `{365, false}`.
+			- An event that ended over a year ago: `/api/events/<id>` and its `.ics` both 404, and it's missing from `/api/events/past`.
+			- A recent past event: 200, and listed in `/api/events/past`.
+			- The upcoming window was clamped as designed.
+			- The muted style is covered by specs; nobody looked at it in a browser.
+		- **Found during the live check:** a fresh database seeded without `HONUWARE_MAIL_APP_PASSWORD` can't start the server. `Mail::MakeMailHelper` fails, and on Windows Debug the message is hidden behind a CRT dialog. This is existing behavior that CF's and honuware's READMEs both describe, not something §10 introduced. Setting `HONUWARE_LOG_DEST` shows it.
+	- **Follow-up, not built:** a curator previewing an archived event past the window sees no "not public" banner. The client's `isPublicEvent` doesn't know the window. A fix: the server could send `is_public` to curators.
 
 # Open Questions
 
@@ -285,6 +352,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- Mason- Let's do the best option. Repin is fine.
 	- **Decided (11/3): no forwarder.** `EnsureSchedulerServiceAccount` takes only the permission list. knottyyoga's seed passes its own (`manage_subscriptions`, plus `manage_class_schedule`, which the old function added when it existed) and re-pins.
 	- **Built with §9, not on its own:** OQ6's extraction touches the same function and needs the same knottyyoga re-pin, so both go in one honuware push and one knottyyoga verification. H13 hasn't been pushed yet, so nothing is lost by waiting.
+	- **Built (11/3)** as §9.1.
 2. **What if the scheduler password isn't set when the database is rebuilt?** knottyyoga's seed fails outright. For CF, that would mean every developer needs the variable even if they never run the helper. *Rec: skip the account with a printed warning. The helper will then fail to log in, with an obvious message, which is easy to diagnose.*
 	- **Built as recommended, please confirm.** (11/3)
 	- Mason- This sounds fine.
@@ -330,6 +398,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 		- **Optional extra:** honuware could also hand both catalogs the five standard jobs, so neither lists them by hand.
 		- **Also suggested for knottyyoga's re-pin:** switch its calendar feed to `refreshInterval`, a small leftover from EV2 OQ7.
 	- Mason- let's go with A. It seems like the best choice. Especially before deploying knotty yoga
+	- **Decided (11/3): (a).** Built as §9. The optional catalog helper was left out.
 7. *(New, 11/3)* **Should the month calendar show past days at all?** With OQ3, the calendar's past days now fill with archived events. That's useful for "what happened last week," but it also means the first thing someone sees on the 28th is a month of finished events above the few still coming. *Rec: leave it as it is for now. The upcoming list is the "what's next" view, and the calendar is the month at a glance. Revisit if testers find the past days distracting. One option then is to dim past days rather than hide them.*
 	- Mason- This sounds okay but maybe we can do past events in a different color and / or have an option to view past events. Make if configurable if it defaults to on or off.
 	- **Decided (11/3): folded into §10 with OQ3.**
@@ -341,6 +410,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- *Rec: hide, don't delete.* The row stays; the public just can't see it after the window.
 	- **How long by default?** *Rec: 365 days.* Links people shared, and search results, stay good for a year. It's a site setting, so it can be changed without code.
 	- Mason- This sounds great to me. I don't think we need more than a years worth of past events.
+	- **Decided (11/3): hide, 365 days.** Built as §10.1. An admin can set it from 1 to 730 days on the Event settings page.
 9. *(New, 11/3, from OQ3 and OQ7)* **How "past events" works on screen.**
 	- *Rec:*
 		- **Home page:** never shows past events, as today.
@@ -349,9 +419,33 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 		- **Defaults:** the switch's starting position is a site setting, *rec: off*. Each visitor's own choice is then remembered in their browser.
 	- The setting lives with the other site settings, so an admin can change it without code.
 	- Mason- This sounds good. Default to past events off in the calendar since I think it just annoys people to see a bunch of events that they missed.
+	- **Decided (11/3): as recommended, with the calendar defaulting to off.** Built as §10.4. One change from the rec: the events list uses a "Past events" link to a separate view instead of a switch, because the two lists sort and page differently.
 
 # Change Log
 
+- **11/3/2026 (v0.4)** — Built §9 and §10.
+	- **§9, the shared jobs (OQ1, OQ6 (a)):**
+		- honuware now owns the five shared jobs, their endpoints, a handler that apps can reuse, and the `run_scheduled_jobs` permission. The service-account call takes a permission list, with no forwarder.
+		- CF and knottyyoga dropped their copies. knottyyoga's feed now carries `REFRESH-INTERVAL`.
+		- **Still to do:** Mason's `git rm` and honuware push, then both re-pins and strict pinned gates, then knottyyoga's seed check.
+	- **§10, past events (OQ3, OQ7, OQ8, OQ9):**
+		- A 365-day window, with hide-not-delete.
+		- `GET /api/events/past` and a "Past events" view of the list.
+		- A "Show past events" switch on the calendar, off by default.
+		- A muted style for ended events.
+		- An admin "Event settings" page.
+	- **Gates:**
+		- CF: **Windows: 2417 passed. Linux: 2417 passed.** Floor raised to 2407.
+		- honuware's own Linux suite: 1926 passed.
+		- knottyyoga: Linux 5447 passed; Windows KY_WINDOWS_SHORT.
+		- vitest 487 passed; `ng build` ×3.
+		- A live check of the window, and a live helper run of all seven jobs.
+	- **Changes from the plan:**
+		- The settings are served by `/api/events/settings`, not site info.
+		- The window hides approved-but-ended events too.
+		- The calendar's past days were in fact empty until §10 widened its clamp.
+		- The list's past view is a link, not a switch.
+	- **OQ6, OQ8 and OQ9** are decided.
 - **11/3/2026 (v0.3)** — Mason answered the open questions.
 	- **Confirmed as built:** OQ2, OQ4 and OQ5.
 	- **OQ1: no forwarder,** and knottyyoga re-pins. This is built with §9 so the honuware push and knottyyoga's verification happen once.

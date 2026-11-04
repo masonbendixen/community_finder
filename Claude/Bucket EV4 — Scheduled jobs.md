@@ -329,6 +329,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- ***Rec: (a)***, as §9, in the same honuware push as H13 and OQ1, before knottyyoga deploys.
 		- **Optional extra:** honuware could also hand both catalogs the five standard jobs, so neither lists them by hand.
 		- **Also suggested for knottyyoga's re-pin:** switch its calendar feed to `refreshInterval`, a small leftover from EV2 OQ7.
+	- Mason- let's go with A. It seems like the best choice. Especially before deploying knotty yoga
 7. *(New, 11/3)* **Should the month calendar show past days at all?** With OQ3, the calendar's past days now fill with archived events. That's useful for "what happened last week," but it also means the first thing someone sees on the 28th is a month of finished events above the few still coming. *Rec: leave it as it is for now. The upcoming list is the "what's next" view, and the calendar is the month at a glance. Revisit if testers find the past days distracting. One option then is to dim past days rather than hide them.*
 	- Mason- This sounds okay but maybe we can do past events in a different color and / or have an option to view past events. Make if configurable if it defaults to on or off.
 	- **Decided (11/3): folded into §10 with OQ3.**
@@ -339,6 +340,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- **Deleting has a catch.** The archived row is what stops a feed from re-importing the event (EV1 OQ10 (d)). Delete it, and the next scan of a feed that still lists the event would bring it back as a new pending submission for curators to review again. Deleting would also lose the record of what was listed.
 	- *Rec: hide, don't delete.* The row stays; the public just can't see it after the window.
 	- **How long by default?** *Rec: 365 days.* Links people shared, and search results, stay good for a year. It's a site setting, so it can be changed without code.
+	- Mason- This sounds great to me. I don't think we need more than a years worth of past events.
 9. *(New, 11/3, from OQ3 and OQ7)* **How "past events" works on screen.**
 	- *Rec:*
 		- **Home page:** never shows past events, as today.
@@ -346,6 +348,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 		- **Month calendar:** gains a "Show past events" switch. When on, past events show in a muted color; when off, past days are empty.
 		- **Defaults:** the switch's starting position is a site setting, *rec: off*. Each visitor's own choice is then remembered in their browser.
 	- The setting lives with the other site settings, so an admin can change it without code.
+	- Mason- This sounds good. Default to past events off in the calendar since I think it just annoys people to see a bunch of events that they missed.
 
 # Change Log
 

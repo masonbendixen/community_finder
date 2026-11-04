@@ -104,8 +104,12 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 		- **The new form** describes the role generically and checks every name **before writing anything**, so a missing permission throws with no half-made account. It also reuses an existing `scheduler` role without duplicating its links.
 		- **Tests:** five new ones in `service_account_test.cpp` (one permission, two, a missing one throws and writes nothing, idempotent, reuses an existing role), plus `ForwarderKeepsTheLegacyRoleDescription`. The old tests still pass, so the forwarder behaves as before.
 		- **Superseded by §9.1 (v0.4):** the forwarder was removed (OQ1).
-- [ ] 1.2 The co-dev loop: CF builds against the local honuware tree (`HONUWARE_SRC_DIR`, the `x64-Debug-local` preset on Windows). Mason pushes honuware, then CF re-pins (`GIT_TAG`) and Claude verifies a strict pinned Linux gate (fresh clone, no override). knottyyoga's re-pin stays batched and isn't required here.
+- [x] 1.2 The co-dev loop: CF builds against the local honuware tree (`HONUWARE_SRC_DIR`, the `x64-Debug-local` preset on Windows). Mason pushes honuware, then CF re-pins (`GIT_TAG`) and Claude verifies a strict pinned Linux gate (fresh clone, no override). knottyyoga's re-pin stays batched and isn't required here.
 	- *Status (11/3):* the local half is done; CF builds and tests against the local tree on both platforms (§8.1). **Waiting on Mason's honuware push.** Then Claude re-pins `GIT_TAG` and runs the strict pinned gate.
+	- *Done (11/4):* Mason pushed honuware `4007233` ("Shared scheduled jobs endpoints") and its CI passed. CF and knottyyoga (OQ1 superseded the batching) both pin `40072333e164dd52d6c6c3cc8c54c5120f57e963`. The strict pinned gates, each a fresh clone with no override (Linux: no honuware mount and no build volume; Windows: a new `out/build/x64-Debug-pinned` with `FETCHCONTENT_SOURCE_DIR_HONUWARE` empty and `_deps/honuware-src` at `4007233`):
+		- CF: **Windows: 2417 passed. Linux: 2417 passed.** (floor 2407)
+		- knottyyoga: **Windows: 5447 passed. Linux: 5447 passed.** (floor 4800)
+		- The counts match the local-tree runs exactly, so the pushed commit is the tree that was tested.
 	- *Update (11/3, v0.4):* §9 widened the push and removed the forwarder (OQ1), so **knottyyoga re-pins in the same cycle**; its re-pin no longer waits for a batch. The push now carries H13 as widened in §9.
 - [x] 1.3 Ledger: add the change as **H13** in [[Setting up the project]]'s cross-repo ledger, plus a follow-up to remove the forwarder once knottyyoga moves to the new signature. *Added 11/3, with OQ6's extraction note as a second follow-up.*
 - [x] 1.4 **Bundle with EV6's H14 if both are near.** [[Bucket EV6 — Structured feed import]] §1 proposes a second small, additive honuware change: fetch options on `HttpRequest` (timeout, size cap, private-address check). Making both in one honuware push saves a bump cycle. Neither needs knottyyoga to move. *Not bundled (11/3): EV6 hasn't started, so H13 goes alone rather than waiting.*
@@ -208,7 +212,7 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 	- *Result (11/3), against the local honuware tree:* **Windows: 2390 passed. Linux: 2390 passed.** The floor in `build_and_test.sh` was raised from 2314 to **2380**.
 	- The four executables (server, helper, test_helper, database_helper) also build on Linux. The gate builds only the test binary.
 	- honuware's own Linux suite: **1913 passed** (floor 1700). Its Windows coverage of H13 comes from CF's Windows run, which links honuware's component tests.
-	- **Still to come (§1.2):** the strict pinned gate after Mason's push.
+	- **Strict pinned gate (§1.2):** done 11/4 at `4007233`; see §1.2.
 - [x] 8.2 vitest green and `ng build` for all three configurations (for §3.3). *Result (11/3):* vitest **452 passed** (65 files). `ng build` passes for production, development and local. Prettier is clean after reformatting `event-detail.spec.ts`. The production bundle-size warning (912 kB against a 500 kB budget) was there before EV4.
 - [x] 8.3 Live seed check (announced, destructive) with `SCHEDULER_SERVICE_ACCOUNT_PASSWORD` set:
 	- the scheduler person exists, `email_verified` is set, and it has the scheduler role holding only `run_scheduled_jobs`;

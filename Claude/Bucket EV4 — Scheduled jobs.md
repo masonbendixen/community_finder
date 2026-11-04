@@ -287,7 +287,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 		- **Endpoints:** the five TUs and their anchors are out of `CMakeLists.txt` and `web_app.cpp`. The files wait for Mason's `git rm`.
 		- **One test comment** in `staff_search_people_test.cpp` was updated; it described the old permission requirement.
 		- **The feed:** `PersonalICalFeedHelper::kFeedRefreshInterval = "PT1H"` is written into the document as `REFRESH-INTERVAL` and `X-PUBLISHED-TTL`. `get_my_ical_feed.cpp` stopped sending `X-PUBLISHED-TTL` as an HTTP header, where calendar apps ignore it. A test covers both properties.
-		- **Gates:** Linux **5447 passed** (floor 4800). Windows: KY_WINDOWS_RESULT. The seed check and its helper run are still to do.
+		- **Gates:** **Windows: 5447 passed. Linux: 5447 passed.** (Linux floor 4800.) The Windows build used its own `out/build/x64-Debug-local`, because the user preset shares `x64-Debug`. KY_SEED_RESULT
 		- **Re-pin:** waiting on Mason's push. It no longer waits for a batch.
 - [x] 9.6 **Ledger:** H13 is widened to the extraction. Its follow-ups (1) and (2) close. *Done 11/3 in [[Setting up the project]].*
 
@@ -437,7 +437,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- **Gates:**
 		- CF: **Windows: 2417 passed. Linux: 2417 passed.** Floor raised to 2407.
 		- honuware's own Linux suite: 1926 passed.
-		- knottyyoga: Linux 5447 passed; Windows KY_WINDOWS_SHORT.
+		- knottyyoga: **Windows: 5447 passed. Linux: 5447 passed.**
 		- vitest 487 passed; `ng build` ×3.
 		- A live check of the window, and a live helper run of all seven jobs.
 	- **Changes from the plan:**

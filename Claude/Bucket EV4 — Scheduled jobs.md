@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
 Last Updated: 11/3/2026
-Version: 0.2
+Version: 0.3
 tags:
 ---
 
@@ -232,6 +232,50 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 		- **The test_helper's one-shot mode** lacked flags for the new commands. `--id`, `--hours_ago` and `--description` are now declared in `main.cpp` (§7.1's tests call the commands through the registry, so they never noticed).
 		- **The helper aborted silently when the server wasn't reachable.** libcurl's error reaches `main` as an exception from `Initialize()`. knottyyoga's `main` catches it, but CF's didn't. Uncaught, the helper aborted; in a Windows Debug build it sat at a hidden abort dialog that looked like a hang. It now catches the error like knottyyoga does, and exits in about 2 seconds with "… could not log in as … : CURL error: Could not connect to server). Is the server running, and was the database seeded … with the same SCHEDULER_SERVICE_ACCOUNT_PASSWORD?" A wrong password gives "… the login was refused …".
 
+### 9. *(Proposed 11/3, from OQ1 + OQ6; waiting on OQ6)* Shared jobs move to honuware; knottyyoga moves over
+
+One honuware push (H13 widened), then both apps re-pin. Lower layers first.
+
+- [ ] 9.1 **honuware: the service account.**
+	- Drop the forwarder (OQ1). `EnsureSchedulerServiceAccount` takes only the permission list, and always adds `run_scheduled_jobs`.
+	- **Tests:** the existing parameterized tests, minus the forwarder's.
+- [ ] 9.2 **honuware: the permission.** The framework seed creates `run_scheduled_jobs` and grants it to Administrator. CF's `db_schema/scheduled_jobs.h` constant and its seed lines go away.
+	- **Tests:** the framework-seed test, plus CF's `create_app_tables_test` updated.
+- [ ] 9.3 **honuware: the five jobs.**
+	- **Logic:** the four cleanups plus the digest, in platform business logic. CF's `admin_alerts_digest` and `LookupRetentionUs` move up with their tests.
+	- **Endpoints:** five platform endpoints at the same URLs, gated by `run_scheduled_jobs`, each anchored in honuware's registration.
+	- **Tests:** CF's per-job endpoint tests move up and are rewritten against honuware's schema.
+	- *Optional:* a scheduler helper that appends the five standard jobs to a catalog.
+- [ ] 9.4 **CF:**
+	- delete the five endpoint TUs, their tests and their anchors;
+	- `Jobs::RunScheduledJob` calls honuware for those five;
+	- re-pin.
+	- **Gates:** both suites, with the floor adjusted for the moved tests; a seed check.
+- [ ] 9.5 **knottyyoga:**
+	- delete its five endpoints and tests;
+	- its seed calls the new `EnsureSchedulerServiceAccount` with `manage_subscriptions` (plus `manage_class_schedule`);
+	- re-pin;
+	- *suggested:* switch the calendar feed to `refreshInterval`.
+	- **Gates:** both knottyyoga suites, a seed check, and the five jobs run through its helper.
+- [ ] 9.6 **Ledger:** H13 is widened to the extraction. Its follow-ups (1) and (2) close.
+
+### 10. *(Proposed 11/3, from OQ3 + OQ7; waiting on OQ8 and OQ9)* Past events
+
+- [ ] 10.1 **The window.**
+	- A site setting `archived_events_visible_days`, default 365 (OQ8). An archived event is public only while it ended within that many days. After that it's hidden, not deleted, so a feed can't re-import it.
+	- This applies everywhere `IsPublicEventStatus` is used: the detail page, the `.ics`, the calendar range, and series instances.
+	- **Tests:** an event inside the window, one just outside it, and the setting missing or malformed.
+- [ ] 10.2 **The past-events read.** `GET /api/events/past`: public past events in the window, newest first, paged, with the list's filters.
+	- **Tests:** ordering, paging, the window edge, and pending or rejected events never appearing.
+- [ ] 10.3 **The default.** A site setting `events_show_past_by_default` (default off, OQ9), served with the site info the client already loads.
+	- **Test.**
+- [ ] 10.4 **Client.**
+	- **Events list:** an "Upcoming / Past events" choice.
+	- **Calendar:** a "Show past events" switch, starting from the site setting and remembered per browser. Past events use a muted color in both views.
+	- **Home page:** unchanged.
+	- **Specs.**
+- [ ] 10.5 **Gates:** both suites, vitest, `ng build` ×3, and a live check that an event older than the window 404s while a recent one shows muted.
+
 # Open Questions
 
 *(Numbered for inline answers; recommendations included so "agreed" suffices.)*
@@ -239,25 +283,77 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 1. **How to change honuware without forcing a knottyyoga re-pin.** The service-account setup needs to accept the permission names instead of assuming knottyyoga's `manage_subscriptions`. If we just change the function, knottyyoga stops compiling the next time it re-pins, and you batch those re-pins deliberately. *Rec: add the new version and keep the old one as a thin forwarder, marked for removal. knottyyoga then moves over whenever its batch happens. The cost is one extra function in honuware for a while.*
 	- **Built as recommended, please confirm.** (11/3)
 	- Mason- Let's do the best option. Repin is fine.
+	- **Decided (11/3): no forwarder.** `EnsureSchedulerServiceAccount` takes only the permission list. knottyyoga's seed passes its own (`manage_subscriptions`, plus `manage_class_schedule`, which the old function added when it existed) and re-pins.
+	- **Built with §9, not on its own:** OQ6's extraction touches the same function and needs the same knottyyoga re-pin, so both go in one honuware push and one knottyyoga verification. H13 hasn't been pushed yet, so nothing is lost by waiting.
 2. **What if the scheduler password isn't set when the database is rebuilt?** knottyyoga's seed fails outright. For CF, that would mean every developer needs the variable even if they never run the helper. *Rec: skip the account with a printed warning. The helper will then fail to log in, with an obvious message, which is easy to diagnose.*
 	- **Built as recommended, please confirm.** (11/3)
 	- Mason- This sounds fine.
+	- **Decided (11/3)**, as built.
 3. **Should past events stay visible?** Today "archived" would mean hidden. Archiving would then empty the past days of the month calendar and turn every old event link into "not found," which hurts anyone who shared a link and anything a search engine indexed. *Rec: archived events stay readable (their page, and the calendar's past days). The upcoming list and calendar feeds still only show what's coming, because their date windows start at now. "Archived" keeps its real job: a re-scan can't reopen the event, and it drops out of the review screens.*
 	- **Built as recommended, please confirm.** (11/3)
 	- Mason- I'd like archived events to persist for a configurable interval. But not show up on the main page but be available through a past events option.
+	- **Decided (11/3): a new feature, planned as §10 with OQ7.** What's already true: the home page and the events list never show past events. Only the month calendar's past days do today.
+	- §10 adds three things:
+		- a configurable window for how long archived events stay public;
+		- a "Past events" view;
+		- a "Show past events" switch on the calendar, with past events in a muted color.
+	- Two details need your call: OQ8 and OQ9 below.
 4. **Unreviewed events whose date passes are marked "not listed," not archived.** They were never public, so they mustn't become visible on the way out. Rejecting them with "Date passed before review" keeps "archived" meaning "happened and was listed." *Rec: as stated. EV3's submitter gets the "sorry, we didn't get to it in time" email.*
 	- **Built as recommended, please confirm.** (11/3)
 	- Mason- That sounds fine.
+	- **Decided (11/3)**, as built.
 5. **Default intervals.** Archive and expire hourly; hygiene daily; the alerts digest hourly (it only mails when there's something new). *Rec: as in the table. All are flags, so a deployment can change them without code.*
 	- **Built as recommended, please confirm.** (11/3)
 	- Mason- This sounds fine.
+	- **Decided (11/3)**, as built.
 6. **Where the jobs' code lives.** knottyyoga's hygiene and digest endpoints are app code over platform helpers. The tidier home is honuware itself (SUTP's H8 note floated the digest as an extraction candidate), but that's another cross-repo change and another knottyyoga clean-up. *Rec: CF writes its own thin endpoints now, over the platform helpers, with the digest logic tested in `business_logic/jobs/`. Add a ledger note that the hygiene endpoints are extraction candidates once both apps carry copies.*
 	- **Built as recommended, please confirm.** (11/3) The note is follow-up (2) on ledger item H13.
 	- Mason- Can you talk about the impact to Knotty Yoga? Is this functionality it would use? If so, I'd like to make the change before deploying Knotty Yoga
+	- **Claude (11/3): yes, knottyyoga already uses all five.** CF's four cleanup jobs and the alerts digest were copied from knottyyoga. knottyyoga runs them today: they are 5 of the 19 jobs in its helper's catalog. So "extracting" means moving code both apps already carry into honuware, and having each app use the shared copy. The two copies have already started to drift: knottyyoga's digest says "Knotty Yoga" in its subject and body, while CF's uses the site name and has its own tests.
+	- **What it would mean for knottyyoga:**
+		- **Code goes away.** knottyyoga deletes its five endpoint files, their five tests, the anchors and the CMake lines.
+		- **The jobs keep working unchanged.** honuware serves the same five URLs and returns the same counts, so knottyyoga's helper and its schedule don't change.
+		- **The permission changes.** Today those five check `manage_subscriptions`, knottyyoga's billing permission. The shared versions would check a framework permission, `run_scheduled_jobs`, which honuware seeds and gives to Administrator. knottyyoga's scheduler role gets it alongside its current permissions, through the new `EnsureSchedulerServiceAccount` call (OQ1).
+		- **A possible later clean-up, not required:** knottyyoga's other 14 jobs could move to `run_scheduled_jobs` too. Then the scheduler account wouldn't need the billing permission at all.
+		- **The digest's wording changes slightly.** It would use the site name (`mail_sender_name`) and `admin_alerts_digest_subject` instead of the hard-coded "Knotty Yoga." Setting either secret keeps the old wording.
+		- **No migration, if it lands before knottyyoga deploys.** A rebuild seeds the new permission. After deploying, the same change would need a migration to add the permission and its grants. That makes before-deploy the right time, as you said.
+		- **A small re-pin.** knottyyoga is already on the same honuware commit as CF, so the re-pin brings only H13 and this change. Its verification is one Windows suite, one Linux suite, and a seed check.
+	- **What it would mean for CF:**
+		- CF deletes five of its seven job endpoints, keeping archive and expire.
+		- Its tested digest (`business_logic/jobs/admin_alerts_digest`) becomes honuware's version.
+		- `run_scheduled_jobs` moves from CF's schema to honuware's.
+	- **Options:**
+		- **(a) Move it all to honuware:** the five endpoints, the digest, the permission, and the scheduler account granting `run_scheduled_jobs` by default. Both apps delete their copies.
+		- **(b) Share the logic only:** each app keeps five thin endpoints with its own permission, calling honuware functions. Less churn, but both apps still carry five routes, anchors and tests each.
+		- **(c) Leave two copies.** Cheapest now, but they keep drifting.
+	- ***Rec: (a)***, as §9, in the same honuware push as H13 and OQ1, before knottyyoga deploys.
+		- **Optional extra:** honuware could also hand both catalogs the five standard jobs, so neither lists them by hand.
+		- **Also suggested for knottyyoga's re-pin:** switch its calendar feed to `refreshInterval`, a small leftover from EV2 OQ7.
 7. *(New, 11/3)* **Should the month calendar show past days at all?** With OQ3, the calendar's past days now fill with archived events. That's useful for "what happened last week," but it also means the first thing someone sees on the 28th is a month of finished events above the few still coming. *Rec: leave it as it is for now. The upcoming list is the "what's next" view, and the calendar is the month at a glance. Revisit if testers find the past days distracting. One option then is to dim past days rather than hide them.*
+	- Mason- This sounds okay but maybe we can do past events in a different color and / or have an option to view past events. Make if configurable if it defaults to on or off.
+	- **Decided (11/3): folded into §10 with OQ3.**
+		- Past events show in a muted color.
+		- A "Show past events" switch sits on the calendar and the events list.
+		- Whether the switch starts on or off is a site setting. Details in OQ9.
+8. *(New, 11/3, from OQ3)* **What happens to an archived event when its window ends: hidden, or deleted?** Either way it disappears from the public site: its page, the past-events view and the calendar.
+	- **Deleting has a catch.** The archived row is what stops a feed from re-importing the event (EV1 OQ10 (d)). Delete it, and the next scan of a feed that still lists the event would bring it back as a new pending submission for curators to review again. Deleting would also lose the record of what was listed.
+	- *Rec: hide, don't delete.* The row stays; the public just can't see it after the window.
+	- **How long by default?** *Rec: 365 days.* Links people shared, and search results, stay good for a year. It's a site setting, so it can be changed without code.
+9. *(New, 11/3, from OQ3 and OQ7)* **How "past events" works on screen.**
+	- *Rec:*
+		- **Home page:** never shows past events, as today.
+		- **Events list:** gains a "Past events" choice next to "Upcoming." It lists the window's past events, newest first, paged.
+		- **Month calendar:** gains a "Show past events" switch. When on, past events show in a muted color; when off, past days are empty.
+		- **Defaults:** the switch's starting position is a site setting, *rec: off*. Each visitor's own choice is then remembered in their browser.
+	- The setting lives with the other site settings, so an admin can change it without code.
 
 # Change Log
 
+- **11/3/2026 (v0.3)** — Mason answered the open questions.
+	- **Confirmed as built:** OQ2, OQ4 and OQ5.
+	- **OQ1: no forwarder,** and knottyyoga re-pins. This is built with §9 so the honuware push and knottyyoga's verification happen once.
+	- **OQ6:** Claude answered the knottyyoga-impact question. knottyyoga already runs all five shared jobs, so the rec is to move them to honuware before knottyyoga deploys (§9, proposed).
+	- **OQ3 and OQ7** became the past-events feature (§10, proposed), with two new questions: OQ8 (hide or delete when the window ends) and OQ9 (how past events appear on screen).
 - **11/3/2026 (v0.2)**
 	- **Built:** all eight sections. Each section's as-built notes record where the code differs from the plan.
 	- **Added:** §4.3, one shared entry point for the jobs, used by the endpoints and the test_helper. The endpoints log their counts server-side, because honuware's engine logs only the status code.

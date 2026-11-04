@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Levi Kuhn (owner) · Mason Bendixen
-Last Updated: 11/3/2026
-Version: 0.4
+Last Updated: 11/4/2026
+Version: 0.5
 tags:
 ---
 
@@ -242,7 +242,7 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 
 One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 
-**Status (11/3):** built and green against the local honuware tree in all three repos. knottyyoga's 15 retired files are removed (`git rm` by Claude with Mason's OK, 11/3). **Waiting on two things from Mason:** deleting CF's 22 retired files, and the honuware push. CF's files were never committed, so they need a plain delete, not `git rm`; Claude's delete was blocked by the settings rule on `Remove-Item`. Then Claude re-pins CF and knottyyoga and runs the strict pinned gates (§1.2).
+**Status (11/4):** done. The retired files are gone: knottyyoga's 15 by `git rm` (Claude, with Mason's OK), and CF's 22, which were never committed, by Mason. Mason pushed honuware `4007233`, and both apps are re-pinned to it with green strict pinned gates (§1.2). What's left for Mason is the commits in CF and knottyyoga, and a `--recreate_database` on both dev databases.
 
 - [x] 9.1 **honuware: the service account.**
 	- Drop the forwarder (OQ1). `EnsureSchedulerServiceAccount` takes only the permission list, and always adds `run_scheduled_jobs`.
@@ -256,7 +256,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- *As built (11/3):*
 		- **The constant** is `DbSchema::kPermissionRunScheduledJobs` in honuware's `db_schema/permissions.h`.
 		- **CF:** its seed no longer adds the permission. `create_app_tables_test` now checks that the framework seed supplies it and that Administrator holds it.
-		- **The old header:** CF's `db_schema/scheduled_jobs.h` is out of the build and waiting to be deleted (it was never committed).
+		- **The old header:** CF's `db_schema/scheduled_jobs.h` is out of the build and deleted (it was never committed).
 - [x] 9.3 **honuware: the five jobs.**
 	- **Logic:** the four cleanups plus the digest, in platform business logic. CF's `admin_alerts_digest` and `LookupRetentionUs` move up with their tests.
 	- **Endpoints:** five platform endpoints at the same URLs, gated by `run_scheduled_jobs`, each anchored in honuware's registration.
@@ -277,9 +277,9 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- *As built (11/3):*
 		- **What stays.** `Jobs::RunScheduledJob` still runs all seven names: archive and expire itself, the other five through `PlatformJobs::RunPlatformJob`. The test_helper's `run-job` and the helper's catalog are unchanged.
 		- **Endpoints:** archive and expire now use honuware's `PostScheduledJob`. `scheduled_job_routes_test.cpp` checks the 401/403 gate across all seven routes.
-		- **Out of the build, waiting for Mason to delete them:** the five endpoint TUs and their tests, CF's `scheduled_job_endpoint.*`, `business_logic/jobs/admin_alerts_digest.*`, and `db_schema/scheduled_jobs.h`. None were ever committed, so a plain delete is enough.
+		- **Out of the build and deleted by Mason (11/4):** the five endpoint TUs and their tests, CF's `scheduled_job_endpoint.*`, `business_logic/jobs/admin_alerts_digest.*`, and `db_schema/scheduled_jobs.h`. None were ever committed, so a plain delete was enough.
 		- **Gates:** §9 and §10 were gated together (§10.5). **The live helper run** passed on a fresh `--recreate_database`. The scheduler account logged in, and all seven jobs (the five moved ones included) answered 200 for four rounds at a 5-second interval. That proves the seed gives the account `run_scheduled_jobs` through honuware.
-		- **Re-pin:** waiting on Mason's push (§1.2).
+		- **Re-pin:** done 11/4, at `4007233`; strict pinned gates green (§1.2).
 - [x] 9.5 **knottyyoga:**
 	- delete its five endpoints and tests;
 	- its seed calls the new `EnsureSchedulerServiceAccount` with `manage_subscriptions` (plus `manage_class_schedule`);
@@ -296,7 +296,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 			- The scheduler role holds exactly `manage_class_schedule`, `manage_subscriptions` and `run_scheduled_jobs`, and Administrator holds `run_scheduled_jobs`.
 			- With a server on port 18191, `knottyyoga_helper` logged in and ran the five moved jobs (its other 14 set to 0). Each answered 200 every 5 seconds through honuware's endpoints, and the server logged their counts.
 		- **Mason's dev databases need a `--recreate_database`, CF's and knottyyoga's both.** Neither has a `run_scheduled_jobs` row, so until they're rebuilt the helper gets 403 on the five moved jobs (and, in CF, on archive and expire too). No migration was written; nothing is deployed.
-		- **Re-pin:** waiting on Mason's push. It no longer waits for a batch.
+		- **Re-pin:** done 11/4, at `4007233`, without waiting for a batch; strict pinned gates green (§1.2).
 - [x] 9.6 **Ledger:** H13 is widened to the extraction. Its follow-ups (1) and (2) close. *Done 11/3 in [[Setting up the project]].*
 
 ### 10. Past events *(from OQ3, OQ7, OQ8 and OQ9)*
@@ -431,11 +431,16 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 
 # Change Log
 
+- **11/4/2026 (v0.5)** — Re-pinned and verified (§1.2).
+	- The retired files are gone in both apps: knottyyoga's by `git rm`, CF's by Mason.
+	- Mason pushed honuware `4007233`, and its CI passed. CF and knottyyoga both now pin it.
+	- Strict pinned gates (fresh clone, no override): CF **Windows: 2417 passed. Linux: 2417 passed.** knottyyoga **Windows: 5447 passed. Linux: 5447 passed.**
+	- Left for Mason: commit CF and knottyyoga, and run `--recreate_database` on both dev databases so they get `run_scheduled_jobs`.
 - **11/3/2026 (v0.4)** — Built §9 and §10.
 	- **§9, the shared jobs (OQ1, OQ6 (a)):**
 		- honuware now owns the five shared jobs, their endpoints, a handler that apps can reuse, and the `run_scheduled_jobs` permission. The service-account call takes a permission list, with no forwarder.
 		- CF and knottyyoga dropped their copies. knottyyoga's feed now carries `REFRESH-INTERVAL`.
-		- **Still to do:** Mason deletes CF's 22 untracked leftovers and pushes honuware (knottyyoga's 15 are `git rm`'d), then both re-pins and strict pinned gates. Mason's two dev databases need a `--recreate_database` to get `run_scheduled_jobs`.
+		- **Still to do:** Mason deletes CF's 22 untracked leftovers and pushes honuware (knottyyoga's 15 are `git rm`'d), then both re-pins and strict pinned gates. Mason's two dev databases need a `--recreate_database` to get `run_scheduled_jobs`. *(The deletes, push, re-pins and gates were done 11/4; see v0.5.)*
 	- **§10, past events (OQ3, OQ7, OQ8, OQ9):**
 		- A 365-day window, with hide-not-delete.
 		- `GET /api/events/past` and a "Past events" view of the list.

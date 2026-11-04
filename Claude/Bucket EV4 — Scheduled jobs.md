@@ -238,16 +238,22 @@ Implements [[Initial Project Implementation Outline]] Stream A bucket EV4. It **
 
 1. **How to change honuware without forcing a knottyyoga re-pin.** The service-account setup needs to accept the permission names instead of assuming knottyyoga's `manage_subscriptions`. If we just change the function, knottyyoga stops compiling the next time it re-pins, and you batch those re-pins deliberately. *Rec: add the new version and keep the old one as a thin forwarder, marked for removal. knottyyoga then moves over whenever its batch happens. The cost is one extra function in honuware for a while.*
 	- **Built as recommended, please confirm.** (11/3)
+	- Mason- Let's do the best option. Repin is fine.
 2. **What if the scheduler password isn't set when the database is rebuilt?** knottyyoga's seed fails outright. For CF, that would mean every developer needs the variable even if they never run the helper. *Rec: skip the account with a printed warning. The helper will then fail to log in, with an obvious message, which is easy to diagnose.*
 	- **Built as recommended, please confirm.** (11/3)
+	- Mason- This sounds fine.
 3. **Should past events stay visible?** Today "archived" would mean hidden. Archiving would then empty the past days of the month calendar and turn every old event link into "not found," which hurts anyone who shared a link and anything a search engine indexed. *Rec: archived events stay readable (their page, and the calendar's past days). The upcoming list and calendar feeds still only show what's coming, because their date windows start at now. "Archived" keeps its real job: a re-scan can't reopen the event, and it drops out of the review screens.*
 	- **Built as recommended, please confirm.** (11/3)
+	- Mason- I'd like archived events to persist for a configurable interval. But not show up on the main page but be available through a past events option.
 4. **Unreviewed events whose date passes are marked "not listed," not archived.** They were never public, so they mustn't become visible on the way out. Rejecting them with "Date passed before review" keeps "archived" meaning "happened and was listed." *Rec: as stated. EV3's submitter gets the "sorry, we didn't get to it in time" email.*
 	- **Built as recommended, please confirm.** (11/3)
+	- Mason- That sounds fine.
 5. **Default intervals.** Archive and expire hourly; hygiene daily; the alerts digest hourly (it only mails when there's something new). *Rec: as in the table. All are flags, so a deployment can change them without code.*
 	- **Built as recommended, please confirm.** (11/3)
+	- Mason- This sounds fine.
 6. **Where the jobs' code lives.** knottyyoga's hygiene and digest endpoints are app code over platform helpers. The tidier home is honuware itself (SUTP's H8 note floated the digest as an extraction candidate), but that's another cross-repo change and another knottyyoga clean-up. *Rec: CF writes its own thin endpoints now, over the platform helpers, with the digest logic tested in `business_logic/jobs/`. Add a ledger note that the hygiene endpoints are extraction candidates once both apps carry copies.*
 	- **Built as recommended, please confirm.** (11/3) The note is follow-up (2) on ledger item H13.
+	- Mason- Can you talk about the impact to Knotty Yoga? Is this functionality it would use? If so, I'd like to make the change before deploying Knotty Yoga
 7. *(New, 11/3)* **Should the month calendar show past days at all?** With OQ3, the calendar's past days now fill with archived events. That's useful for "what happened last week," but it also means the first thing someone sees on the 28th is a month of finished events above the few still coming. *Rec: leave it as it is for now. The upcoming list is the "what's next" view, and the calendar is the month at a glance. Revisit if testers find the past days distracting. One option then is to dim past days rather than hide them.*
 
 # Change Log

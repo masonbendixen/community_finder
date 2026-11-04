@@ -3,14 +3,14 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
-Last Updated: 11/3/2026
-Version: 0.1
+Last Updated: 11/4/2026
+Version: 0.2
 tags:
 ---
 
 # Bucket CM3 — Event photos & video
 
-**Track:** CM — Community · **Size:** M (the outline said S; video and submitter pictures are additions) · **Stream:** D in the outline, but nearly every file is Stream A's (OQ9) · **Owner:** open (OQ9)
+**Track:** CM — Community · **Size:** M (the outline said S; video and submitter pictures are additions) · **Stream:** A, after EV3's gates (OQ9; the outline's Stream D row points here) · **Owner:** Levi or Mason (OQ9)
 **Needs:** EV1 (done: events and venues already take a photo) · EV2 (done: the event page, list rows and sharing tags already show it) · EV3 (built; its gates are still open) for the submit form. **Feeds:** RT4 (sharing images) · RT3 (newsletter imagery) · CM4.
 
 # Context
@@ -48,12 +48,12 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- the event's own photo;
 	- else its series' photo, else its venue's (OQ2);
 	- chosen by the server, so pages stop guessing.
-- **A gallery** of up to 12 photos (OQ5) on an event or a series, each with alt text, an optional caption and an optional credit. Shown as a grid, with a full-size viewer.
+- **A gallery** on an event or a series (OQ7), each photo with alt text, an optional caption and an optional credit. Shown as a grid, with a full-size viewer. The cap is 12 by default, and an admin can change it (OQ5).
 - **One embedded video** per event or series: YouTube or Vimeo (OQ3), click-to-play (OQ4).
 - **Curator tools:**
 	- the main photo, gallery and video in the `/admin/events` editor;
 	- series through the generic admin editor, which already handles photos and child tables.
-- **Submitter additions in the submit form,** as OQ1 decides: a video link, and maybe one flyer photo.
+- **Submitter additions in the submit form** (OQ1): a video link and one flyer photo. The flyer needs H15, which is in scope.
 - **The consent and no-outing policy** for photos (pin-down below), plus a way to ask for a photo's removal.
 - The JSON-LD `image` list, test_helper commands, offline-demo placeholder art, and tests at every layer.
 
@@ -74,7 +74,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 # Design pin-downs
 
 - **The main photo needs no new storage.** It stays the event's own photo in honuware's pipeline.
-	- **The fallback, if OQ2 is agreed:** an event without one shows its series' photo, then its venue's. This turns on photos for `series` (photo support and public read).
+	- **The fallback (OQ2):** an event without one shows its series' photo, then its venue's. A series without one shows its venue's. This turns on photos for `series` (photo support and public read).
 	- **The server picks.** Event payloads gain `photo: {"table": "events" | "series" | "venues", "id": N}`, or `null`. The client builds the URL with `PhotoUrlBuilder` as it does now.
 		- The event page drops its separate `has_photo` call.
 		- List rows stop guessing and hiding failures.
@@ -84,12 +84,25 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- **A row belongs to an event or to a series, never both.**
 		- A recurring night's photos belong to the series: each dated instance goes past and drops off the calendar.
 		- An event in a series with no gallery of its own shows the series' gallery.
-	- **Order:** `sort_order`, then `id`.
-	- **What the event page gets:** `gallery: [{id, alt_text, caption, credit}]`, only on `/api/events/<int>` and only while the event is visible. Lists don't carry it.
+	- **Order:** `sort_order`, then `id`. A new row goes one past the highest `sort_order` in its gallery.
+	- **What the event page gets:** `gallery: [{id, alt_text, caption, credit}]`, only on `/api/events/<int>` and only while the event is visible. The series page (`/api/event_series/<string>`) gets the series' own gallery. Lists don't carry it.
+	- **Row first, photo second.** A curator adds the row (with its text and the consent box), then uploads its picture through honuware's `/api/upload_photo/event_gallery_photos/<id>/<type>`.
+		- A public gallery shows only rows whose photo has been uploaded, so a half-finished add never shows an empty frame.
+		- The cap counts every row, uploaded or not.
+	- **Adding a row has its own curator route** (a change from v0.1's "no new endpoints"): `POST /api/admin/event_gallery_photos`, under `manage_events`.
+		- It stamps the consent record from the session, so nobody can type in someone else's name.
+		- It applies the cap.
+		- The consent columns have no defaults, so generic CRUD can't add a row without them. Editing, reordering and deleting still go through generic CRUD.
+	- **The cap is a setting** (OQ5): `event_gallery_max_photos`, default 12, from 1 to 60.
+		- It's read and saved through `GET`/`PUT /api/admin/event_gallery_settings` under `manage_events`, the same shape as EV4's event settings: `{value, default, min, max}`.
+		- Lowering it never removes photos. It only stops new ones.
+		- *Known limit:* two curators adding at the same moment could both get past a full cap by one. It's curator-only, so this is accepted.
 - **Video is a link we parse, never HTML we store.** `video_url` on events and series holds a canonical link:
 	- `https://www.youtube.com/watch?v=<11-char id>` or `https://vimeo.com/<digits>`.
 	- Pasted variants become canonical: `youtu.be/…`, `/shorts/…`, `/live/…`, `m.youtube.com`, extra `&t=` parameters.
+	- Refused: playlists, channel, album, showcase and user pages, and unlisted Vimeo links (their private hash can't be played from the id alone).
 	- **`ParseVideoLink` (business_logic) is the one parser.** Payloads carry `video: {"provider": "youtube" | "vimeo", "id": "…"}` or `null`.
+	- **An event without its own video shows its series'** (OQ7).
 	- **The client builds the player address only from that id:**
 		- YouTube: `https://www.youtube-nocookie.com/embed/<id>`;
 		- Vimeo: `https://player.vimeo.com/video/<id>?dnt=1`.
@@ -111,37 +124,48 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- every gallery shows "Ask us to remove a photo," using the site's contact address for now (CM1's report flag later);
 		- a curator removes it within a day.
 	- **Adult-layer events get no photos** (GD10 OQ3). Until events have an 18+ flag (EV6 OQ9), that's a curator rule.
+- **Which photos a signed-out visitor sees (H15, OQ1).** honuware's public-photo list now takes an optional per-row rule from the app. CF's rule (`IsPhotoRowPublic`):
+	- an `events` photo is public once its event is approved or archived. Pending, rejected and missing events are not;
+	- an `event_gallery_photos` photo follows its parent: a series row is always public, an event row follows its event, and a row that's gone isn't;
+	- every other listed table (venues, series, organizations, places, guide pages) is public, as before.
+	- A photo the rule refuses takes the normal signed-in path, so curators still see it, and its response is never cached publicly.
+- **The submitter's flyer (OQ1).** `POST /api/event_submissions/<int>/photo/<jpeg|png>`, with the image as the body.
+	- Only the submission's owner may add it. Someone else's submission is a 404, as for withdraw.
+	- It goes on every date still waiting for review, and a second flyer replaces the first. A date that's already been decided keeps what it has.
+	- JPEG or PNG only: never a vector from a stranger. It must be within `image_max_upload_bytes`, and it must decode.
+	- It stays private until a curator approves the date (H15).
 - **Sizes.** `hw-photo-upload` already shrinks and re-encodes on the way up, and the server enforces `image_max_upload_bytes`. The sizes:
 	- the existing thumbnail (160×160) and hero (1200×630);
 	- a gallery thumbnail (480×360);
 	- a full view (1600×1200).
 	- Scaled copies regenerate on demand. EV4's cleanup job already prunes old ones.
+	- *A signed-out visitor's photos are capped at 800×800* (honuware's `image_max_public_scaled_*` defaults), so the hero and the full view come out smaller for them today. See OQ10.
 - **Sharing tags.** `og:image` stays the main photo. The JSON-LD `image` becomes a list: the main photo, then up to three gallery photos.
 
 # Layered work items
 
 ### 0. honuware
 
-- [ ] 0.1 **Only if OQ1 lets submitters add a photo:** **H15**, a per-row photo visibility check.
-	- `PublicPhotoTables` gains an optional rule the app supplies. CF's rule: an `events` photo is public only once its event is approved.
-	- A photo that isn't public falls back to the normal signed-in read, so curators still see it.
-	- `get_scaled_photo` and `has_photo` use it. Additive, so knottyyoga needn't move.
-	- **Tests** in honuware. The cross-repo bump per CLAUDE.md, ideally bundled with H13/H14.
-	- *Without H15, a pending event's photo is readable by anyone who guesses its number, as GD2 OQ12 (d) accepted for draft guide pages. That's tolerable for curator uploads, not for strangers' uploads.*
+- [x] 0.1 **H15** (OQ1), a per-row photo visibility check.
+	- `PublicPhotoTables` gains `isRowPublic`, an optional rule the app supplies: `(DatabaseHelper, Transaction, table, id) → bool`. CF's rule is in the photo pin-down above.
+	- A photo that isn't public falls back to the normal signed-in read, so curators still see it, and gets `Cache-Control: private, no-cache`.
+	- `get_scaled_photo` uses it. Additive: with no rule, every row of a listed table is public as before, so knottyyoga needn't move.
+	- **Tests** in honuware (`get_scaled_photo_test.cpp`) and the README. Built in the local honuware tree; it needs Mason's push, then the CF re-pin (CLAUDE.md's bump-point).
+	- *Without H15, a pending event's photo would be readable by anyone who guessed its number, as GD2 OQ12 (d) accepted for draft guide pages.*
 
 ### 1. db_schema
 
-- [ ] 1.1 `src/db_schema/event_gallery_photos.{h,cpp}`:
+- [x] 1.1 `src/db_schema/event_gallery_photos.{h,cpp}`:
 	- `id`;
 	- `event_id` and `series_id`, both nullable FKs with cascade, and a CHECK that exactly one is set;
 	- `sort_order` int, default 0;
 	- `alt_text` (required, 1–300);
 	- `caption` (≤300, default `''`) and `credit` (≤120, default `''`);
-	- `consent_confirmed_by_person_id` (FK people, set null on delete, per EV1 OQ8 (e)) and `consent_confirmed_us`;
+	- `consent_confirmed_by_person_id` and `consent_confirmed_us`, both required with no default. *As built:* the person is a plain `people.id`, not an FK. honuware's FKs always cascade, so a link would delete the photos someone added when their account is deleted (EV1 OQ8 (e)).
 	- `created_us` and `updated_us`;
 	- indexes on (`event_id`, `sort_order`) and (`series_id`, `sort_order`).
-- [ ] 1.2 `video_url` on `events` and on `series`: not null, default `''`, with a CHECK for `''` or the two canonical shapes.
-- [ ] 1.3 `create_app_tables.cpp` (the three-place rule):
+- [x] 1.2 `video_url` on `events` and on `series`: not null, default `''`, with a CHECK for `''` or the two canonical shapes (`db_schema/video_links.h`).
+- [x] 1.3 `create_app_tables.cpp` (the three-place rule):
 	- `MakeAppTables`;
 	- `AppTableCreationOrder` (after `events` and `series`);
 	- `PopulateAppTables`, which covers:
@@ -153,15 +177,15 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 
 ### 2. table_helpers
 
-- [ ] 2.1 `event_gallery_photos.{h,cpp}`:
-	- `AddGalleryPhoto`;
-	- `GetGalleryForEvent` and `GetGalleryForSeries` (ordered);
-	- `CountForEvent` and `CountForSeries`;
+- [x] 2.1 `event_gallery_photos.{h,cpp}`:
+	- `AddGalleryPhoto` and `GetGalleryPhoto`;
+	- `GetGalleryForEvent` and `GetGalleryForSeries` (ordered), each row with `has_photo`;
 	- `UpdateGalleryPhoto` (bumps `updated_us`);
 	- `DeleteGalleryPhoto`.
+	- *As built:* no `CountFor*`. A gallery is at most the cap's rows, so the business layer counts the rows it already reads.
 	- **Tests.**
-- [ ] 2.2 `events` and `series`: `video_url` in add, update and the reads. **Tests.**
-- [ ] 2.3 **The photo picker:** `GetPhotoOwners(eventIds)` → for each event, which of event, series or venue has a photo, in one query against `table_item_photos`. **Tests:** each of the four outcomes, and a mixed list.
+- [x] 2.2 `events` and `series`: `video_url` in add, update and the reads. **Tests.**
+- [x] 2.3 **The photo picker:** `Events::GetPhotoOwners(eventIds)` → for each event, which of event, series or venue has a photo, in one query against `table_item_photos`; `Series::GetPhotoOwners(seriesIds)` does the same for series and their venues. **Tests:** each of the four outcomes, and a mixed list.
 
 ### 3. business_logic
 

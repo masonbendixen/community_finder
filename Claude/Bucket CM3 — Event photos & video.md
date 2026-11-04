@@ -169,11 +169,12 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- `MakeAppTables`;
 	- `AppTableCreationOrder` (after `events` and `series`);
 	- `PopulateAppTables`, which covers:
-		- photo support for `event_gallery_photos`, and `series` if OQ2;
+		- photo support for `event_gallery_photos` and `series`;
 		- the `manage_events` table mapping;
-		- admin metadata, so the gallery shows as a child table of events and series in the generic editor.
+		- admin metadata, so the gallery shows as a child table of events and series in the generic editor. The consent columns are read-only there.
+	- The gallery cap's default comes from the app's secret defaults (`app_secret_values.cpp`).
 	- **Tests:** `create_app_tables_test.cpp` (photo support rows, the mapping, the nesting), and the CHECKs (both parents, neither parent, blank alt text, a non-canonical video link).
-- [ ] 1.4 `register_app_services.cpp`: public read for `event_gallery_photos`, and `series` if OQ2. **Test:** `register_app_services_test.cpp`, where a signed-out visitor gets a gallery photo.
+- [x] 1.4 `register_app_services.cpp`: public read for `series` and `event_gallery_photos`, with `IsPhotoRowPublic` as the row rule (H15). **Tests:** `register_app_services_test.cpp`: a signed-out visitor gets a series photo and a gallery photo; a pending event's photo needs a login until the event is approved.
 
 ### 2. table_helpers
 
@@ -189,37 +190,48 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 
 ### 3. business_logic
 
-- [ ] 3.1 `video_link.{h,cpp}`: `ParseVideoLink(text)` → `{provider, id, canonicalUrl}` or an error code (`BAD_VIDEO_URL`, `VIDEO_HOST_NOT_SUPPORTED`).
+- [x] 3.1 `video_link.{h,cpp}`: `ParseVideoLink(text)` → `{provider, id, canonicalUrl}` or an error code (`BAD_VIDEO_URL`, `VIDEO_HOST_NOT_SUPPORTED`). `StoredVideoLink(video_url)` reads a stored link back.
 	- **Tests:**
 		- each YouTube variant, with and without extra parameters;
 		- a playlist-only link (refused);
-		- a Vimeo number, and a Vimeo channel or album (refused);
-		- `http:`;
+		- a Vimeo number, a channel video (accepted), and a channel, album, showcase, user page or unlisted link (refused);
+		- `http:`, no scheme, capitals and stray spaces;
 		- another host;
 		- an id of the wrong length.
-- [ ] 3.2 `EventHelper`:
-	- the resolved `photo` on list and detail reads;
-	- `gallery` (the event's own, else its series') on the detail read, only when the event is visible;
+- [x] 3.2 `EventHelper`:
+	- the resolved `photo` on list and detail reads, for events and for series;
+	- `gallery` (the event's own, else its series') on the event detail read, only when the event is visible; the series' own on the series detail read;
 	- `video` (the event's own, else its series').
 	- **Tests:** the fallbacks; a pending event's gallery hidden from the public read and shown in the curator preview.
-- [ ] 3.3 **The gallery cap** (OQ5) and deletes:
-	- a 13th row is refused;
-	- deleting a row deletes its photo through `ImageHelper::DeletePhotoForItem`. Generic CRUD already does this.
+- [x] 3.3 **The gallery** (`event_gallery_helper.{h,cpp}`) **and its cap** (`gallery_settings.{h,cpp}`, OQ5):
+	- `AddGalleryPhoto` checks one parent that exists, trimmed alt text (required), caption and credit lengths counted in characters, and the consent box. Then the cap, then it stamps the consent record. It writes nothing on a refusal.
+	- a row past the cap is refused with `GALLERY_FULL` and the cap;
+	- `LoadGallerySettings` / `SaveGallerySettings` for `event_gallery_max_photos` (1–60, default 12). A stored value out of range reads as the default;
+	- `DeleteGalleryPhoto` deletes the row and its photo through `ImageHelper::DeletePhotoForItem`. Generic CRUD already does this.
 	- **Tests.**
-- [ ] 3.4 **If OQ1:** `SubmissionHelper` takes `video_url`, checks it with `ParseVideoLink` (field `video_url`, the EV3 problem shape), and stores it on each date's event. **Tests.**
+- [x] 3.4 `SubmissionHelper` takes `video_url`, checks it with `ParseVideoLink` (field `video_url`, the EV3 problem shape), and stores the canonical link on each date's event. **Tests.**
+- [x] 3.5 **The flyer** (OQ1): `SubmissionHelper::AttachFlyer` locks the submission and checks:
+	- the owner (`NOT_YOURS`);
+	- something is still pending (`NOTHING_PENDING`);
+	- JPEG or PNG (`BAD_IMAGE_TYPE`);
+	- the size (`IMAGE_TOO_LARGE`), and that the image decodes (`BAD_IMAGE`).
+	- Then it uploads to each pending date. **Tests**, including a second flyer replacing the first and every refusal writing nothing.
+- [x] 3.6 **The H15 rule:** `photo_visibility.{h,cpp}`, `IsPhotoRowPublic`. **Tests:** each event status, gallery rows on each kind of parent, a missing row, other tables.
 
 ### 4. endpoints
 
-- [ ] 4.1 Payloads gain `photo` and `video` (`/api/events/upcoming`, `/api/events/<int>`, `/api/event_series*`), and `gallery` (`/api/events/<int>` and `/api/event_series/<string>`). **Tests** (`handle_full`, `ThreadPool::Shutdown()` first):
+- [x] 4.1 Payloads gain `photo` and `video` (`/api/events/upcoming`, `/api/events/<int>`, `/api/event_series*`), and `gallery` (`/api/events/<int>` and `/api/event_series/<string>`). **Tests** (`handle_full`, `ThreadPool::Shutdown()` first):
 	- an event with each kind of photo;
 	- a gallery in order;
 	- a video;
 	- a pending event's gallery not shown publicly.
-- [ ] 4.2 **No new curator endpoints.** Gallery rows go through generic CRUD under `manage_events`, as events do, and their photos through honuware's upload and delete endpoints. **Tests:**
-	- a curator adds a row and uploads its photo;
-	- someone without `manage_events` is refused.
-- [ ] 4.3 **If OQ1:** `POST /api/event_submissions` takes `video_url`. **Tests:** accepted, and refused with the field named.
-- [ ] 4.4 **If OQ1 includes a flyer:** after H15, the submitter uploads one photo to their pending event. One more route, `POST /api/event_submissions/<int>/photo`, checks that the caller owns the submission and that it's pending, then hands off to `ImageHelper`. **Tests.**
+- [x] 4.2 **Two new curator endpoints** (a change from v0.1, see the gallery pin-down), both under `manage_events`:
+	- `POST /api/admin/event_gallery_photos` adds a row: `{event_id | series_id, alt_text, caption?, credit?, consent_confirmed}` → `{id}`. A refusal is a 400 with `error_code` and `field`, plus `max_photos` on `GALLERY_FULL`.
+	- `GET`/`PUT /api/admin/event_gallery_settings` reads and saves the cap.
+	- Editing, reordering and deleting rows go through generic CRUD. Their photos go through honuware's upload and delete endpoints.
+	- **Tests:** a curator adds a row and their consent record is stamped; each refusal names its code and field; a full gallery says what the cap is; someone signed out or without `manage_events` is refused; the settings read, save and refuse bad values.
+- [x] 4.3 `POST /api/event_submissions` takes `video_url`. **Tests:** accepted and stored in its canonical form, and refused with the field named.
+- [x] 4.4 **The flyer route:** `POST /api/event_submissions/<int>/photo/<jpeg|png>`, the image as the body, anchored through the submission endpoints' anchor. **Tests:** signed out, someone else's submission (404), a vector refused, the flyer on each waiting date, nothing pending after a withdraw.
 
 ### 5. client (`ui/src/app/`)
 
@@ -243,16 +255,17 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- thumbnails with their alt, caption and credit;
 		- move up and down;
 		- remove, with a confirm in the page;
-		- "Add photo": alt text, caption, credit, the consent box, and `hw-photo-upload` with `deferUpload`. The row is created first, then its photo uploaded.
+		- "Add photo": alt text, caption, credit, the consent box, and `hw-photo-upload` with `deferUpload`. The row is created first (`POST /api/admin/event_gallery_photos`), then its photo uploaded. A `GALLERY_FULL` refusal says what the cap is.
+	- **the gallery cap** on the admin Event settings page, beside EV4's settings (`/api/admin/event_gallery_settings`);
 	- **Specs.**
 	- *Series use the generic admin editor (photo upload plus the gallery as a child table) until someone asks for more.*
-- [ ] 5.7 **If OQ1:** the submit form gets an optional "Video link" with the same feedback, and maybe a "Flyer" upload (H15). "My submissions" shows them. **Specs.**
+- [ ] 5.7 The submit form gets an optional "Video link" with the same feedback, and an optional "Flyer" (JPEG or PNG), uploaded after the submit succeeds to `/api/event_submissions/<id>/photo/<type>`. "My submissions" shows them. **Specs.**
 
 ### 6. test_helper
 
-- [ ] 6.1 Two commands for local data:
-	- `set_event_video --event_id N --url …`, which goes through `ParseVideoLink`;
-	- `add_gallery_photo --event_id N | --series_id N --file … --alt …`, which uploads through `ImageHelper` and records the consent as the test admin.
+- [x] 6.1 Two commands for local data, in a new "Media" group (`commands/media_commands.*`), named in the house's kebab-case:
+	- `set-event-video` (`sv`) `--event_id N | --series_id N --url …`, which goes through `ParseVideoLink`. `--clear` removes the video;
+	- `add-gallery-photo` (`ag`) `--event_id N | --series_id N --file … --alt … [--caption …] [--credit …]`. It adds the row through `EventGalleryHelper` (so the cap applies), uploads the file through `ImageHelper`, and records the logged-in person as the consent record. A login is required. If the upload fails, the row is taken back out.
 	- **Tests.**
 
 ### 7. Gates
@@ -262,8 +275,9 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 - [ ] 7.3 **Live seed check after §1** (destructive, announced):
 	- `event_gallery_photos` with its CHECKs and indexes;
 	- `video_url` on both tables, with its CHECK;
-	- the photo-support and public-read rows;
+	- the photo-support rows for `series` and `event_gallery_photos`;
 	- the `manage_events` mapping;
+	- `event_gallery_max_photos` = 12 in `config_secrets`;
 	- nothing new in `allowed_tables`.
 - [ ] 7.4 **Manual loop (Mason or Levi), on a phone as well as desktop:**
 	1. Add a main photo, three gallery photos and a YouTube link to an event.
@@ -282,31 +296,43 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Rec: the flyer waits.* Curators add the main photo and gallery in this bucket. A submitter's flyer upload is a follow-up that needs H15 first, so a stranger's image is never public before a curator approves it.
 	- *Alternative:* do H15 now and let submitters attach one flyer.
 	- Mason- Let's do H15 now.
+	- **Decided (11/4): H15 now, plus a video link and one flyer from submitters.** Built as §0.1, §3.4–3.6 and §4.3–4.4. The flyer goes on every date still waiting and stays private until a curator approves the date.
 2. **When an event has no photo of its own, should it borrow one?** First from its series, then from its venue. A weekly night then looks right without someone uploading to every date.
 	- *Rec: yes.* It turns on photos for series.
 	- Mason- I like this recommendation.
+	- **Decided (11/4)**, as built: event → series → venue, and series → venue.
 3. **Which video sites?**
 	- *Rec: YouTube and Vimeo,* played from YouTube's no-cookie address and Vimeo's do-not-track player.
 	- Instagram, TikTok and Facebook embeds only work by loading their own scripts on our page, which the "never trackers" rule rules out. Their links can still go in the event's Link field.
 	- Mason- YouTube and Vimeo are fine.
+	- **Decided (11/4)**, as built.
 4. **Click-to-play, or load the player right away?**
 	- *Rec: click-to-play.* Nothing from YouTube loads, and nobody is tracked, until someone chooses to watch. It also keeps pages fast.
 	- Mason- This sounds good.
+	- **Decided (11/4): click-to-play.** This is client work (§5.4).
 5. **How many gallery photos per event or series?**
 	- *Rec: 12,* enough to market a night without becoming an archive. Easy to raise later.
 	- Mason- This sounds good but let's make this configurable via the admin portal.
+	- **Decided (11/4): 12 by default, and an admin can set it from 1 to 60.** The server side is built (§3.3, §4.2). The control on the Event settings page is §5.6. Lowering the cap never removes photos.
 6. **Record who vouched for consent on each photo?**
 	- *Rec: yes.* A required "everyone recognizable agreed" box on upload, stored with who ticked it and when. When a removal request comes in, we can see who added the photo and on what understanding.
 	- Mason- This sounds good to me.
+	- **Decided (11/4)**, as built. The server stamps who and when from the curator's session. Nobody types it in.
 7. **Galleries on series pages too?**
 	- *Rec: yes, and the same for video.* A recurring night's pictures belong to the series, because each dated instance drops off the calendar once it's past. An event shows its own gallery, or else its series'.
 	- Mason- This sounds good.
+	- **Decided (11/4)**, as built: series have their own gallery and video, and an event without its own shows its series'.
 8. **Where does the removal-request link go before CM1 exists?**
 	- *Rec: the site's contact address,* with the photo's page in the subject, and a curator acts within a day. CM1's report flag replaces it.
 	- Mason- Your recommendation is fine.
+	- **Decided (11/4): the site's contact address.** This is client work (§5.3).
 9. **Which stream owns it, and when?** The outline puts CM3 in Stream D, gated on traction. But almost every file is Stream A's (the events tables, the event pages, the curator editor, the submit form), and Mason wants it for marketing now.
 	- *Rec: run it in Stream A after EV3's gates, with Levi or Mason as owner.* Update the outline's Stream D row to point here.
 	- Mason- Sounds good.
+	- **Decided (11/4): Stream A, with Levi or Mason as owner.** The outline's Stream D row now points here.
+10. **Should signed-out visitors get bigger photos?** honuware caps every photo a signed-out visitor gets at 800×800 (`image_max_public_scaled_width` and `_height`). So the 1200×630 hero already comes out at 800×420, and the 1600×1200 full view would come out at 800×600. Signed-in people get the full size.
+	- *Rec: raise CF's cap to 1600×1200* in this app's database seed. The full view then looks sharp on a phone or laptop. The cost is more stored scaled copies, which EV4's cleanup job already prunes.
+	- *Alternative:* keep 800×800 and use the smaller sizes everywhere.
 
 # Change Log
 

@@ -138,7 +138,7 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 
 ### 1. db_schema
 
-*Done 11/2 — Windows: 2233 passed. Linux: 2233 passed (+2 new tests; floor unchanged at 2221 until the bucket exit). The live seed check (§7.3) hasn't been run yet: it's destructive and waits for the go-ahead.*
+*Done 11/2 — Windows: 2233 passed. Linux: 2233 passed (+2 new tests; floor unchanged at 2221 until the bucket exit). The live seed check (§7.3) hasn't been run yet: it's destructive and waits for the go-ahead.* *(It passed 11/3; see §7.3.)*
 
 - [x] 1.1 `src/db_schema/event_submissions.{h,cpp}`. Columns:
 	- `submitted_by_person_id` (BIGINT, required, a **plain id, not an FK**, per EV1 OQ8 (e): deleting an account must not delete its events)
@@ -549,7 +549,33 @@ So this bucket adds the **submitter's side** (the form, "my submissions," and th
 		- **The app build is unaffected.** This was checked in the production bundle.
 		- **The fix:** the three such fields (`maxDates`, `relationships`, `rejectReasons`) are now getters.
 		- **The rule for client code:** expose an imported constant to a template through a getter, not a field. A constant from the component's own file is fine as a field.
-- [ ] 7.3 Live seed check after §1 (destructive, announced): `event_submissions` present with its CHECKs and index, `events.submission_id` FK and `events_submission_idx` present, twelve tables mapped to `manage_events`, nothing new in `allowed_tables`. The rate-limit keys and the pause key need no seed check: a database without them reads the defaults (§3.3, §3.4).
+- [x] 7.3 Live seed check after §1 (destructive, announced): `event_submissions` present with its CHECKs and index, `events.submission_id` FK and `events_submission_idx` present, twelve tables mapped to `manage_events`, nothing new in `allowed_tables`. The rate-limit keys and the pause key need no seed check: a database without them reads the defaults (§3.3, §3.4).
+	- *Passed 11/3,* at Mason's request ("implement 7. Gates"). Claude ran it with the Windows x64-Debug `communityfinder_database_helper.exe`, built from the current tree, with the env from `launch_defaults.local.json`.
+	- **Mason's dev data was kept.** Unlike EV1's check, this one didn't wipe the dev database:
+		1. it was renamed aside (`communityfinder_kept_20261103`) with nothing connected;
+		2. `--recreate_database` built a fresh `communityfinder` (exit 0), which the checks ran on;
+		3. the fresh copy was dropped and the dev database renamed back.
+		- A before-and-after fingerprint matched: 59 tables, 3 people, 29 events, 1 submission, and the same latest event update.
+	- **`event_submissions`:**
+		- all ten columns, with the specced defaults and nullability;
+		- `event_submissions_relationship_check` (the five relationships) and `event_submissions_reject_reason_check` (the six reasons plus `withdrawn` and `expired`);
+		- `event_submissions_person_created_idx` on `(submitted_by_person_id, created_us)`.
+	- **`events`:** `fk_events_submission_id`, `ON DELETE CASCADE`, and `events_submission_idx` on `submission_id`.
+	- **`manage_events`:** granted to `admin`, and mapped to exactly the 12 events-domain tables, `event_submissions` among them.
+	- **`allowed_tables`** is unchanged: categories, neighborhoods, permission_implications, scene_tags, venues.
+	- **Admin metadata:**
+		- `event_submissions` is top-level and not nested, and `events` isn't nested either;
+		- its friendly name is "Event Submissions" and its display template "Submission #{id}";
+		- in its column info, the person id, "Decision Emailed," "Created" and "Updated" are read-only, as is `events.submission_id`.
+	- **The settings keys are seeded after all.** `app_secret_values` writes them with the code's defaults: `event_submission_max_pending_dates` 10, `event_submission_max_per_day` 5, `event_submissions_paused` false. So a fresh database matches a database without them, and nothing needs changing. The note above was only imprecise.
+	- **A rolled-back insert test,** all in one transaction and then rolled back:
+		- **Defaults:** a submission given only its submitter took every default.
+		- **Cascade:** three `user_submitted` dates pointing at it came in pending, and deleting the submission deleted all three.
+		- **Accepted:** all eight reject reasons.
+		- **Refused:**
+			- an unknown relationship ("fan") and an unknown reason ("boring"), by their CHECKs;
+			- a date pointing at a missing submission, by the FK;
+			- a submission with no submitter, by NOT NULL.
 - [ ] 7.4 **Manual loop (Mason or Levi):**
 	1. Register a fresh account and confirm its email. The form refuses it before confirmation.
 	2. Submit a three-date event.

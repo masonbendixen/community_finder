@@ -286,8 +286,12 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 		- **The seed** passes `{"manage_subscriptions", kPermissionManageClassSchedule}`, which is what its own 14 jobs check.
 		- **Endpoints:** the five TUs and their anchors are out of `CMakeLists.txt` and `web_app.cpp`. The files wait for Mason's `git rm`.
 		- **One test comment** in `staff_search_people_test.cpp` was updated; it described the old permission requirement.
-		- **The feed:** `PersonalICalFeedHelper::kFeedRefreshInterval = "PT1H"` is written into the document as `REFRESH-INTERVAL` and `X-PUBLISHED-TTL`. `get_my_ical_feed.cpp` stopped sending `X-PUBLISHED-TTL` as an HTTP header, where calendar apps ignore it. A test covers both properties.
-		- **Gates:** **Windows: 5447 passed. Linux: 5447 passed.** (Linux floor 4800.) The Windows build used its own `out/build/x64-Debug-local`, because the user preset shares `x64-Debug`. KY_SEED_RESULT
+		- **The feed:** the personal feed sets `ICalConfig::refreshInterval` to `PersonalICalFeedHelper::kFeedRefreshInterval` (`"PT1H"`). The one-off attachments that share `AppICalConfig` are unchanged. The document now carries `REFRESH-INTERVAL` and `X-PUBLISHED-TTL`. `get_my_ical_feed.cpp` stopped sending `X-PUBLISHED-TTL` as an HTTP header, where calendar apps ignore it. A test covers both properties.
+		- **Gates:** **Windows: 5447 passed. Linux: 5447 passed.** (Linux floor 4800.) The Windows build used its own `out/build/x64-Debug-local`, because the user preset shares `x64-Debug`.
+		- **Seed check and helper run (11/3).** On a throwaway `knottyyoga` (Mason's renamed aside, then restored unchanged), `--recreate_database` exited 0.
+			- The scheduler role holds exactly `manage_class_schedule`, `manage_subscriptions` and `run_scheduled_jobs`, and Administrator holds `run_scheduled_jobs`.
+			- With a server on port 18191, `knottyyoga_helper` logged in and ran the five moved jobs (its other 14 set to 0). Each answered 200 every 5 seconds through honuware's endpoints, and the server logged their counts.
+		- **Mason's dev databases need a `--recreate_database`, CF's and knottyyoga's both.** Neither has a `run_scheduled_jobs` row, so until they're rebuilt the helper gets 403 on the five moved jobs (and, in CF, on archive and expire too). No migration was written; nothing is deployed.
 		- **Re-pin:** waiting on Mason's push. It no longer waits for a batch.
 - [x] 9.6 **Ledger:** H13 is widened to the extraction. Its follow-ups (1) and (2) close. *Done 11/3 in [[Setting up the project]].*
 
@@ -427,7 +431,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 	- **§9, the shared jobs (OQ1, OQ6 (a)):**
 		- honuware now owns the five shared jobs, their endpoints, a handler that apps can reuse, and the `run_scheduled_jobs` permission. The service-account call takes a permission list, with no forwarder.
 		- CF and knottyyoga dropped their copies. knottyyoga's feed now carries `REFRESH-INTERVAL`.
-		- **Still to do:** Mason's `git rm` and honuware push, then both re-pins and strict pinned gates, then knottyyoga's seed check.
+		- **Still to do:** Mason's `git rm` and honuware push, then both re-pins and strict pinned gates. Mason's two dev databases need a `--recreate_database` to get `run_scheduled_jobs`.
 	- **§10, past events (OQ3, OQ7, OQ8, OQ9):**
 		- A 365-day window, with hide-not-delete.
 		- `GET /api/events/past` and a "Past events" view of the list.
@@ -439,7 +443,7 @@ One honuware push (H13 widened), then both apps re-pin. Lower layers first.
 		- honuware's own Linux suite: 1926 passed.
 		- knottyyoga: **Windows: 5447 passed. Linux: 5447 passed.**
 		- vitest 487 passed; `ng build` ×3.
-		- A live check of the window, and a live helper run of all seven jobs.
+		- A live check of the window, and live helper runs: all seven of CF's jobs, and knottyyoga's five moved ones. knottyyoga's seed check also passed.
 	- **Changes from the plan:**
 		- The settings are served by `/api/events/settings`, not site info.
 		- The window hides approved-but-ended events too.

@@ -150,7 +150,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- `PublicPhotoTables` gains `isRowPublic`, an optional rule the app supplies: `(DatabaseHelper, Transaction, table, id) → bool`. CF's rule is in the photo pin-down above.
 	- A photo that isn't public falls back to the normal signed-in read, so curators still see it, and gets `Cache-Control: private, no-cache`.
 	- `get_scaled_photo` uses it. Additive: with no rule, every row of a listed table is public as before, so knottyyoga needn't move.
-	- **Tests** in honuware (`get_scaled_photo_test.cpp`) and the README. Built in the local honuware tree; it needs Mason's push, then the CF re-pin (CLAUDE.md's bump-point).
+	- **Tests** in honuware (`get_scaled_photo_test.cpp`) and the README. Mason pushed it as `f445a49` on 11/5, and CF and knottyyoga now pin that commit.
 	- *Without H15, a pending event's photo would be readable by anyone who guessed its number, as GD2 OQ12 (d) accepted for draft guide pages.*
 
 ### 1. db_schema

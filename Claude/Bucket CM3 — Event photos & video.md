@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
-Last Updated: 11/4/2026
-Version: 0.2
+Last Updated: 11/5/2026
+Version: 0.2.1
 tags:
 ---
 
@@ -271,6 +271,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 ### 7. Gates
 
 - [ ] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit.
+	- *Server side (11/5):* Windows 2500 passed, Linux 2500 passed, pinned to honuware `f445a49`. knottyyoga is 5454 on each. The floor is now 2490. The client gates (§7.2) are still to come.
 - [ ] 7.2 `ng build` for local, development and production; vitest green, with the count recorded; the bundle change noted. The viewer and player load with the event pages, not up front.
 - [ ] 7.3 **Live seed check after §1** (destructive, announced):
 	- `event_gallery_photos` with its CHECKs and indexes;
@@ -359,3 +360,6 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- the test_helper commands use kebab-case names (`set-event-video`, `add-gallery-photo`).
 	- **OQ10 added:** whether signed-out visitors get photos bigger than honuware's 800×800 cap.
 	- **Gates:** Linux 2500 passed against the local honuware tree (was 2417). The Windows run was stopped for low memory.
+- **11/5/2026 (v0.2.1)** — H15 is pushed (honuware `f445a49`), and CF and knottyyoga are re-pinned to it.
+	- **Strict pinned gates:** CF Windows 2500 passed, Linux 2500 passed. knottyyoga Windows 5454 passed, Linux 5454 passed (7 more than before: H15's honuware tests). The CF floor is now 2490.
+	- **A test fix:** the first pinned run failed `GetEventSeriesTest.ASeriesCarriesItsPhotoVideoAndGallery`. The test kept a pointer into a JSON value that was freed at the end of its line, so whether it passed depended on leftover memory. It now parses the response into a local first. No other test in the app has that pattern.

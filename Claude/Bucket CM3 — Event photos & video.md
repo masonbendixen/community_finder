@@ -347,3 +347,15 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- **One honuware change (H15)** is needed only if submitters may upload a photo.
 	- **The page's content security policy belongs to PL2,** which must allow the two players.
 	- OQ1–OQ9 are open.
+- **11/4/2026 (v0.2)** — Mason answered OQ1–9, and the server side is built (§0, §1–4, §6). The client (§5) is next.
+	- **Decisions:** H15 now, with a video link and one flyer from submitters (OQ1); event → series → venue for the main photo (OQ2); YouTube and Vimeo (OQ3); click-to-play (OQ4); a cap of 12 that an admin can change (OQ5); who confirmed consent, and when (OQ6); galleries and video on series too (OQ7); the site's contact address for removal requests (OQ8); Stream A with Levi or Mason as owner (OQ9). The outline's Stream D row now points here.
+	- **H15** was built in honuware: `PublicPhotoTables` gains an optional per-row rule. It's additive, so knottyyoga needn't change.
+	- **Changes from v0.1:**
+		- two curator routes after all: `POST /api/admin/event_gallery_photos`, so the server stamps the consent record from the session, and `GET`/`PUT /api/admin/event_gallery_settings` for the cap;
+		- the cap is a setting (1–60, default 12), not a constant;
+		- no `CountFor*` table methods, because the business layer counts the rows it already reads;
+		- `consent_confirmed_by_person_id` is a plain id, not an FK, so deleting an account doesn't delete the photos that person added;
+		- the flyer goes on every date still waiting for review;
+		- the test_helper commands use kebab-case names (`set-event-video`, `add-gallery-photo`).
+	- **OQ10 added:** whether signed-out visitors get photos bigger than honuware's 800×800 cap.
+	- **Gates:** Linux 2500 passed against the local honuware tree (was 2417). The Windows run was stopped for low memory.

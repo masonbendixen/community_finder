@@ -287,6 +287,8 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 
 - [ ] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit.
 	- *Server side (11/5):* Windows 2500 passed, Linux 2500 passed, pinned to honuware `f445a49`. knottyyoga is 5454 on each. The floor is now 2490. The client gates (§7.2) are still to come.
+	- *§1.5 (11/18), pinned to `f445a49`:* Linux 2506 passed. Windows: 2503 of 2507 passed. §1.5's 6 new tests pass on both.
+		- The 4 Windows failures are CF's generic-CRUD tests in `crud_test.cpp` and `roles_permissions_test.cpp`. They were edited at 11:04, between the two builds, to expect honuware's uncommitted CRUD write check (knottyyoga Beta feedback Phase 1.2), which `f445a49` doesn't have. That's also the 2507th test. They should pass once that change is pushed and re-pinned.
 - [ ] 7.2 `ng build` for local, development and production; vitest green, with the count recorded; the bundle change noted. The viewer and player load with the event pages, not up front.
 - [ ] 7.3 **Live seed check after §1** (destructive, announced):
 	- `event_gallery_photos` with its CHECKs and indexes;
@@ -381,6 +383,8 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 - **11/5/2026 (v0.2.1)** — H15 is pushed (honuware `f445a49`), and CF and knottyyoga are re-pinned to it.
 	- **Strict pinned gates:** CF Windows 2500 passed, Linux 2500 passed. knottyyoga Windows 5454 passed, Linux 5454 passed (7 more than before: H15's honuware tests). The CF floor is now 2490.
 	- **A test fix:** the first pinned run failed `GetEventSeriesTest.ASeriesCarriesItsPhotoVideoAndGallery`. The test kept a pointer into a JSON value that was freed at the end of its line, so whether it passed depended on leftover memory. It now parses the response into a local first. No other test in the app has that pattern.
-- **11/18/2026 (v0.2.2)** — Mason answered OQ10: signed-out visitors get photos up to 1600×1200.
-	- **New server item §1.5, not built yet.** CF's seed overwrites honuware's two 800 defaults, as it already does for the mail app password. The keys belong to honuware, so they can't join the app's own defaults. No honuware change, and knottyyoga is unchanged.
-	- §7.3's live seed check now covers the two rows.
+- **11/18/2026 (v0.2.2)** — Mason checked in the server side (§0–4, §6) as `7422b8c`, answered OQ10, and §1.5 is built: CF serves photos up to 1600×1200.
+	- **§1.5:** CF's seed overwrites honuware's two 800 defaults, as it already does for the mail app password. The keys belong to honuware, so they can't join the app's own defaults. No honuware change, and knottyyoga is unchanged.
+	- **A correction:** honuware's 800×800 cap applies to signed-in readers too, not only signed-out visitors, as OQ10 and the sizes pin-down had said.
+	- §7.3's live seed check now covers the two rows. It hasn't been run yet.
+	- **Gates (pinned):** Linux 2506 passed. Windows 2503 of 2507 passed; the 4 failures come from separate CRUD work in progress, not §1.5 (see §7.1). The floor stays 2490 until the bucket exits.

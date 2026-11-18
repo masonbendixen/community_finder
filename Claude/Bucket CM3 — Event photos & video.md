@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
-Last Updated: 11/5/2026
-Version: 0.2.1
+Last Updated: 11/18/2026
+Version: 0.2.2
 tags:
 ---
 
@@ -139,7 +139,8 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- a gallery thumbnail (480×360);
 	- a full view (1600×1200).
 	- Scaled copies regenerate on demand. EV4's cleanup job already prunes old ones.
-	- *A signed-out visitor's photos are capped at 800×800* (honuware's `image_max_public_scaled_*` defaults), so the hero and the full view come out smaller for them today. See OQ10.
+	- *A signed-out visitor's photos are capped at 800×800* (honuware's `image_max_public_scaled_*` defaults), so the hero and the full view come out smaller for them today.
+		- **Decided (OQ10):** CF raises its cap to 1600×1200 (§1.5), so both sizes come out whole for everyone.
 - **Sharing tags.** `og:image` stays the main photo. The JSON-LD `image` becomes a list: the main photo, then up to three gallery photos.
 
 # Layered work items
@@ -175,6 +176,13 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- The gallery cap's default comes from the app's secret defaults (`app_secret_values.cpp`).
 	- **Tests:** `create_app_tables_test.cpp` (photo support rows, the mapping, the nesting), and the CHECKs (both parents, neither parent, blank alt text, a non-canonical video link).
 - [x] 1.4 `register_app_services.cpp`: public read for `series` and `event_gallery_photos`, with `IsPhotoRowPublic` as the row rule (H15). **Tests:** `register_app_services_test.cpp`: a signed-out visitor gets a series photo and a gallery photo; a pending event's photo needs a login until the event is approved.
+- [ ] 1.5 **The public photo size (OQ10):** raise `image_max_public_scaled_width` to 1600 and `image_max_public_scaled_height` to 1200 in CF's seed.
+	- Both keys belong to honuware, which already seeds them at 800. So CF overwrites honuware's rows with an UPDATE in `PopulateConfigSecrets` (`database_helper/create_database.cpp`), as it already does for the mail app password.
+		- They can't go in `FillInAppSecretDefaults`: that would fail `AppSecretValuesTest.FrameworkAndAppKeySetsDoNotOverlap` and hit the unique `name`.
+		- Keep the two values in their own small list in `app_secret_values.cpp`, apart from the app's own defaults, so a test can read them.
+	- honuware is unchanged, and knottyyoga stays at 800×800.
+	- An existing database keeps 800 until it's reseeded or an admin edits the two rows.
+	- **Tests:** the list names only honuware keys, with the values 1600 and 1200. The live seed check (§7.3) confirms the rows.
 
 ### 2. table_helpers
 
@@ -279,6 +287,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- the photo-support rows for `series` and `event_gallery_photos`;
 	- the `manage_events` mapping;
 	- `event_gallery_max_photos` = 12 in `config_secrets`;
+	- `image_max_public_scaled_width` = 1600 and `image_max_public_scaled_height` = 1200 in `config_secrets` (§1.5);
 	- nothing new in `allowed_tables`.
 - [ ] 7.4 **Manual loop (Mason or Levi), on a phone as well as desktop:**
 	1. Add a main photo, three gallery photos and a YouTube link to an event.
@@ -334,6 +343,8 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 10. **Should signed-out visitors get bigger photos?** honuware caps every photo a signed-out visitor gets at 800×800 (`image_max_public_scaled_width` and `_height`). So the 1200×630 hero already comes out at 800×420, and the 1600×1200 full view would come out at 800×600. Signed-in people get the full size.
 	- *Rec: raise CF's cap to 1600×1200* in this app's database seed. The full view then looks sharp on a phone or laptop. The cost is more stored scaled copies, which EV4's cleanup job already prunes.
 	- *Alternative:* keep 800×800 and use the smaller sizes everywhere.
+	- Mason- I'll go with your recommendation.
+	- **Decided (11/18): CF raises the cap to 1600×1200** in its seed (§1.5). honuware's defaults stay 800×800, so knottyyoga is unchanged.
 
 # Change Log
 
@@ -363,3 +374,6 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 - **11/5/2026 (v0.2.1)** — H15 is pushed (honuware `f445a49`), and CF and knottyyoga are re-pinned to it.
 	- **Strict pinned gates:** CF Windows 2500 passed, Linux 2500 passed. knottyyoga Windows 5454 passed, Linux 5454 passed (7 more than before: H15's honuware tests). The CF floor is now 2490.
 	- **A test fix:** the first pinned run failed `GetEventSeriesTest.ASeriesCarriesItsPhotoVideoAndGallery`. The test kept a pointer into a JSON value that was freed at the end of its line, so whether it passed depended on leftover memory. It now parses the response into a local first. No other test in the app has that pattern.
+- **11/18/2026 (v0.2.2)** — Mason answered OQ10: signed-out visitors get photos up to 1600×1200.
+	- **New server item §1.5, not built yet.** CF's seed overwrites honuware's two 800 defaults, as it already does for the mail app password. The keys belong to honuware, so they can't join the app's own defaults. No honuware change, and knottyyoga is unchanged.
+	- §7.3's live seed check now covers the two rows.

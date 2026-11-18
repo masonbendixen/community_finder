@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/18/2026
-Version: 0.2.2
+Version: 0.3
 tags:
 ---
 
@@ -250,20 +250,28 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 
 ### 5. client (`ui/src/app/`)
 
-- [ ] 5.1 **Types and access:** `photo`, `gallery` and `video` on the event and series types, and in the offline mock. The demo gets placeholder art (generated shapes and color fields, not people), one gallery and one video id. **Specs.**
-- [ ] 5.2 **One place for photo addresses:** `photoFor(event, width, height)`. Event rows and the event page switch to it, and the event page drops its `has_photo` call. **Specs:** each owner, and none.
-- [ ] 5.3 `shared/components/photo-gallery`:
+- [x] 5.1 **Types and access:** `photo`, `gallery` and `video` on the event and series types, and in the offline mock. The demo gets placeholder art (generated shapes and color fields, not people), one gallery and one video id. **Specs.**
+	- *As built (11/18):* `PhotoRef`, `VideoRef` and `GalleryPhoto` in `core/types/events.types.ts`, with `toPhotoRef`, `toVideoRef`, `normalizeGallery` and `normalizeEventDetail`. `getEvent` now returns an `EventDetail` (the event plus its gallery).
+	- The mock follows the server's fallback: Leather Night (103) has its own photo, a gallery of four and the demo video; Bear Happy Hour's series (11) and The Lantern Room (venue 2) have photos.
+	- `core/mock/demo-photo-art.ts` draws the placeholders as SVG shapes, and `DemoPhotoUrlBuilder` stands in for honuware's `PhotoUrlBuilder` in mock mode only.
+	- **The demo's video id `demoVideo01` is made up.** It has the right shape, but it plays nothing: offline there's no YouTube to play it anyway.
+- [x] 5.2 **One place for photo addresses:** `photoFor(event, width, height)`. Event rows and the event page switch to it, and the event page drops its `has_photo` call. **Specs:** each owner, and none.
+	- *As built:* `EventPhotos` (`core/services/event-photos.service.ts`): `photoFor(owner, size)` and `galleryPhotoUrl(photo, size)`, with the sizes as constants (list thumb 160, hero 1200×630, gallery thumb 480×360, full view 1600×1200). The event page no longer asks `has_photo`.
+- [x] 5.3 `shared/components/photo-gallery`:
 	- a thumbnail grid;
 	- a full-size viewer in a dialog: arrow keys, Escape, swipe on a phone, alt text, caption and credit, focus returned on close;
 	- "Ask us to remove a photo."
 	- **Specs.**
-- [ ] 5.4 `shared/components/video-embed`: the play tile, then the frame on press. It's built only from `{provider, id}`. **Specs:**
+	- *As built:* 11 specs. The viewer is `role="dialog"` with `aria-modal` and CDK's focus trap. The removal links are mailto links to `SiteConfig.contactEmail` (see OQ8), one for the whole gallery and one for the photo being viewed.
+- [x] 5.4 `shared/components/video-embed`: the play tile, then the frame on press. It's built only from `{provider, id}`. **Specs:**
 	- no frame before the press;
 	- the right address for each provider;
 	- the frame's title;
 	- the address isn't rebuilt on every change check.
-- [ ] 5.5 **The event page and the series page:** the hero (resolved), then the video, then the gallery. The JSON-LD `image` list. **Specs.**
-- [ ] 5.6 **The curator editor** (`pages/admin/manage-events.*`):
+	- *As built:* 6 specs. The address is a `computed`, so it's sanitized once per video. A new video puts the tile back. `core/utils/video-links.ts` mirrors the server's `ParseVideoLink`, for the editor's and the submit form's feedback.
+- [x] 5.5 **The event page and the series page:** the hero (resolved), then the video, then the gallery. The JSON-LD `image` list. **Specs.**
+	- *As built:* `og:image` stays the main photo. The JSON-LD `image` list is the main photo, then up to 3 gallery photos (`JSON_LD_GALLERY_IMAGES`). A gallery with no main photo gives JSON-LD images but no `og:image`. The series page gets its hero and `og:image` too.
+- [x] 5.6 **The curator editor** (`pages/admin/manage-events.*`):
 	- the main photo through `hw-photo-upload`;
 	- a video field that shows what it found ("YouTube video ✓") or why not, and saves the canonical link;
 	- **a gallery section:**
@@ -274,7 +282,26 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- **the gallery cap** on the admin Event settings page, beside EV4's settings (`/api/admin/event_gallery_settings`);
 	- **Specs.**
 	- *Series use the generic admin editor (photo upload plus the gallery as a child table) until someone asks for more.*
-- [ ] 5.7 The submit form gets an optional "Video link" with the same feedback, and an optional "Flyer" (JPEG or PNG), uploaded after the submit succeeds to `/api/event_submissions/<id>/photo/<type>`. "My submissions" shows them. **Specs.**
+	- *As built (11/18), in `pages/admin/event-editor.*`:*
+		- **The video field** says "YouTube video ✓" or why not as it's typed. Save refuses an unreadable link, and stores the canonical link or `''` (`videoColumnValue` in `manage-events-form.ts`).
+		- **The main photo and the gallery** appear below the form only once the event is saved. A new event says to open it again after adding it. Both save on their own, apart from the form's Save. Each upload has a "Which photos are fine" note with the policy (`photo-policy-note.ts`).
+		- **The gallery** is `event-gallery-editor.*`, showing "3 of 12 photos".
+			- A move swaps the two rows' `sort_order`. If two rows share a `sort_order`, it renumbers the whole gallery instead.
+			- Remove deletes the photo, then the row. A row whose photo is already gone is still removed.
+			- "Add photo" checks the alt text, the consent box and the chosen file before sending anything. Then it makes the row and uploads the photo against it. If the upload fails, the row is deleted again, so no row is ever left without a picture.
+			- What was typed stays after a refusal, so a `GALLERY_FULL` can be fixed by removing a photo and pressing Add again.
+		- **The cap** is a card under a new "Photo galleries" heading on the Event settings page (`gallery-settings-card.*`), checked against 1–60 before sending.
+		- **Not built:** changing a gallery photo's alt text, caption or credit after it's added. For now, remove and re-add the photo, or edit the row in the generic admin.
+		- 15 new gallery specs, 6 for the cap card, and 9 more in the editor and form specs.
+- [x] 5.7 The submit form gets an optional "Video link" with the same feedback, and an optional "Flyer" (JPEG or PNG), uploaded after the submit succeeds to `/api/event_submissions/<id>/photo/<type>`. "My submissions" shows them. **Specs.**
+	- *As built (11/18):* the video link is checked before sending (field `video_url`) and sent canonical.
+	- **The flyer** is picked with `hw-photo-upload` in `deferUpload` mode, so it looks like every other upload. The page then sends the file's own bytes.
+		- The picker accepts any image, so the page refuses anything but a JPEG or PNG before sending (by type, or by extension when the file has none).
+		- No re-encode: `hw-photo-upload`'s resize is private. A flyer over the server's 10 MB limit gets the server's "The flyer is too large."
+	- The flyer goes up only after the submission is in. If it fails, the submission stands, and the thanks say "Your event was sent, but its flyer couldn't be added." with the server's reason.
+	- A honeypot send (`submission_id` 0) uploads nothing.
+	- **A gap:** if submissions are paused between opening the form and sending it, the form comes back with what was typed, but the chosen flyer has to be picked again.
+	- **"My submissions"** says "With a photo · With a Vimeo video" under each date. For that, the server's `/mine` now sends `has_photo` and `video` per date (`submission_helper.*`, `event_submissions.*`, `events_json.*`, with a test in each layer). **These server changes aren't committed yet.**
 
 ### 6. test_helper
 
@@ -285,11 +312,21 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 
 ### 7. Gates
 
-- [ ] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit.
+- [x] 7.1 Docker suite green per slice, Windows too ("Windows: N passed. Linux: M passed."); raise the floor at bucket exit.
+	- **Bucket exit (11/18), strict pinned to honuware `838045f`: Windows 2525 passed. Linux 2525 passed.** That includes the two new `/mine` tests. The 4 CRUD failures from the earlier §1.5 run are gone, since `838045f` has the CRUD write check. The floor is raised from 2490 to 2515 (`server/docker/build_and_test.sh`).
 	- *Server side (11/5):* Windows 2500 passed, Linux 2500 passed, pinned to honuware `f445a49`. knottyyoga is 5454 on each. The floor is now 2490. The client gates (§7.2) are still to come.
 	- *§1.5 (11/18), pinned to `f445a49`:* Linux 2506 passed. Windows: 2503 of 2507 passed. §1.5's 6 new tests pass on both.
 		- The 4 Windows failures are CF's generic-CRUD tests in `crud_test.cpp` and `roles_permissions_test.cpp`. They were edited at 11:04, between the two builds, to expect honuware's uncommitted CRUD write check (knottyyoga Beta feedback Phase 1.2), which `f445a49` doesn't have. That's also the 2507th test. They should pass once that change is pushed and re-pinned.
-- [ ] 7.2 `ng build` for local, development and production; vitest green, with the count recorded; the bundle change noted. The viewer and player load with the event pages, not up front.
+- [x] 7.2 `ng build` for local, development and production; vitest green, with the count recorded; the bundle change noted. The viewer and player load with the event pages, not up front.
+	- *11/18:* all three builds pass. **Vitest: 563 passed in 71 files** (was 487 in 67).
+	- **Production bundle, before → after:**
+		- initial: 918.46 → 931.83 kB raw (+13.4); 212.9 → 216.5 kB transferred (+3.6);
+		- `events-routes`: 161.14 → 177.76 kB (+16.6): the viewer, the player and the flyer;
+		- `admin-routes`: 218.95 → 236.69 kB (+17.7): the gallery editor and the cap card.
+	- The 500 kB initial budget warning was already there before this bucket.
+	- **Lazy as required:** the player and the viewer ("Plays from YouTube", "Photo removal") are only in the `events-routes` chunk, and the gallery editor only in `admin-routes`.
+	- **Why initial grew:** mostly the offline mock. `app.config.ts` picks mock or HTTP at runtime from `environment.useMock`, so the mock's data and handlers ship in every build, production included. That was true before CM3. This bucket adds the demo gallery, the placeholder art, the gallery mock and the video-link parser the mocks use.
+	- *A possible follow-up, not in scope:* replace the mocks by file replacement in the `local` config, so production drops them.
 - [ ] 7.3 **Live seed check after §1** (destructive, announced):
 	- `event_gallery_photos` with its CHECKs and indexes;
 	- `video_url` on both tables, with its CHECK;
@@ -345,6 +382,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Rec: the site's contact address,* with the photo's page in the subject, and a curator acts within a day. CM1's report flag replaces it.
 	- Mason- Your recommendation is fine.
 	- **Decided (11/4): the site's contact address.** This is client work (§5.3).
+	- *Built (11/18):* `SiteConfig.contactEmail`, set to `community.finder.seattle@gmail.com`, the site's sending address. **Mason, please confirm that inbox is watched,** or name another address.
 9. **Which stream owns it, and when?** The outline puts CM3 in Stream D, gated on traction. But almost every file is Stream A's (the events tables, the event pages, the curator editor, the submit form), and Mason wants it for marketing now.
 	- *Rec: run it in Stream A after EV3's gates, with Levi or Mason as owner.* Update the outline's Stream D row to point here.
 	- Mason- Sounds good.
@@ -388,3 +426,16 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- **A correction:** honuware's 800×800 cap applies to signed-in readers too, not only signed-out visitors, as OQ10 and the sizes pin-down had said.
 	- §7.3's live seed check now covers the two rows. It hasn't been run yet.
 	- **Gates (pinned):** Linux 2506 passed. Windows 2503 of 2507 passed; the 4 failures come from separate CRUD work in progress, not §1.5 (see §7.1). The floor stays 2490 until the bucket exits.
+- **11/18/2026 (v0.3)** — The server side went in as `9617614`, which re-pinned honuware to `838045f` and `@honuware/ui` to 0.3.1. The client (§5) is now built, and so are the gates that need no hands (§7.1, §7.2).
+	- **What's new:**
+		- the photo gallery and the click-to-play video on the event and series pages, with every photo address built in one place (`EventPhotos`);
+		- in the curator's editor, the main photo, the video field, a gallery editor, and the gallery cap on the Event settings page;
+		- on the submit form, a video link and a flyer; "My submissions" shows both.
+	- **A small server addition for §5.7:** `/api/event_submissions/mine` sends `has_photo` and `video` for each date. It has a test in business_logic and one in endpoints.
+	- **Gates:** Windows 2525 passed. Linux 2525 passed (pinned `838045f`). The floor is now 2515. Vitest: 563 passed. `ng build` passes for local, development and production. The bundle change is noted in §7.2.
+	- **Choices to look at:**
+		- the removal-request address (OQ8);
+		- the demo's made-up video id (§5.1);
+		- gallery photos can't be edited after they're added (§5.6);
+		- a flyer has to be picked again after a pause (§5.7).
+	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).

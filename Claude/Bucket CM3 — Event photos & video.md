@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/18/2026
-Version: 0.5.1
+Version: 0.6
 tags:
 ---
 
@@ -49,7 +49,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- else its series' photo, else its venue's (OQ2);
 	- chosen by the server, so pages stop guessing.
 - **A gallery** on an event or a series (OQ7), each photo with alt text, an optional caption and an optional credit. Shown as a grid, with a full-size viewer. The cap is 12 by default, and an admin can change it (OQ5).
-- **One embedded video** per event or series: YouTube or Vimeo (OQ3), click-to-play (OQ4).
+- **One embedded video** per event or series: YouTube or Vimeo (OQ3), shown as the provider's player from the start (OQ23, replacing OQ4's click-to-play).
 - **Curator tools:**
 	- the main photo, gallery and video in the `/admin/events` editor;
 	- series through the generic admin editor, which already handles photos and child tables.
@@ -108,13 +108,14 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- Vimeo: `https://player.vimeo.com/video/<id>?dnt=1`.
 		- The address goes through Angular's trusted-URL wrapper once and is cached (knottyyoga's Location-page pattern).
 	- **A database CHECK is the backstop.** Curators save events through generic CRUD, which no app code sees, so the column only accepts the two canonical shapes. The editor turns a pasted link into its canonical form before saving.
-- **Click-to-play (OQ4).** The page shows a play tile, not a player: the gradient tile, a play button, and "Plays from YouTube."
-	- *Changed 11/18:* the tile first showed the event's own photo, cropped to 16:9 and darkened. Mason found that misleading, because it reads as a frame of the video. It's now the plain gradient. Showing a real frame is **OQ23**.
-	- Nothing from YouTube or Vimeo loads until someone presses play. It's private (the outline's "never trackers") and costs no page weight.
-	- Pressing play creates the frame with autoplay, a title ("Video: Leather Night"), and fullscreen allowed.
+- **The provider's own player, from the start (OQ23, reversing OQ4's click-to-play on 11/18).** The page shows YouTube's no-cookie player, or Vimeo's do-not-track one, with its own still and one tap to play.
+	- The frame has a title ("Video: Leather Night"), allows fullscreen, and doesn't autoplay.
+	- It's `loading="lazy"`, so the player loads only when the visitor scrolls near it.
+	- *The trade Mason accepted:* every event or series page with a video loads the provider's player script once it's scrolled into view. Each visitor's browser then talks to Google's (or Vimeo's) servers whether or not they watch. The full write-up is under OQ23.
+	- *History:* click-to-play (OQ4) first showed the event's own photo on a tile, which read as a frame of the video and was misleading (§17.1). Then it showed a plain gradient, which Mason didn't want. He chose the full player as "the best experience".
 - **The page's content security policy must allow the two players.** honuware's `SecurityHeaders` policy rides the API's responses. The page itself is served from S3/CDN in knottyyoga's setup, so the page's policy belongs to PL2.
 	- Wherever `index.html` is served, `frame-src` must name `https://www.youtube-nocookie.com` and `https://player.vimeo.com`.
-	- `img-src` stays `'self' data:`, because the play tile shows no outside image. OQ23's browser option would add `https://i.ytimg.com`.
+	- `img-src` stays `'self' data:`. The player draws its still inside its own frame, so the page itself shows no outside image.
 	- This is a PL2 item, not a honuware change. If PL2 ends up serving the page through the C++ server, it becomes a small honuware change: frame sources set by the app, as `SetServerBanner` is today.
 - **The photo policy (consent and no outing).** It's written for curators and shown beside every upload:
 	- **Always fine:** flyers and artwork, the venue, performers' own promo images, and crowd shots where nobody can be recognized.
@@ -270,7 +271,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- the frame's title;
 	- the address isn't rebuilt on every change check.
 	- *As built:* 6 specs. The address is a `computed`, so it's sanitized once per video. A new video puts the tile back. `core/utils/video-links.ts` mirrors the server's `ParseVideoLink`, for the editor's and the submit form's feedback.
-	- *Changed 11/18 (Phase 2 §17.1):* the `posterUrl` input is gone. The tile is the gradient only, with no image.
+	- *Changed 11/18 (Phase 2 §17):* first the `posterUrl` input went (§17.1). Then the tile itself went (§17.2, OQ23). It's now the provider's player from the start, lazy and not autoplaying, with 5 specs.
 - [x] 5.5 **The event page and the series page:** the hero (resolved), then the video, then the gallery. The JSON-LD `image` list. **Specs.**
 	- *As built:* `og:image` stays the main photo. The JSON-LD `image` list is the main photo, then up to 3 gallery photos (`JSON_LD_GALLERY_IMAGES`). A gallery with no main photo gives JSON-LD images but no `og:image`. The series page gets its hero and `og:image` too.
 - [x] 5.6 **The curator editor** (`pages/admin/manage-events.*`):
@@ -349,7 +350,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 
 Planned 11/18 from Mason's answers to OQ11–18 and his two new-work items. Each section names where it came from.
 - **The rule from OQ12 applies throughout:** anything that can be created gets full CRUD.
-- **Order:** §8 first, because it blocks the manual loop (§7.4). Then the client-only items (§9–11, §14–15), then §12, §13 and §18. §17.2 waits on OQ23. §8.2 and §13 are cross-repo bump points.
+- **Order:** §8 first, because it blocks the manual loop (§7.4). Then the client-only items (§9–11, §14–15), then §12, §13 and §18. §17 is done. §8.2 and §13 are cross-repo bump points.
 - **Layering:** as in §0–7. Server items go endpoints → business_logic → table_helpers. Each new endpoint is anchored in `RegisterAllEndpoints()`, and each new method gets a test.
 
 ### 8. Event pages fail on the dev database (Mason New Item 1)
@@ -468,7 +469,7 @@ In its own commit.
 	- adding, replacing and removing a flyer from "My submissions";
 	- a removal request arriving in each inbox;
 	- a curator who isn't an admin, using the Events pages and kept out of Users and Roles;
-	- the video tile showing the video's still, after §17.2;
+	- the video showing as YouTube's player, with its still, on an event and a series. Check one Vimeo video too (§17.2);
 	- a fresh `--populate_sample_data` showing photos, a gallery and the video, after §18;
 	- a server started on an old database printing §8.2's warning.
 
@@ -485,18 +486,25 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- `VideoEmbed` lost its `posterUrl` input, and the event and series pages stopped passing the hero.
 	- Specs: the tile has no image; the event page's hero still appears exactly once.
 	- Vitest: 563 passed in 71 files. Prettier clean.
-- [ ] 17.2 **The video's real still on the tile.** Mason doesn't want the plain gradient (OQ23). Who fetches the still waits on **OQ23**.
-	- **If the server option:**
-		- **db_schema:** a small `video_thumbnails` table, one row per `{provider, id}`, holding its photo and when it was fetched. As a new app table it touches three places: `MakeAppTables`, `AppTableCreationOrder` and `PopulateAppTables`.
-		- **business_logic:** fetch through honuware's `HttpClient` (YouTube's fixed address; Vimeo's oEmbed lookup), store it through `ImageHelper`, and fall back to nothing on failure.
-		- **endpoints:** `GET /api/events/<id>/video_thumbnail` and the series equivalent. Each looks up the stored video, so it can't be used to make our server fetch arbitrary videos.
-		- **client:** the tile shows the still.
-		- **Tests** with `TestHttpClient`: first view fetches; second view doesn't; a changed link fetches again; a failed fetch gives no image; there's no route to an arbitrary id.
-	- **If the browser option:**
-		- client only: the tile shows `https://i.ytimg.com/vi/<id>/hqdefault.jpg` with `referrerpolicy="no-referrer"`;
-		- Vimeo keeps the gradient;
-		- a PL2 note to add `https://i.ytimg.com` to `img-src`;
-		- specs.
+- [x] 17.2 **The video's real still: YouTube's or Vimeo's own player, on the page from the start** (OQ23: "the full player"). ✅ 11/18
+	- **`VideoEmbed`:**
+		- The tile, the play button, "Plays from …" and the press handling are gone.
+		- It's now one frame, titled "Video: <title>", with fullscreen allowed.
+		- It has `loading="lazy"`, so a visitor who never scrolls near it never loads the player.
+		- The address is still built only from `{provider, id}` and trusted once per video.
+	- **`videoEmbedUrl`:** no autoplay any more, since nobody has pressed anything. It's now `youtube-nocookie.com/embed/<id>` and `player.vimeo.com/video/<id>?dnt=1`.
+	- **Specs:**
+		- the player is there at once, titled, lazy and not autoplaying, with no stand-in image or button;
+		- Vimeo's do-not-track address;
+		- trusted once;
+		- nothing from a bad id;
+		- a new video moves the one player;
+		- the event and series pages show the player between the hero and the gallery.
+	- **Gates:**
+		- Vitest: 562 passed in 71 files. That's one fewer, because the press test went with the tile.
+		- `ng build` (production) is clean. The events chunk went from 177.76 to 175.37 kB.
+	- **No server work, and nothing for PL2:** `frame-src` already names both players, and `img-src` is unchanged.
+	- *The server and browser thumbnail versions planned here were dropped. Their costs and benefits stay under OQ23.*
 
 ### 18. Sample data that shows off CM3 (OQ22)
 
@@ -541,6 +549,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- *Rec: click-to-play.* Nothing from YouTube loads, and nobody is tracked, until someone chooses to watch. It also keeps pages fast.
 	- Mason- This sounds good.
 	- **Decided (11/4): click-to-play.** This is client work (§5.4).
+	- **Reversed (11/18) by OQ23:** the page now loads the provider's player from the start, because its still and one-tap play are the better experience.
 5. **How many gallery photos per event or series?**
 	- *Rec: 12,* enough to market a night without becoming an archive. Easy to raise later.
 	- Mason- This sounds good but let's make this configurable via the admin portal.
@@ -676,7 +685,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- Mason- Use this: https://www.youtube.com/watch?v=lVhJ_A8XUgc
 	- **Decided (11/18): the demo uses YouTube video `lVhJ_A8XUgc`.** Planned as Phase 2 §15.
 
-*Added 11/18 from the answers above and Mason's new work. They shape Phase 2 §8, §12, §13, §17 and §18. OQ19–22 were answered on 11/18. OQ23 has an answer to Mason's follow-up question and still needs his choice.*
+*Added 11/18 from the answers above and Mason's new work. They shape Phase 2 §8, §12, §13, §17 and §18. OQ19–23 were all answered on 11/18. OQ23 settled on the full player after a follow-up discussion.*
 
 19. **How should photo-removal requests and the new curator role work? (Follows OQ11.)** Four parts, each with a recommendation, so "agreed" covers all four.
 	1. **How a request is sent.**
@@ -808,6 +817,8 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 				- **It gives the same look as the browser-thumbnail option, at many times the weight and with more sent to Google.** Its one real advantage over that option is the single tap on phones.
 		- *Rec: still the server,* because this site's visitors are the people the no-outing rule protects, and the cost is one slice of work, not a redesign. The browser option is a reasonable call if you judge the risk small: it's what any site using Google Fonts does.
 	- **What I need from you now:** "server", "browser", "browser now, server before launch", or "player right away".
+	- Mason- Let's just do the full player. It's the best experience.
+	- **Decided (11/18): the full player, from the start.** This reverses OQ4. Built as Phase 2 §17.2: lazy-loaded and not autoplaying, with no server work.
 
 # Change Log
 
@@ -857,6 +868,10 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/18/2026 (v0.6)** — OQ23 decided: the full player. Mason: *"Let's just do the full player. It's the best experience."* This reverses OQ4's click-to-play.
+	- Built as §17.2: `VideoEmbed` is now the provider's player from the start, lazy and not autoplaying, and `videoEmbedUrl` dropped autoplay.
+	- The design pin-down, §5.4's note and OQ4 are updated, and the thumbnail plans are dropped.
+	- Vitest: 562 passed. Production build clean.
 - **11/18/2026 (v0.5.1)** — OQ23 gains a fourth option after Mason asked why we can't load YouTube's whole player: we can (it reverses OQ4). Its costs and benefits are written up beside the other three.
 - **11/18/2026 (v0.5)** — Mason answered OQ19–23. No code changed.
 	- **Decided:**

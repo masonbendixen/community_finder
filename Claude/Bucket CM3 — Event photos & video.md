@@ -404,6 +404,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Rec: keep it, if someone checks that inbox at least daily.*
 	- *Alternative:* name another address, for example a shared inbox for curators. It's one line in the client, so a change later needs a deploy. CM1's report flag will replace this link eventually.
 	- **What I need from you:** "keep it", or the address to use.
+	- Mason- I would like to use this site email address AND send email to all of the email addresses for the admin users. If there is another, lesser permission that allows even editing but not full admin access, that would be useful. Maybe we can add that role and a corresponding permission. Give the permission to this new role and admin.
 
 12. **Should curators be able to fix a gallery photo's words after adding it?**
 	- **Now:** the event editor's gallery lists each photo's alt text, caption and credit, but can't change them. To fix a typo, a curator has to:
@@ -415,6 +416,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- It's a client-only change to `event-gallery-editor.*`, with specs.
 	- *Alternative:* leave it as it is until a curator asks. §5.6 only asked for the words to be shown.
 	- **What I need from you:** "add it" or "leave it".
+	- Mason- Delete / recreate is annoying. Let's allow editing of these. I general, anything that can be created should have full CRUD support. Please add a memory for that.
 
 13. **Should a big flyer be shrunk in the browser before it's sent?**
 	- **Now:** the submit form sends the flyer exactly as picked. The server refuses anything over 10 MB (`image_max_upload_bytes`).

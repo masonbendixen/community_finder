@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/18/2026
-Version: 0.3
+Version: 0.4
 tags:
 ---
 
@@ -254,7 +254,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *As built (11/18):* `PhotoRef`, `VideoRef` and `GalleryPhoto` in `core/types/events.types.ts`, with `toPhotoRef`, `toVideoRef`, `normalizeGallery` and `normalizeEventDetail`. `getEvent` now returns an `EventDetail` (the event plus its gallery).
 	- The mock follows the server's fallback: Leather Night (103) has its own photo, a gallery of four and the demo video; Bear Happy Hour's series (11) and The Lantern Room (venue 2) have photos.
 	- `core/mock/demo-photo-art.ts` draws the placeholders as SVG shapes, and `DemoPhotoUrlBuilder` stands in for honuware's `PhotoUrlBuilder` in mock mode only.
-	- **The demo's video id `demoVideo01` is made up.** It has the right shape, but YouTube's player says "Video unavailable". A real one is **OQ18**.
+	- **The demo's video id `demoVideo01` is made up.** It has the right shape, but YouTube's player says "Video unavailable". Mason chose a real one (OQ18), which goes in with Phase 2 §15.
 - [x] 5.2 **One place for photo addresses:** `photoFor(event, width, height)`. Event rows and the event page switch to it, and the event page drops its `has_photo` call. **Specs:** each owner, and none.
 	- *As built:* `EventPhotos` (`core/services/event-photos.service.ts`): `photoFor(owner, size)` and `galleryPhotoUrl(photo, size)`, with the sizes as constants (list thumb 160, hero 1200×630, gallery thumb 480×360, full view 1600×1200). The event page no longer asks `has_photo`.
 - [x] 5.3 `shared/components/photo-gallery`:
@@ -291,16 +291,16 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 			- "Add photo" checks the alt text, the consent box and the chosen file before sending anything. Then it makes the row and uploads the photo against it. If the upload fails, the row is deleted again, so no row is ever left without a picture.
 			- What was typed stays after a refusal, so a `GALLERY_FULL` can be fixed by removing a photo and pressing Add again.
 		- **The cap** is a card under a new "Photo galleries" heading on the Event settings page (`gallery-settings-card.*`), checked against 1–60 before sending.
-		- **Not built:** changing a gallery photo's alt text, caption or credit after it's added. For now, remove and re-add the photo, or edit the row in the generic admin. Whether to add it is **OQ12**.
+		- **Not built:** changing a gallery photo's alt text, caption or credit after it's added. For now, remove and re-add the photo, or edit the row in the generic admin. Editing is being added in Phase 2 §10 (OQ12).
 		- 15 new gallery specs, 6 for the cap card, and 9 more in the editor and form specs.
 - [x] 5.7 The submit form gets an optional "Video link" with the same feedback, and an optional "Flyer" (JPEG or PNG), uploaded after the submit succeeds to `/api/event_submissions/<id>/photo/<type>`. "My submissions" shows them. **Specs.**
 	- *As built (11/18):* the video link is checked before sending (field `video_url`) and sent canonical.
 	- **The flyer** is picked with `hw-photo-upload` in `deferUpload` mode, so it looks like every other upload. The page then sends the file's own bytes.
 		- The picker accepts any image, so the page refuses anything but a JPEG or PNG before sending (by type, or by extension when the file has none).
-		- No re-encode: `hw-photo-upload`'s resize is private. A flyer over the server's 10 MB limit gets the server's "The flyer is too large." (**OQ13**).
-	- The flyer goes up only after the submission is in. If it fails, the submission stands, and the thanks say "Your event was sent, but its flyer couldn't be added." with the server's reason. There's no way to retry yet (**OQ14**).
+		- No re-encode: `hw-photo-upload`'s resize is private. A flyer over the server's 10 MB limit gets the server's "The flyer is too large." Phase 2 §13 makes the limit a setting and shrinks flyers first (OQ13).
+	- The flyer goes up only after the submission is in. If it fails, the submission stands, and the thanks say "Your event was sent, but its flyer couldn't be added." with the server's reason. There's no way to retry yet; Phase 2 §11 adds one on "My submissions" (OQ14).
 	- A honeypot send (`submission_id` 0) uploads nothing.
-	- **A gap:** if submissions are paused between opening the form and sending it, the form comes back with what was typed, but the chosen flyer has to be picked again (**OQ15**).
+	- **A gap:** if submissions are paused between opening the form and sending it, the form comes back with what was typed, but the chosen flyer has to be picked again. Accepted as it is (OQ15).
 	- **"My submissions"** says "With a photo · With a Vimeo video" under each date. For that, the server's `/mine` now sends `has_photo` and `video` per date (`submission_helper.*`, `event_submissions.*`, `events_json.*`, with a test in each layer). **These server changes aren't committed yet.**
 
 ### 6. test_helper
@@ -326,8 +326,8 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- The 500 kB initial budget warning was already there before this bucket.
 	- **Lazy as required:** the player and the viewer ("Plays from YouTube", "Photo removal") are only in the `events-routes` chunk, and the gallery editor only in `admin-routes`.
 	- **Why initial grew:** mostly the offline mock. `app.config.ts` picks mock or HTTP at runtime from `environment.useMock`, so the mock's data and handlers ship in every build, production included. That was true before CM3. This bucket adds the demo gallery, the placeholder art, the gallery mock and the video-link parser the mocks use.
-	- *A possible follow-up, not in scope:* swap the mocks in at build time for the `local` config, so production leaves them out. That's **OQ16**, with measurements: 61.7 kB of mock code in production, 44.0 kB of it up front.
-- [ ] 7.3 **Live seed check after §1** (destructive, announced):
+	- *A follow-up:* swap the mocks in at build time for the `local` config, so production leaves them out. That was agreed in OQ16 and is planned as Phase 2 §14. Measured: 61.7 kB of mock code in production, 44.0 kB of it up front.
+- [ ] 7.3 **Live seed check after §1** (destructive, announced). *Until this runs, Mason's dev database lacks CM3's schema and every event page fails (Phase 2 §8).*
 	- `event_gallery_photos` with its CHECKs and indexes;
 	- `video_url` on both tables, with its CHECK;
 	- the photo-support rows for `series` and `event_gallery_photos`;
@@ -343,12 +343,119 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	5. Check the shared-link preview.
 	6. Follow the removal-request path.
 
-Mason- new work
-- When clicking on an event, I get: This event couldn't be loaded. Please try again in a moment.
-	- Is this something that is supposed to be implemented in a later phase or just broken. If there is no work item for this, lets add one to this document.
-- In Admin Dashboard / Events / Edit Event, I would like:
-	- A list of the ten next upcoming events I can click on to edit
-	- If I type a search term, I'd like the result to show information like the date, time, and venue in addition to the event title. Currently, I wanted to edit Board Game Night and it is a series and showed a bunch of items with the same name and I had to try each one to edit the right one.
+# Phase 2 — Follow-ups (OQ11–21 and Mason's new work)
+
+Planned 11/18 from Mason's answers to OQ11–18 and his two new-work items. Each section names where it came from.
+- **The rule from OQ12 applies throughout:** anything that can be created gets full CRUD.
+- **Order:** §8 first, because it blocks the manual loop (§7.4). Then the client-only items (§9–11, §14–15). §12 waits on OQ19 and §13 on OQ21. §13 is a cross-repo bump point.
+- **Layering:** as in §0–7. Server items go endpoints → business_logic → table_helpers. Each new endpoint is anchored in `RegisterAllEndpoints()`, and each new method gets a test.
+
+### 8. Event pages fail on the dev database (Mason New Item 1)
+
+Mason: *"When clicking on an event, I get: This event couldn't be loaded. Please try again in a moment. Is this something that is supposed to be implemented in a later phase or just broken. If there is no work item for this, lets add one to this document."*
+
+**Neither a later phase nor broken code: the dev database is older than CM3.** Checked 11/18:
+- `GET /api/events/upcoming` returns 200, with CM3's `photo` field, so the running server is the new build.
+- Every `GET /api/events/<id>` tried (ids 25, 10 and 17) returns a 500.
+- A read-only query of `communityfinder` shows no `event_gallery_photos` table, and no `video_url` column on `events` or `series`.
+- The event page reads the event's gallery inside `GetEventDetail`, and any database error there becomes a 500 (`get_event_detail.cpp:42`). The list doesn't read galleries, so it kept working.
+
+The items:
+- [x] 8.1 **Recreate the dev database** with `--recreate_database`, which is §7.3. ✅ 11/18, Mason ran it.
+	- The recreate seeds no events. The sample events come from a second flag, `--populate_sample_data`, which can run alone or with `--recreate_database` (it runs after it). Both need `HONUWARE_ALLOW_DESTRUCTIVE=1`.
+	- [ ] Still to check: with the sample data loaded, an event page opens. Then §7.3's checklist can be ticked against the new schema.
+	- The sample data has no photos, gallery or video, so it doesn't show CM3 (**OQ22**).
+- [ ] 8.2 **If OQ20 says yes:** the startup schema check in honuware, with tests, so the next out-of-date database explains itself.
+
+### 9. Edit Event: the next ten events, and search results that tell events apart (Mason New Item 2)
+
+Mason: *"In Admin Dashboard / Events / Edit Event, I would like: A list of the ten next upcoming events I can click on to edit. If I type a search term, I'd like the result to show information like the date, time, and venue in addition to the event title. Currently, I wanted to edit Board Game Night and it is a series and showed a bunch of items with the same name and I had to try each one to edit the right one."*
+
+**Why it happens:** the search box uses honuware's generic lookup (`getFkOptions('events', …)` in `manage-events.ts:230`). That returns each event's display name, and the events table's display template is just `{title}` (`create_app_tables.cpp:799`). So every Board Game Night looks the same.
+- Changing the template isn't the fix. Times are stored as microseconds, which a template can't format, and the template also labels events in every picker in the generic admin.
+
+The items:
+- [ ] 9.1 **table_helpers:** an `Events` method that finds events whose title contains the search text. It ignores case, and escapes `%` and `_` in the search text. It returns the id, title, start, end, venue name or location text, series title and status, sorted as in 9.2, with a limit. **Tests:** a match in the middle of a title, any capitalization, a `%` in the search taken literally, the limit, and the order.
+- [ ] 9.2 **business_logic:** `EventHelper::FindForCurators(transaction, searchText, limit)`.
+	- With search text: upcoming matches first (soonest first, counting one still running as upcoming), then past ones (most recent first).
+	- With none: the next `limit` upcoming events.
+	- Every status is included and labelled, since curators edit pending and rejected events too.
+	- **Tests.**
+- [ ] 9.3 **endpoint:** `GET /api/admin/events/search?q=<text>&limit=<n>` under `manage_events`, returning `{items: [{id, title, starts_at_us, ends_at_us, venue_name, location_text, series_title, status}]}`. The limit defaults to 10, with a maximum of 50. **Tests** (`handle_full`): signed out, without the permission, a search, the blank list, and the limit clamped.
+- [ ] 9.4 **client:** the Edit Event tab.
+	- Under the search box, a "Coming up" list of the next ten events: "Thu, Nov 20 · 7:00 PM · Cafe Mox · Pending", each opening in the editor.
+	- Search results show the same date, time and venue under the title, so "Board Game Night" appears once per date.
+	- The list refreshes after a save.
+	- The search moves off `getFkOptions` onto 9.3. The access layer and the offline mock get the new call.
+	- **Specs.**
+
+### 10. Edit a gallery photo's words (OQ12)
+
+- [ ] 10.1 **client:** an "Edit" button on each row of the event editor's gallery. It opens the alt text, caption and credit in place, with Save and Cancel and the same length limits, and alt text still required.
+	- It saves through generic CRUD (`updateItem` on `event_gallery_photos`), sending only the fields that changed, trimmed. The database's CHECK refuses blank alt text even if the client let it through.
+	- **Specs:** editing each field, Cancel leaving the row as it was, blank alt text refused before sending, and a failed save saying so and keeping what was typed.
+	- *Series galleries are still edited in the generic admin, which already has full CRUD.*
+
+### 11. Add, replace or remove the flyer from "My submissions" (OQ14, and the full-CRUD rule)
+
+- [ ] 11.1 **business_logic:** `SubmissionHelper::RemoveFlyer(submissionId, personId)`. It removes the photo from every date of the submission still waiting for review, with the same checks as `AttachFlyer`: a 404 for someone else's submission, and `NOTHING_PENDING` when no date is waiting. **Tests.**
+- [ ] 11.2 **endpoint:** `DELETE /api/event_submissions/<int>/photo`, anchored through the submission endpoints' anchor. **Tests:** signed out, someone else's submission, removing from each waiting date, and nothing pending.
+- [ ] 11.3 **client:** on "My submissions", while any date of a submission is waiting:
+	- "Add a flyer" (or "Replace the flyer" once one is attached, which `/mine`'s `has_photo` tells us) opens the same `hw-photo-upload` picker with the same JPEG/PNG check;
+	- "Remove the flyer" asks in the page first.
+	- The thanks page's failed-flyer message gains "You can add it from My submissions."
+	- **Specs.**
+
+### 12. Photo-removal requests reach the right people (OQ11; the design waits on OQ19)
+
+Assuming OQ19's recommendations:
+- [ ] 12.1 **The Curator role:** seeded in `create_app_tables.cpp` beside `PopulateAppPermissions`, holding `manage_events`, with both looked up by name like the Administrator grant.
+	- It's seed data, not a new table, so the three-place rule doesn't apply. `create_app_tables_test.cpp` covers it, and §7.3's live check gains a line for it.
+	- **Tests.**
+- [ ] 12.2 **business_logic:** `PhotoRemovalRequestHelper`. It takes the page, title, photo description, optional message and optional reply address, and emails the site address plus everyone holding `manage_events`, through `::Mail::LoadSenderAddress` and `FormatString`, with `NormalizeCrLf` on the HTML. **Tests:** who it goes to, a curator without the permission left out, and the reply address shown only when given.
+- [ ] 12.3 **endpoint:** `POST /api/photo_removal_requests`, public, with the honeypot and a rate limit per visitor. **Tests:** sent, the honeypot quietly accepted and dropped, the rate limit, and length limits.
+- [ ] 12.4 **client:** "Ask us to remove a photo" and "Ask us to remove this photo" open a short form in the gallery and the viewer instead of a mailto. It confirms when sent. `SiteConfig.contactEmail` stays as the fallback shown if sending fails. **Specs.**
+- [ ] 12.5 **client:** open the admin Events and Event settings pages to `manage_events` holders.
+	- A CF guard on those routes replaces `AdminGuard` there. The dashboard shows a curator only the tiles they can use. Users and Roles stay admin-only.
+	- Check whether `@honuware/ui/crud`'s table picker already hides tables a curator can't reach. If it doesn't, that's a web-components change for this phase.
+	- **Specs.**
+
+### 13. A configurable upload limit, shared with knottyyoga (OQ13; the page and range wait on OQ21)
+
+A cross-repo bump point: Mason pushes honuware and publishes `@honuware/ui`, then I re-pin CF and verify a fresh pinned build, then Mason commits. knottyyoga follows the same way.
+- [ ] 13.1 **honuware server:** `GET`/`PUT /api/admin/image_upload_settings` under `admin_portal`, for `image_max_upload_bytes`, with the default and allowed range (10 MB; 1–50 MB per OQ21), refusing values out of range.
+	- A read that any signed-in session can call returns the limit, so the upload control knows it.
+	- The upload routes' existing check stays the last word.
+	- **Tests.**
+- [ ] 13.2 **honuware web components:**
+	- `hw-photo-upload` reads the limit. It says before uploading when a file is still too big after shrinking, instead of waiting for the server's refusal.
+	- Its "prepare the image" step becomes a public export, so an app can shrink a file it sends itself.
+	- A settings card for the limit, for an app to put on its settings page.
+	- **Specs.**
+- [ ] 13.3 **CF:** the card on the page OQ21 chooses. The submit form's flyer and §11's "Add a flyer" go through honuware's prepare step, so a flyer is shrunk to at most 4096 px and sent as a JPEG, as a curator's upload is. **Specs.**
+- [ ] 13.4 **knottyyoga:** the card on its settings page after the bump. That's knottyyoga's own change and gate.
+
+### 14. Leave the offline demo out of production builds (OQ16)
+
+In its own commit.
+- [ ] 14.1 `app.config.ts` gets its access providers from one small file (for example `core/app-access-providers.ts`, which uses HTTP only). The `local` configuration's `fileReplacements` swaps in a mock version. `environment.useMock` then only selects the build configuration. The specs aren't affected, since they import the mocks directly.
+- [ ] 14.2 **Measure before and after**, the same way as OQ16 (from the build's stats file). Expected: about 44 kB less up front (932 → about 888 kB), and 17.6 kB less in the guide chunk. Then confirm `ng build` for all three configurations, and that `ng serve` in the local configuration still runs the demo.
+
+### 15. The demo's video (OQ18)
+
+- [ ] 15.1 `MOCK_VIDEO.id` becomes `lVhJ_A8XUgc`, and the CRUD seed's `video_url` becomes `https://www.youtube.com/watch?v=lVhJ_A8XUgc`. Specs that name `demoVideo01` are updated. The §5.1 note about the made-up id goes.
+
+### 16. Gates for Phase 2
+
+- [ ] 16.1 Docker plus Windows green after each server slice ("Windows: N passed. Linux: M passed."), with the floor raised at the end.
+- [ ] 16.2 Vitest green with the count, and `ng build` for local, development and production. §14's bundle change is recorded.
+- [ ] 16.3 §13's bump point verified with a fresh pinned build.
+- [ ] 16.4 The manual loop (§7.4) gains:
+	- the Edit Event list and search;
+	- editing a gallery photo's words;
+	- adding, replacing and removing a flyer from "My submissions";
+	- a removal request arriving in each inbox;
+	- a curator who isn't an admin, using the Events pages and kept out of Users and Roles.
 
 # Open Questions
 
@@ -389,7 +496,7 @@ Mason- new work
 	- *Rec: the site's contact address,* with the photo's page in the subject, and a curator acts within a day. CM1's report flag replaces it.
 	- Mason- Your recommendation is fine.
 	- **Decided (11/4): the site's contact address.** This is client work (§5.3).
-	- *Built (11/18):* `SiteConfig.contactEmail`, set to `community.finder.seattle@gmail.com`, the site's sending address. Whether that's the right inbox is **OQ11**.
+	- *Built (11/18):* `SiteConfig.contactEmail`, set to `community.finder.seattle@gmail.com`, the site's sending address. OQ11 widens this: requests go to that address plus everyone who holds `manage_events`, sent by the server (Phase 2 §12, details in OQ19).
 9. **Which stream owns it, and when?** The outline puts CM3 in Stream D, gated on traction. But almost every file is Stream A's (the events tables, the event pages, the curator editor, the submit form), and Mason wants it for marketing now.
 	- *Rec: run it in Stream A after EV3's gates, with Levi or Mason as owner.* Update the outline's Stream D row to point here.
 	- Mason- Sounds good.
@@ -400,7 +507,7 @@ Mason- new work
 	- Mason- I'll go with your recommendation.
 	- **Decided (11/18): CF raises the cap to 1600×1200** in its seed. honuware's defaults stay 800×800, so knottyyoga is unchanged. Built the same day (§1.5).
 
-*Added 11/18 after the client build (§5). OQ11–15 and OQ18 are about CM3. OQ16 and OQ17 came up while measuring the bundle and reach beyond it. OQ17 is the most urgent.*
+*Added 11/18 after the client build (§5). OQ11–15 and OQ18 are about CM3. OQ16 and OQ17 came up while measuring the bundle and reach beyond it. All eight were answered on 11/18, and the work they call for is Phase 2.*
 
 11. **Which address should photo-removal requests go to?**
 	- **What it does:** every gallery on an event or series page has an "Ask us to remove a photo" link, and the full-size viewer has "Ask us to remove this photo" for the picture on screen.
@@ -412,6 +519,10 @@ Mason- new work
 	- *Alternative:* name another address, for example a shared inbox for curators. It's one line in the client, so a change later needs a deploy. CM1's report flag will replace this link eventually.
 	- **What I need from you:** "keep it", or the address to use.
 	- Mason- I would like to use this site email address AND send email to all of the email addresses for the admin users. If there is another, lesser permission that allows even editing but not full admin access, that would be useful. Maybe we can add that role and a corresponding permission. Give the permission to this new role and admin.
+	- **Decided (11/18): requests go to the site address and to everyone who holds the permission. That's admins, plus a new role that can edit without full admin access.** Planned as Phase 2 §12.
+		- **The lesser permission already exists:** `manage_events` lets someone curate events, galleries, series, venues and the vocabularies, but not manage users or roles. Only the Administrator role holds it today, and the `/admin` pages let in admins only (`AdminGuard`), so a non-admin can't use it yet.
+		- **Sending to admins needs the server to send the mail.** A mailto link to every admin would print their addresses into the public page, where address-harvesting bots read them. So the link becomes a short form on the page, and the server emails everyone.
+		- The details are **OQ19**.
 
 12. **Should curators be able to fix a gallery photo's words after adding it?**
 	- **Now:** the event editor's gallery lists each photo's alt text, caption and credit, but can't change them. To fix a typo, a curator has to:
@@ -424,6 +535,8 @@ Mason- new work
 	- *Alternative:* leave it as it is until a curator asks. §5.6 only asked for the words to be shown.
 	- **What I need from you:** "add it" or "leave it".
 	- Mason- Delete / recreate is annoying. Let's allow editing of these. I general, anything that can be created should have full CRUD support. Please add a memory for that.
+	- **Decided (11/18): add editing** (Phase 2 §10), **and the rule from now on: anything that can be created gets full CRUD** (create, read, update, delete). It's saved as a memory.
+		- Checked against what CM3 creates: the video and the main photo already have it. The gallery photo's words get it in §10. The flyer gets replace and remove in §11.
 
 13. **Should a big flyer be shrunk in the browser before it's sent?**
 	- **Now:** the submit form sends the flyer exactly as picked. The server refuses anything over 10 MB (`image_max_upload_bytes`).
@@ -438,6 +551,9 @@ Mason- new work
 	- *Rec: option 1,* because it keeps one copy of the code and knottyyoga could use it too. Until it's published, option 3.
 	- **What I need from you:** which option, and for option 1, whether you'll make the web-components change or want me to draft it.
 	- Mason- I like having a limit but this should be configurable in the site settings (and defaul to 10MB). We can change this in web components as well and have knotty yoga get the same feature.
+	- **Decided (11/18): keep a limit, default 10 MB, that an admin can change in site settings. Build it in honuware** (server and web components), so knottyyoga gets it too. As part of that, the web components' "prepare the image" step becomes public (option 1), so the flyer is shrunk like every other upload. Planned as Phase 2 §13.
+		- **Today:** the limit already is a setting: `image_max_upload_bytes` in `config_secrets`, 10485760 bytes (10 MB) by default, checked by honuware's upload routes. But no screen in honuware or CF lets anyone change it, and the upload control doesn't know it.
+		- **CF has no "site settings" page yet,** only Event settings. Where the setting goes, and its allowed range, is **OQ21**.
 
 14. **Should someone be able to add or replace a flyer after sending, from "My submissions"?**
 	- **Now:** a flyer can only be attached in the moment the form is sent. If that upload fails (too large, or a dropped connection), nothing else on the site lets them add one. The form also says we don't take events by email, so they can't send it any other way.
@@ -448,6 +564,7 @@ Mason- new work
 	- *Alternative:* leave it; a curator can add a photo when they review.
 	- **What I need from you:** "yes" or "leave it".
 	- Mason- Yes
+	- **Decided (11/18): yes.** Planned as Phase 2 §11, together with "Remove the flyer", per the full-CRUD rule in OQ12.
 
 15. **Keep the chosen flyer when submissions pause mid-form?**
 	- **Now:** if curators pause submissions while someone has the form open, pressing Send shows the "We're not taking event submissions right now" notice. After "Check again", the form comes back with everything typed, but the flyer they picked is gone and has to be picked again. The picker is rebuilt along with the form.
@@ -455,6 +572,7 @@ Mason- new work
 	- *Alternative:* leave it. A pause is rare, and the person can pick the file again.
 	- **What I need from you:** "agreed" or "leave it".
 	- Mason- I say leave it. This is extreme edge case to me that isn't worth complicating the system for.
+	- **Decided (11/18): leave it.** Once §11 is built, someone who loses their flyer this way can add it from "My submissions".
 
 16. **Should production builds leave out the offline demo?**
 	- **Background:** `app.config.ts` decides at runtime, from `environment.useMock`, whether to use the offline mock or the real server. So every production visitor downloads all the mock code and demo data, though the site never runs it.
@@ -469,6 +587,7 @@ Mason- new work
 	- *Alternative:* leave it. 44 kB is noticeable on a slow phone, but not serious.
 	- **What I need from you:** "yes" (and whether now or later) or "leave it".
 	- Mason- Yes, let's go with your recommendation.
+	- **Decided (11/18): yes, as its own small change after CM3.** Planned as Phase 2 §14, in its own commit, so the photo work's diff stays about photos.
 
 17. **Are the three seeded accounts still using the password `changeme`? (Outside CM3, but it's a security question.)**
 	- **What I found while measuring OQ16:** `create_database.cpp` (lines 108–113) creates your, Levi's and Caleb's accounts with the password `changeme`.
@@ -486,6 +605,7 @@ Mason- new work
 		- which seed fix you want;
 		- whether this belongs in CM3 or in a separate security item.
 	- Mason- The site isn't live. Please leave this as is. We will change those passwords during deploy.
+	- **Decided (11/18): no change.** The site isn't live, and Mason will change the three passwords during deployment. The demo login's `changeme` stays as well.
 
 18. **What should the offline demo's video be?**
 	- **Now:** in the local build, Leather Night has a video. Its id, `demoVideo01`, is made up. The play tile works, but pressing it opens YouTube's player showing "Video unavailable". The browser still has internet in the local build, so a real id would play.
@@ -493,6 +613,64 @@ Mason- new work
 	- *Alternative:* keep the placeholder. The demo then shows the tile and the player opening, but not a playing video.
 	- **What I need from you:** a link, or "keep the placeholder".
 	- Mason- Use this: https://www.youtube.com/watch?v=lVhJ_A8XUgc
+	- **Decided (11/18): the demo uses YouTube video `lVhJ_A8XUgc`.** Planned as Phase 2 §15.
+
+*Added 11/18 from the answers above and Mason's new work. They shape Phase 2 §8, §12 and §13.*
+
+19. **How should photo-removal requests and the new curator role work? (Follows OQ11.)** Four parts, each with a recommendation, so "agreed" covers all four.
+	1. **How a request is sent.**
+		- *Rec: a short form on the page.* "Ask us to remove this photo" opens it in place, with a box for a message. The server emails the request to everyone in part 2, and the visitor sees "Thanks, we'll take it down within a day."
+		- The form gets the submit form's honeypot plus a rate limit, so a bot can't use it to flood the inbox.
+		- *Alternative:* keep the mailto link to the site address only, and have that Gmail inbox auto-forward to the admins. That needs no code, but it fixes the recipient list by hand outside the app, so a new curator wouldn't get the requests automatically.
+	2. **Who gets the email.**
+		- *Rec: the site address, plus everyone who holds `manage_events`.* That's the permission it takes to remove a photo, so whoever gets the request can act on it. Admins have it through their role, and the new role in part 3 would have it too.
+		- *Alternative:* a separate `receive_photo_removal_requests` permission, so who can edit and who gets the email can be set apart. That's more to manage, and no case needs it yet.
+	3. **The new role.**
+		- *Rec: a "Curator" role holding only `manage_events`.*
+			- A curator can use the admin Events page (review queue, New Event, Edit Event and galleries) and the Event settings page, whose server routes check `manage_events`. In the generic data editor, they reach only the events tables.
+			- A curator can't manage users or roles, which need `admin_portal`, and can't touch the guide, which needs `manage_guide`.
+			- Today `AdminGuard` lets only admins into `/admin`, so the Events pages need their own permission check, and the dashboard should show a curator only the tiles they can use.
+			- Mason assigns the role on the Roles & Permissions page.
+		- *Alternative:* the role also gets `manage_guide`, so one curator role covers events and the guide.
+	4. **What the visitor must give.**
+		- *Rec: no sign-in.* The person in the photo may not have an account. The message is optional, and so is an email address to reply to. The request carries the page, the photo's number and its caption automatically.
+		- *Alternative:* require sign-in, which keeps out abuse but turns away exactly the people most likely to ask.
+	- **What I need from you:** "agreed", or your choice on any of the four parts.
+
+20. **Should the server say plainly when the database is older than the code?**
+	- **What happened (11/18):** clicking any event showed "This event couldn't be loaded. Please try again in a moment."
+		- The cause wasn't the code: the dev database `communityfinder` was created before CM3, so it has no `event_gallery_photos` table and no `video_url` columns. I checked with a read-only query.
+		- Every event page reads its gallery, so every one returned a 500 from the server. The events list kept working, which made it look like a page bug.
+		- The fix is §7.3's `--recreate_database`.
+	- **The general problem:** `--migrate` exists, but its lists are empty until the first deploy (`all_migrations.cpp`). So after any schema change, an old database fails in confusing ways until someone recreates it.
+	- *Rec: yes, in honuware.* At startup, the server compares the tables and columns it expects (from its `DatabaseInfo`) with what the database has. If anything is missing, it logs one clear message, for example: "The database is older than this build: missing table event_gallery_photos, column events.video_url. Run --recreate_database." It keeps running, so the parts that still work stay usable. It's a small honuware change with tests, and knottyyoga gets it too.
+	- *Alternative:* the server refuses to start with an old database, which is louder but blocks all work until the recreate.
+	- *Alternative:* leave it, and remember to recreate after schema changes.
+	- **What I need from you:** "yes", "refuse to start", or "leave it".
+
+21. **Where should the upload limit be set, and what range should it allow? (Follows OQ13.)**
+	- **Where:** CF's admin has an Event settings page, but nothing for the site as a whole.
+		- *Rec: a new "Site settings" page* on the admin dashboard, admin-only, holding honuware's upload-limit card. It's also where future site-wide settings would go, like the `manage_site_meta` settings `create_app_tables.cpp` mentions. knottyyoga would put the same card on its own settings page.
+		- *Alternative:* add it to the Event settings page. That's quicker, but the limit covers every upload, including guide and user photos, not only events.
+	- **Range:**
+		- *Rec: 1 to 50 MB, default 10 MB.* Anything bigger than 50 MB is too slow on a phone connection, and the server holds each upload in memory while it handles it.
+		- *Alternative:* a different upper bound.
+	- **Who can change it:**
+		- *Rec: admins only,* since it affects the whole site and server load.
+	- **What I need from you:** "agreed", or the page, range or permission you want.
+
+22. **Should the sample data show off CM3's photos and video?**
+	- **Today:** `database_helper --populate_sample_data` adds a small guide and four weeks of events from the day it runs. It has no photos, galleries or video (`populate_sample_data.cpp` never mentions them). So a freshly loaded dev site looks as it did before CM3, and the manual loop (§7.4) starts with uploading pictures by hand.
+	- *Rec: yes, a little.*
+		- A main photo on a few events and one series.
+		- A three-photo gallery on one event.
+		- The OQ18 video (`lVhJ_A8XUgc`) on one event and one series.
+		- The pictures would be generated art like the offline demo's (`demo-photo-art.ts`): shapes and colour, no people, so there's no consent question. They'd be stored through honuware's photo storage like a real upload.
+		- Re-running leaves them alone, as it does the listings.
+		- With tests.
+	- *Alternative:* the video only. That's one column, with no image storage involved.
+	- *Alternative:* leave it, and add pictures by hand when trying CM3.
+	- **What I need from you:** "yes", "video only", or "leave it".
 
 # Change Log
 
@@ -542,3 +720,20 @@ Mason- new work
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/18/2026 (v0.4)** — Mason answered OQ11–18 and added two new-work items. Phase 2 (§8–16) plans the follow-ups. No code changed.
+	- **Decisions:**
+		- removal requests go to the site address and everyone with the editing permission, plus a new non-admin role (OQ11);
+		- editing gallery photos' words, and **full CRUD for anything that can be created** from now on (OQ12, saved as a memory);
+		- a configurable upload limit (10 MB default) built in honuware for both apps, with the image-shrink step made public (OQ13);
+		- add, replace and remove a flyer from "My submissions" (OQ14);
+		- leave the pause case as it is (OQ15);
+		- the demo out of production builds, in its own commit (OQ16);
+		- the seeded passwords stay until deployment, since the site isn't live (OQ17);
+		- a real demo video, `lVhJ_A8XUgc` (OQ18).
+	- **Mason's new item 1, "This event couldn't be loaded":** not a bug and not a later phase. The dev database predates CM3: no gallery table and no `video_url` columns, so every event page returns a 500. Running §7.3's recreate fixes it (§8).
+	- **Mason's new item 2:** a "Coming up" list and search results with the date, time and venue on Edit Event, through a new curator search route (§9).
+	- **OQ19–21 added:**
+		- how removal requests and the curator role work (OQ19);
+		- whether the server should say plainly when the database is older than the code (OQ20);
+		- where the upload limit is set, and its range (OQ21);
+		- whether the sample data should include photos and video (OQ22). That was added after Mason recreated the database (§8.1) and found the recreate seeds no events, because they come from `--populate_sample_data`.

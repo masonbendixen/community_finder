@@ -656,6 +656,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- *Rec: no sign-in.* The person in the photo may not have an account. The message is optional, and so is an email address to reply to. The request carries the page, the photo's number and its caption automatically.
 		- *Alternative:* require sign-in, which keeps out abuse but turns away exactly the people most likely to ask.
 	- **What I need from you:** "agreed", or your choice on any of the four parts.
+	- Mason- I'll go with your recommendations.
 
 20. **Should the server say plainly when the database is older than the code?**
 	- **What happened (11/18):** clicking any event showed "This event couldn't be loaded. Please try again in a moment."

@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/18/2026
-Version: 0.6
+Version: 0.7
 tags:
 ---
 
@@ -368,7 +368,7 @@ The items:
 	- The recreate seeds no events. The sample events come from a second flag, `--populate_sample_data`, which can run alone or with `--recreate_database` (it runs after it). Both need `HONUWARE_ALLOW_DESTRUCTIVE=1`.
 	- [ ] Still to check: with the sample data loaded, an event page opens. Then §7.3's checklist can be ticked against the new schema.
 	- The sample data has no photos, gallery or video, so it doesn't show CM3 (**OQ22**).
-- [ ] 8.2 **The startup schema check (OQ20), in honuware,** so the next out-of-date database explains itself. Mason: *"I've been burned by this a lot."*
+- [x] 8.2 **The startup schema check (OQ20), in honuware,** so the next out-of-date database explains itself. Mason: *"I've been burned by this a lot."* ✅ 11/18, built; waiting on the bump point.
 	- At startup, the server compares the tables and columns in its composed `DatabaseInfo` with what `information_schema` says the database has.
 	- Anything missing gets one clear warning, listing every missing table and column, for example: "The database is older than this build: missing table event_gallery_photos; missing column events.video_url. Run --recreate_database (dev) or --migrate."
 	- The server keeps running. Extra tables or columns the build doesn't know about are ignored.
@@ -379,6 +379,14 @@ The items:
 		- several missing items share one message;
 		- an extra column is ignored.
 	- A cross-repo bump point: Mason pushes honuware, I re-pin CF and verify a fresh pinned build, Mason commits, and knottyyoga follows.
+	- **As built:**
+		- **honuware** `data/sql_util/database_access/schema_check.{h,cpp}`, in `DbMeta`:
+			- `FindMissingSchema(transaction, databaseInfo)` makes one read of `information_schema.columns` (public schema). It returns the missing tables, in the build's order, and the missing columns as `table.column`. A missing table's columns aren't listed again.
+			- `DescribeMissingSchema(missing)` gives the one-line warning, or "" when nothing is missing. Its advice names both apps' database-helper flags: "Run the database helper with --migrate, or --recreate_database on a dev database."
+			- `WarnIfDatabaseIsOlderThanBuild(transaction, databaseInfo)` logs it and returns whether it did. If the check itself fails, that's logged too, and it never throws.
+		- **CF** `main.cpp` calls it first, right after the composed `DatabaseInfo` is built, so the warning is logged even when a later startup step trips over the same gap.
+		- **Tests** (`SchemaCheckTest`, 5): the five above. "An extra column is ignored" also covers an extra table.
+		- **knottyyoga** gets it by adding the same call to its `main.cpp` after the bump. That's its own change.
 
 ### 9. Edit Event: the next ten events, and search results that tell events apart (Mason New Item 2)
 
@@ -388,13 +396,13 @@ Mason: *"In Admin Dashboard / Events / Edit Event, I would like: A list of the t
 - Changing the template isn't the fix. Times are stored as microseconds, which a template can't format, and the template also labels events in every picker in the generic admin.
 
 The items:
-- [ ] 9.1 **table_helpers:** an `Events` method that finds events whose title contains the search text. It ignores case, and escapes `%` and `_` in the search text. It returns the id, title, start, end, venue name or location text, series title and status, sorted as in 9.2, with a limit. **Tests:** a match in the middle of a title, any capitalization, a `%` in the search taken literally, the limit, and the order.
-- [ ] 9.2 **business_logic:** `EventHelper::FindForCurators(transaction, searchText, limit)`.
+- [x] 9.1 **table_helpers:** an `Events` method that finds events whose title contains the search text. It ignores case, and escapes `%` and `_` in the search text. It returns the id, title, start, end, venue name or location text, series title and status, sorted as in 9.2, with a limit. **Tests:** a match in the middle of a title, any capitalization, a `%` in the search taken literally, the limit, and the order.
+- [x] 9.2 **business_logic:** `EventHelper::FindForCurators(transaction, searchText, limit)`.
 	- With search text: upcoming matches first (soonest first, counting one still running as upcoming), then past ones (most recent first).
 	- With none: the next `limit` upcoming events.
 	- Every status is included and labelled, since curators edit pending and rejected events too.
 	- **Tests.**
-- [ ] 9.3 **endpoint:** `GET /api/admin/events/search?q=<text>&limit=<n>` under `manage_events`, returning `{items: [{id, title, starts_at_us, ends_at_us, venue_name, location_text, series_title, status}]}`. The limit defaults to 10, with a maximum of 50. **Tests** (`handle_full`): signed out, without the permission, a search, the blank list, and the limit clamped.
+- [x] 9.3 **endpoint:** `GET /api/admin/events/search?q=<text>&limit=<n>` under `manage_events`, returning `{items: [{id, title, starts_at_us, ends_at_us, venue_name, location_text, series_title, status}]}`. The limit defaults to 10, with a maximum of 50. **Tests** (`handle_full`): signed out, without the permission, a search, the blank list, and the limit clamped.
 - [ ] 9.4 **client:** the Edit Event tab.
 	- Under the search box, a "Coming up" list of the next ten events: "Thu, Nov 20 · 7:00 PM · Cafe Mox · Pending", each opening in the editor.
 	- Search results show the same date, time and venue under the title, so "Board Game Night" appears once per date.

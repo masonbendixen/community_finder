@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/18/2026
-Version: 0.4
+Version: 0.4.1
 tags:
 ---
 
@@ -108,12 +108,13 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- Vimeo: `https://player.vimeo.com/video/<id>?dnt=1`.
 		- The address goes through Angular's trusted-URL wrapper once and is cached (knottyyoga's Location-page pattern).
 	- **A database CHECK is the backstop.** Curators save events through generic CRUD, which no app code sees, so the column only accepts the two canonical shapes. The editor turns a pasted link into its canonical form before saving.
-- **Click-to-play (OQ4).** The page shows a play tile, not a player: the event's own photo (or the gradient tile), a play button, and "Plays from YouTube."
+- **Click-to-play (OQ4).** The page shows a play tile, not a player: the gradient tile, a play button, and "Plays from YouTube."
+	- *Changed 11/18:* the tile first showed the event's own photo, cropped to 16:9 and darkened. Mason found that misleading, because it reads as a frame of the video. It's now the plain gradient. Showing a real frame is **OQ23**.
 	- Nothing from YouTube or Vimeo loads until someone presses play. It's private (the outline's "never trackers") and costs no page weight.
 	- Pressing play creates the frame with autoplay, a title ("Video: Leather Night"), and fullscreen allowed.
 - **The page's content security policy must allow the two players.** honuware's `SecurityHeaders` policy rides the API's responses. The page itself is served from S3/CDN in knottyyoga's setup, so the page's policy belongs to PL2.
 	- Wherever `index.html` is served, `frame-src` must name `https://www.youtube-nocookie.com` and `https://player.vimeo.com`.
-	- `img-src` stays `'self' data:`, because the play tile uses our own image.
+	- `img-src` stays `'self' data:`, because the play tile shows no outside image. OQ23's browser option would add `https://i.ytimg.com`.
 	- This is a PL2 item, not a honuware change. If PL2 ends up serving the page through the C++ server, it becomes a small honuware change: frame sources set by the app, as `SetServerBanner` is today.
 - **The photo policy (consent and no outing).** It's written for curators and shown beside every upload:
 	- **Always fine:** flyers and artwork, the venue, performers' own promo images, and crowd shots where nobody can be recognized.
@@ -269,6 +270,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- the frame's title;
 	- the address isn't rebuilt on every change check.
 	- *As built:* 6 specs. The address is a `computed`, so it's sanitized once per video. A new video puts the tile back. `core/utils/video-links.ts` mirrors the server's `ParseVideoLink`, for the editor's and the submit form's feedback.
+	- *Changed 11/18 (Phase 2 §17.1):* the `posterUrl` input is gone. The tile is the gradient only, with no image.
 - [x] 5.5 **The event page and the series page:** the hero (resolved), then the video, then the gallery. The JSON-LD `image` list. **Specs.**
 	- *As built:* `og:image` stays the main photo. The JSON-LD `image` list is the main photo, then up to 3 gallery photos (`JSON_LD_GALLERY_IMAGES`). A gallery with no main photo gives JSON-LD images but no `og:image`. The series page gets its hero and `og:image` too.
 - [x] 5.6 **The curator editor** (`pages/admin/manage-events.*`):
@@ -455,7 +457,25 @@ In its own commit.
 	- editing a gallery photo's words;
 	- adding, replacing and removing a flyer from "My submissions";
 	- a removal request arriving in each inbox;
-	- a curator who isn't an admin, using the Events pages and kept out of Users and Roles.
+	- a curator who isn't an admin, using the Events pages and kept out of Users and Roles;
+	- the video tile on an event that has a photo, after §17.
+
+### 17. The video tile showed the event's photo, not the video (Mason, 11/18)
+
+Mason: *"I put a video in the event. When I click on the event, it shows the main event photo stretched as the representation of the video instead of a frame from youtube for the video. When I click on it, it plays the right video but this is misleading."*
+
+**Why it looked that way:** OQ4 says nothing loads from YouTube until someone presses play, so the tile borrowed the page's own photo.
+- The server keeps a photo's proportions when it scales (`bounding_rect.cpp`), so a tall flyer stays tall.
+- The tile then cropped it to 16:9 (`object-fit: cover`), which zooms far into its middle, and darkened it to 60%.
+- And it was never a picture of the video.
+
+- [x] 17.1 **client:** the tile no longer shows the page's photo. It's the gradient, the play button and "Plays from YouTube". ✅ 11/18
+	- `VideoEmbed` lost its `posterUrl` input, and the event and series pages stopped passing the hero.
+	- Specs: the tile has no image; the event page's hero still appears exactly once.
+	- Vitest: 563 passed in 71 files. Prettier clean.
+- [ ] 17.2 **A real frame on the tile.** The way to do it waits on **OQ23**.
+	- If the server option: a CF endpoint per event and series, business_logic that fetches and stores the thumbnail, and the tile's image from our own server, all with tests.
+	- If the browser option: client only, plus a PL2 note for `img-src`.
 
 # Open Questions
 
@@ -672,6 +692,30 @@ In its own commit.
 	- *Alternative:* leave it, and add pictures by hand when trying CM3.
 	- **What I need from you:** "yes", "video only", or "leave it".
 
+23. **How should the video tile show a real frame from the video? (Follows Phase 2 §17.)**
+	- **Background:**
+		- OQ4 decided click-to-play so that nothing from YouTube or Vimeo loads, and nobody is tracked, until someone presses play.
+		- To keep that promise, the tile borrowed the event's own photo, which Mason found misleading (§17).
+		- It's now a plain gradient: honest, but it doesn't show what the video is. A frame needs the video site's thumbnail, and the question is who fetches it.
+	- *Rec: our server fetches it once and serves it like our own photos.*
+		- The first time an event's or a series' video tile is shown, the server gets the thumbnail and keeps it:
+			- YouTube's is at a fixed address: `https://i.ytimg.com/vi/<id>/hqdefault.jpg`, 480×360.
+			- Vimeo's comes from its oEmbed lookup: `https://vimeo.com/api/oembed.json?url=https://vimeo.com/<id>` gives a `thumbnail_url`.
+		- It serves the thumbnail from our address, for example `/api/events/<id>/video_thumbnail`.
+			- The route looks up the event's stored video, so it can't be used to make our server fetch arbitrary videos.
+			- A changed link fetches again.
+			- A failed fetch falls back to the gradient.
+		- Visitors' browsers never contact YouTube before play, OQ4 holds, and the page's `img-src 'self'` stays. It works for Vimeo too.
+		- honuware already has an outbound `HttpClient` (`foundation/util/http/http_client.h`), with a test double for the tests.
+		- It's CF-side unless knottyyoga wants video tiles too.
+	- *Alternative: the browser loads YouTube's thumbnail directly* from `i.ytimg.com`.
+		- It's client-only and small, and no cookies or scripts are involved.
+		- But every visitor's browser contacts Google's image server when the page opens, which is the thing OQ4 ruled out. Their IP address reaches Google; `referrerpolicy="no-referrer"` can at least hide which page they were on.
+		- The page's `img-src` must add `https://i.ytimg.com` (PL2).
+		- Vimeo has no fixed thumbnail address, so Vimeo tiles would stay the gradient.
+	- *Alternative:* keep the plain gradient tile as it is now.
+	- **What I need from you:** "server", "browser", or "keep it plain".
+
 # Change Log
 
 - **11/3/2026 (v0.1)** — Drafted from Mason's ask: a main photo, an optional gallery, and an embedded video, because "visuals really market an event."
@@ -720,6 +764,9 @@ In its own commit.
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/18/2026 (v0.4.1)** — The video tile showed the event's photo, which read as a frame of the video (Mason).
+	- The tile is now the plain gradient (Phase 2 §17.1). Vitest: 563 passed.
+	- How to show a real frame is **OQ23**.
 - **11/18/2026 (v0.4)** — Mason answered OQ11–18 and added two new-work items. Phase 2 (§8–16) plans the follow-ups. No code changed.
 	- **Decisions:**
 		- removal requests go to the site address and everyone with the editing permission, plus a new non-admin role (OQ11);

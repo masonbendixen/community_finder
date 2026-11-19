@@ -256,7 +256,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *As built (11/18):* `PhotoRef`, `VideoRef` and `GalleryPhoto` in `core/types/events.types.ts`, with `toPhotoRef`, `toVideoRef`, `normalizeGallery` and `normalizeEventDetail`. `getEvent` now returns an `EventDetail` (the event plus its gallery).
 	- The mock follows the server's fallback: Leather Night (103) has its own photo, a gallery of four and the demo video; Bear Happy Hour's series (11) and The Lantern Room (venue 2) have photos.
 	- `core/mock/demo-photo-art.ts` draws the placeholders as SVG shapes, and `DemoPhotoUrlBuilder` stands in for honuware's `PhotoUrlBuilder` in mock mode only.
-	- **The demo's video id `demoVideo01` is made up.** It has the right shape, but YouTube's player says "Video unavailable". Mason chose a real one (OQ18), which goes in with Phase 2 §15.
+	- **The demo's video is `lVhJ_A8XUgc`** (OQ18, Phase 2 §15), which plays.
 - [x] 5.2 **One place for photo addresses:** `photoFor(event, width, height)`. Event rows and the event page switch to it, and the event page drops its `has_photo` call. **Specs:** each owner, and none.
 	- *As built:* `EventPhotos` (`core/services/event-photos.service.ts`): `photoFor(owner, size)` and `galleryPhotoUrl(photo, size)`, with the sizes as constants (list thumb 160, hero 1200×630, gallery thumb 480×360, full view 1600×1200). The event page no longer asks `has_photo`.
 - [x] 5.3 `shared/components/photo-gallery`:
@@ -337,7 +337,9 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- the `manage_events` mapping;
 	- `event_gallery_max_photos` = 12 in `config_secrets`;
 	- `image_max_public_scaled_width` = 1600 and `image_max_public_scaled_height` = 1200 in `config_secrets` (§1.5);
-	- nothing new in `allowed_tables`.
+	- nothing new in `allowed_tables`;
+	- *(Phase 2 §12.1)* the `curator` role, holding `manage_events` and nothing else;
+	- *(Phase 2 §18)* after `--populate_sample_data`: photos on a few events and one series, a three-photo gallery on one event, and the video on one event and one series.
 - [ ] 7.4 **Manual loop (Mason or Levi), on a phone as well as desktop:**
 	1. Add a main photo, three gallery photos and a YouTube link to an event.
 	2. Reorder the photos, then remove one.
@@ -403,73 +405,153 @@ The items:
 	- Every status is included and labelled, since curators edit pending and rejected events too.
 	- **Tests.**
 - [x] 9.3 **endpoint:** `GET /api/admin/events/search?q=<text>&limit=<n>` under `manage_events`, returning `{items: [{id, title, starts_at_us, ends_at_us, venue_name, location_text, series_title, status}]}`. The limit defaults to 10, with a maximum of 50. **Tests** (`handle_full`): signed out, without the permission, a search, the blank list, and the limit clamped.
-- [ ] 9.4 **client:** the Edit Event tab.
+- [x] 9.4 **client:** the Edit Event tab.
 	- Under the search box, a "Coming up" list of the next ten events: "Thu, Nov 20 · 7:00 PM · Cafe Mox · Pending", each opening in the editor.
 	- Search results show the same date, time and venue under the title, so "Board Game Night" appears once per date.
 	- The list refreshes after a save.
 	- The search moves off `getFkOptions` onto 9.3. The access layer and the offline mock get the new call.
 	- **Specs.**
+- **As built (§9), 11/18:**
+	- **table_helpers:** `Events::FindByTitle` and `Events::GetNotEndedBy`, both in every status, with the venue, location text and series title joined in. **Tests:** `FindByTitleMatchesAnywhereInTheTitleInAnyCase`, `FindByTitleTakesLikeCharactersLiterally`, `FindByTitleListsWhatHasNotEndedSoonestFirstThenThePastNewestFirst`, `GetNotEndedByListsWhatIsComingSoonestFirstInEveryStatus`.
+	- **business_logic:** `EventHelper::FindForCurators` returns `CuratorEventMatch` rows; `ClampCuratorFinderLimit` gives the default of 10 and the cap of 50. **Tests:** the clamp, the search telling events apart, and the blank list.
+	- **endpoint:** `endpoints/admin_event_search.{h,cpp}`, anchored in `RegisterAllEndpoints()`. `ends_at_us` is a real null when an event has no end. **Tests** (`AdminEventSearchTest`, 3): 401 and 403; a search showing each date with its venue, series and status; the blank list with the limit clamped.
+	- **client:** `EventsAdminAccess.findEvents(search, limit?)`, over HTTP and in the mock. Edit Event's "Coming up" and its search results share one line format.
 
 ### 10. Edit a gallery photo's words (OQ12)
 
-- [ ] 10.1 **client:** an "Edit" button on each row of the event editor's gallery. It opens the alt text, caption and credit in place, with Save and Cancel and the same length limits, and alt text still required.
+- [x] 10.1 **client:** an "Edit" button on each row of the event editor's gallery. ✅ 11/18: `EventGalleryEditor.startEdit` and `saveEdit`, with the specs listed below. It opens the alt text, caption and credit in place, with Save and Cancel and the same length limits, and alt text still required.
 	- It saves through generic CRUD (`updateItem` on `event_gallery_photos`), sending only the fields that changed, trimmed. The database's CHECK refuses blank alt text even if the client let it through.
 	- **Specs:** editing each field, Cancel leaving the row as it was, blank alt text refused before sending, and a failed save saying so and keeping what was typed.
 	- *Series galleries are still edited in the generic admin, which already has full CRUD.*
 
 ### 11. Add, replace or remove the flyer from "My submissions" (OQ14, and the full-CRUD rule)
 
-- [ ] 11.1 **business_logic:** `SubmissionHelper::RemoveFlyer(submissionId, personId)`. It removes the photo from every date of the submission still waiting for review, with the same checks as `AttachFlyer`: a 404 for someone else's submission, and `NOTHING_PENDING` when no date is waiting. **Tests.**
-- [ ] 11.2 **endpoint:** `DELETE /api/event_submissions/<int>/photo`, anchored through the submission endpoints' anchor. **Tests:** signed out, someone else's submission, removing from each waiting date, and nothing pending.
-- [ ] 11.3 **client:** on "My submissions", while any date of a submission is waiting:
+- [x] 11.1 **business_logic:** `SubmissionHelper::RemoveFlyer(submissionId, personId)`. It removes the photo from every date of the submission still waiting for review, with the same checks as `AttachFlyer`: a 404 for someone else's submission, and `NOTHING_PENDING` when no date is waiting. **Tests.**
+- [x] 11.2 **endpoint:** `DELETE /api/event_submissions/<int>/photo`, anchored through the submission endpoints' anchor. **Tests:** signed out, someone else's submission, removing from each waiting date, and nothing pending.
+- [x] 11.3 **client:** on "My submissions", while any date of a submission is waiting:
 	- "Add a flyer" (or "Replace the flyer" once one is attached, which `/mine`'s `has_photo` tells us) opens the same `hw-photo-upload` picker with the same JPEG/PNG check;
 	- "Remove the flyer" asks in the page first.
 	- The thanks page's failed-flyer message gains "You can add it from My submissions."
 	- **Specs.**
+- **As built (§11), 11/18:**
+	- **business_logic:** `RemoveFlyer` returns the same `FlyerResult` as `AttachFlyer`, and touches only the dates still waiting. **Tests:** `RemovingTheFlyerTakesItOffThePendingDatesOnly` (a second removal is harmless) and `RemovingTheFlyerChecksWhoseItIsAndThatSomethingIsWaiting` (someone else's, an unknown id, nothing pending).
+	- **endpoint:** the `DELETE` route sits in `event_submissions.cpp` beside the `POST`, so it shares that TU's anchor. A refusal is a 400 with `error_code` `NOTHING_PENDING`, as for attaching.
+	- **client:** `EventSubmissionsAccess.removeFlyer`, over HTTP and in the mock, plus the three buttons on "My submissions". From §13.3, adding or replacing a flyer here goes through honuware's prepare step, as the submit form does.
 
 ### 12. Photo-removal requests reach the right people (OQ11, OQ19)
 
 As OQ19 decided (all four recommendations):
-- [ ] 12.1 **The Curator role:** seeded in `create_app_tables.cpp` beside `PopulateAppPermissions`, holding `manage_events`, with both looked up by name like the Administrator grant.
+- [x] 12.1 **The Curator role:** seeded in `create_app_tables.cpp` beside `PopulateAppPermissions`, holding `manage_events`, with both looked up by name like the Administrator grant.
 	- It's seed data, not a new table, so the three-place rule doesn't apply. `create_app_tables_test.cpp` covers it, and §7.3's live check gains a line for it.
 	- **Tests.**
-- [ ] 12.2 **business_logic:** `PhotoRemovalRequestHelper`. It takes the page, title, photo description, optional message and optional reply address, and emails the site address plus everyone holding `manage_events`, through `::Mail::LoadSenderAddress` and `FormatString`, with `NormalizeCrLf` on the HTML. **Tests:** who it goes to, a curator without the permission left out, and the reply address shown only when given.
-- [ ] 12.3 **endpoint:** `POST /api/photo_removal_requests`, public, with the honeypot and a rate limit per visitor. **Tests:** sent, the honeypot quietly accepted and dropped, the rate limit, and length limits.
-- [ ] 12.4 **client:** "Ask us to remove a photo" and "Ask us to remove this photo" open a short form in the gallery and the viewer instead of a mailto. It confirms when sent. `SiteConfig.contactEmail` stays as the fallback shown if sending fails. **Specs.**
-- [ ] 12.5 **client:** open the admin Events and Event settings pages to `manage_events` holders.
+- [x] 12.2 **business_logic:** `PhotoRemovalRequestHelper`. It takes the page, title, photo description, optional message and optional reply address, and emails the site address plus everyone holding `manage_events`, through `::Mail::LoadSenderAddress` and `FormatString`, with `NormalizeCrLf` on the HTML. **Tests:** who it goes to, a curator without the permission left out, and the reply address shown only when given.
+- [x] 12.3 **endpoint:** `POST /api/photo_removal_requests`, public, with the honeypot and a rate limit per visitor. **Tests:** sent, the honeypot quietly accepted and dropped, the rate limit, and length limits.
+- [x] 12.4 **client:** "Ask us to remove a photo" and "Ask us to remove this photo" open a short form in the gallery and the viewer instead of a mailto. It confirms when sent. `SiteConfig.contactEmail` stays as the fallback shown if sending fails. **Specs.**
+- [x] 12.5 **client:** open the admin Events and Event settings pages to `manage_events` holders.
 	- A CF guard on those routes replaces `AdminGuard` there. The dashboard shows a curator only the tiles they can use. Users and Roles stay admin-only.
 	- Check whether `@honuware/ui/crud`'s table picker already hides tables a curator can't reach. If it doesn't, that's a web-components change for this phase.
 	- **Specs.**
+- **As built (§12), 11/18:**
+	- **12.1:** the role is named `curator` (`DbSchema::kRoleNameCurator`) and holds only `manage_events`. Both are looked up by name, so a re-seed is harmless. **Test:** `SeedsTheCuratorRoleHoldingOnlyManageEvents`. §7.3's live check gains its line.
+	- **12.2:** `business_logic/events/photo_removal_request_helper.{h,cpp}`. **Nothing is stored; the email is the request.**
+		- **The checks** trim everything and name the wrong field: `REQUIRED`, `TOO_LONG`, `BAD_PAGE`, `BAD_EMAIL`. The limits are page path 300, page title 200, photo 500, message 2000, reply address 254.
+		- **The page link** is built from the site's own address plus a site-relative path, so it can never point off-site. Everything the visitor typed is HTML-escaped.
+		- **The rate limit is a decision beyond the plan:** 3 an hour per visitor (by client IP), *and* 20 an hour for the whole site, so a flood from many addresses still can't fill the curators' inboxes.
+		- **Recipients:** each gets their own email, so no one sees anyone else's address. If none can be sent, the result is `NOT_SENT`, and the form offers the contact address.
+		- **Tests** (5): the checks; escaping and the on-site link; the two rate limits; the site plus everyone holding `manage_events`; one email each.
+	- **12.3:** `endpoints/photo_removal_requests.{h,cpp}`, anchored in `RegisterAllEndpoints()`. **Tests** (5): emailed to the site and its curators; past the CSRF guard here and nowhere else; the honeypot; 3 an hour; a 400 naming the field.
+		- **A finding along the way, the CSRF guard:** honuware's `CsrfGuard` refuses any `POST` without the `csrft` token cookie. A visitor who never signed in has no such cookie, so a public form could never be sent. honuware's `CsrfGuard` gained `AllowWithoutToken(path)` / `IsAllowedWithoutToken(url)`: an app names the exact public routes that serve people who aren't signed in. CF names only this one. The rest of the site keeps the check (3 new `CsrfGuardTest`s in honuware).
+	- **12.4:** `shared/components/photo-removal-form` (`app-photo-removal-form`), opened from the gallery and the viewer.
+		- It checks the server's rules first, with the same messages. From the gallery, where no photo is chosen, the message has to say which one.
+		- The `website` honeypot is hidden from people.
+		- If sending fails, the form says so and shows the site's address, with the request written out to copy.
+		- `CommunityAccess.requestPhotoRemoval`, over HTTP and in the mock.
+	- **12.5:**
+		- `core/guards/manage-events.guard.ts`: `canManageEvents` (an admin, or anyone holding `manage_events`) and the `/admin` guard. Anyone else is sent where `AdminGuard` sends them.
+		- `AdminGuard` stays on Users, Roles and (from §13.3) Site settings. The dashboard shows a curator Events and Manage Data, and the latter reads "Browse and edit the events tables".
+		- **The table picker needed no change:** honuware's `get_db_schema` already cuts `root_tables` to what the caller's permissions reach, so a curator's picker lists only the events tables.
+		- The header's Admin link shows for curators too.
+		- **Specs:** the guard (a curator in and kept out, an admin everywhere, a member and a signed-out visitor), the dashboard per role, and the header.
+		- *Unchanged, and worth deciding:* someone holding only `manage_guide` still can't reach `/admin`, so they can't reach the guide tables the server would let them edit. That was true under `AdminGuard` too (OQ24).
 
 ### 13. A configurable upload limit, shared with knottyyoga (OQ13, OQ21)
 
 A cross-repo bump point: Mason pushes honuware and publishes `@honuware/ui`, then I re-pin CF and verify a fresh pinned build, then Mason commits. knottyyoga follows the same way.
-- [ ] 13.1 **honuware server:** `GET`/`PUT /api/admin/image_upload_settings` under `admin_portal`, for `image_max_upload_bytes`, with the default and allowed range (10 MB; 1–50 MB per OQ21), refusing values out of range.
+- [x] 13.1 **honuware server:** `GET`/`PUT /api/admin/image_upload_settings` under `admin_portal`, for `image_max_upload_bytes`, with the default and allowed range (10 MB; 1–50 MB per OQ21), refusing values out of range. ✅ 11/18, built; waiting on the bump point.
 	- A read that any signed-in session can call returns the limit, so the upload control knows it.
 	- The upload routes' existing check stays the last word.
 	- **Tests.**
-- [ ] 13.2 **honuware web components:**
+- [x] 13.2 **honuware web components:** ✅ 11/18, built; waiting on publishing.
 	- `hw-photo-upload` reads the limit. It says before uploading when a file is still too big after shrinking, instead of waiting for the server's refusal.
 	- Its "prepare the image" step becomes a public export, so an app can shrink a file it sends itself.
 	- A settings card for the limit, for an app to put on its settings page.
 	- **Specs.**
-- [ ] 13.3 **CF:** a new admin-only "Site settings" page (OQ21) on the admin dashboard, holding the card. The submit form's flyer and §11's "Add a flyer" go through honuware's prepare step, so a flyer is shrunk to at most 4096 px and sent as a JPEG, as a curator's upload is. **Specs.**
+- [x] 13.3 **CF:** a new admin-only "Site settings" page (OQ21) on the admin dashboard, holding the card. The submit form's flyer and §11's "Add a flyer" go through honuware's prepare step, so a flyer is shrunk to at most 4096 px and sent as a JPEG, as a curator's upload is. **Specs.** ✅ 11/18, built against the local library.
 - [ ] 13.4 **knottyyoga:** the card on its settings page after the bump. That's knottyyoga's own change and gate.
+- **As built (§13), 11/18:**
+	- **13.1, honuware server:**
+		- `platform/business_logic/images/image_upload_limit.{h,cpp}` (`Images`): `LoadImageUploadLimit`, `ValidateImageUploadLimit` and `SaveImageUploadLimit`. The constants are a 10 MB default, 1 MB minimum and 50 MB maximum. The load returns what's stored, which is what the upload routes enforce, even if it was set outside the range by hand. A value that's unset, or isn't a positive whole number, reads as the default.
+		- `platform/endpoints/image_upload_settings.{h,cpp}`, anchored in `RegisterFrameworkEndpoints()`:
+			- `GET /api/image_upload_limit`, for anyone signed in, returns `{max_upload_bytes}`;
+			- `GET`/`PUT /api/admin/image_upload_settings`, under `admin_portal`, return `{max_upload_bytes, default_bytes, minimum_bytes, maximum_bytes}`.
+			- A value out of range is a 400 naming `max_upload_bytes`; a body that isn't JSON is a 400, not a 500.
+		- `kPermissionAdminPortal` moved into honuware's `platform/db_schema/permissions.h`. CF's two file-local copies don't clash with it.
+		- **Tests:** `ImageUploadLimitTest` (5) and `ImageUploadSettingsTest` (7). The last of these shows the existing upload route refusing a 1 MB + 1 byte image once 1 MB is saved: the server stays the last word.
+	- **13.2, `@honuware/ui`:**
+		- **access:** an `ImageUploadSettingsAccess` seam of its own (`HONUWARE_IMAGE_UPLOAD_SETTINGS_ACCESS`, HTTP by default), with `getUploadLimit`, `getSettings` and `saveSettings`.
+			- *Why not add to `PhotoAccess`:* knottyyoga's `ServerAccess` extends `PhotoAccess`, so new methods there would break its build on upgrade. A separate seam is additive.
+		- **photos:** `prepareImageForUpload(file, maxDimension)` is exported, with `MAX_UPLOAD_IMAGE_DIMENSION` (4096), `checkImageUploadSize`, `ImageTooLargeError` and `formatMegabytes`.
+			- **`hw-photo-upload`:**
+				- It looks the limit up only when a file is chosen. If the lookup fails or no seam is provided, it doesn't block, and the server still decides.
+				- A file still too big after shrinking shows, in the control: "This image is 12 MB even after shrinking, and the limit is 10 MB. Try a smaller image." The size rounds *up*, so a file just over never reads "10 MB … limit 10 MB".
+				- The new public `preparePendingPhoto()` lets a page get the prepared bytes and send them itself.
+			- **`hw-image-upload-settings`:** the card. It takes whole megabytes from 1 to 50, has "Use the default", and has messages for saved, a save failure, and a load failure with Try again.
+		- **testing:** `MockImageUploadSettingsAccess`. `provideHonuwareAccessMock` supplies it, so CF's offline demo has the card working.
+		- **Specs:** web components 550 SUCCESS, lint clean, `npm run build` clean.
+		- **Both READMEs** describe the seam, the prepare step and the card.
+	- **13.3, CF:**
+		- **The Site settings page:** `pages/admin/site-settings` at `/admin/settings`, under `AdminGuard`, holding `<hw-image-upload-settings>`. It has an admin-only dashboard tile.
+		- **The flyer:** the submit form and "My submissions" call `preparePendingPhoto()` *before* anything is sent.
+			- A flyer that's too big, or can't be read, is refused at its field, and nothing is submitted.
+			- Otherwise the prepared JPEG is attached, so the flyer type sent is always `jpeg`.
+			- *This is a decision beyond the plan:* checking first means a too-big flyer can't leave a submission without its flyer.
+		- **Specs:** the page (it shows the limit, saves through the card, and links back), the dashboard's admin tiles, the guard keeping a curator out of `/admin/settings`, and too-big and unreadable flyers on both pages.
+	- **For the bump point:** CF's `node_modules/@honuware/ui` is currently overlaid with the local build, so CF builds and tests against the unpublished library. The published 0.3.1 is backed up at `C:\Users\mason\AppData\Local\Temp\claude\b5d20db9e86cf1f8\96e18d45-ccc9-47aa-91b9-9a3bcedb7877\scratchpad\honuware-ui-0.3.1-npm`. `npm install` after the version bump replaces the overlay. The library's version is OQ25.
 
 ### 14. Leave the offline demo out of production builds (OQ16)
 
 In its own commit.
-- [ ] 14.1 `app.config.ts` gets its access providers from one small file (for example `core/app-access-providers.ts`, which uses HTTP only). The `local` configuration's `fileReplacements` swaps in a mock version. `environment.useMock` then only selects the build configuration. The specs aren't affected, since they import the mocks directly.
-- [ ] 14.2 **Measure before and after**, the same way as OQ16 (from the build's stats file). Expected: about 44 kB less up front (932 → about 888 kB), and 17.6 kB less in the guide chunk. Then confirm `ng build` for all three configurations, and that `ng serve` in the local configuration still runs the demo.
+- [x] 14.1 `app.config.ts` gets its access providers from one small file (for example `core/app-access-providers.ts`, which uses HTTP only). The `local` configuration's `fileReplacements` swaps in a mock version. `environment.useMock` then only selects the build configuration. The specs aren't affected, since they import the mocks directly. ✅ 11/18
+	- **As built:**
+		- `core/app-access-providers.ts`: `provideAppAccess()` returns honuware's HTTP access plus CF's four HTTP seams.
+		- `core/app-access-providers.mock.ts`: the same export, with the mock access, the demo photos, `DemoPhotoUrlBuilder` and CF's four mocks.
+		- **The guide's access had to be swapped too,** because the guide routes chose mock or HTTP the same way. `core/guide-access/guide-access-provider.ts` and its `.mock.ts` give `provideGuideAppAccess()`. `guide.routes.ts` now exports `guideRoutes(guideAccess)`, so the guide's test harness passes the mock in directly.
+		- `angular.json`'s `local` configuration replaces both files.
+- [x] 14.2 **Measure before and after**, the same way as OQ16 (from the build's stats file). Expected: about 44 kB less up front (932 → about 888 kB), and 17.6 kB less in the guide chunk. Then confirm `ng build` for all three configurations, and that `ng serve` in the local configuration still runs the demo. ✅ 11/18
+	- **Production, before → after** (both measured with 0.3.1 of the library):
+		- **initial:** 944.72 → 896.60 kB raw (−48.1). *The "before" is higher than the 932 kB in §7.2 because §9–12 and §15 came first.*
+		- **main:** 176.6 → 129.05 kB;
+		- **the guide chunk:** 148.3 → 130.5 kB (−17.8);
+		- **mock code in production:** 64.6 kB → 0.
+	- All three configurations build. The `local` build has the mocks: the demo's events, gallery and video, and the guide.
+	- *The offline demo under `ng serve` (local) is for Mason to try by eye.* It's in §16.4.
 
 ### 15. The demo's video (OQ18)
 
-- [ ] 15.1 `MOCK_VIDEO.id` becomes `lVhJ_A8XUgc`, and the CRUD seed's `video_url` becomes `https://www.youtube.com/watch?v=lVhJ_A8XUgc`. Specs that name `demoVideo01` are updated. The §5.1 note about the made-up id goes.
+- [x] 15.1 `MOCK_VIDEO.id` becomes `lVhJ_A8XUgc`, and the CRUD seed's `video_url` becomes `https://www.youtube.com/watch?v=lVhJ_A8XUgc`. Specs that name `demoVideo01` are updated. The §5.1 note about the made-up id goes. ✅ 11/18
 
 ### 16. Gates for Phase 2
 
 - [ ] 16.1 Docker plus Windows green after each server slice ("Windows: N passed. Linux: M passed."), with the floor raised at the end.
-- [ ] 16.2 Vitest green with the count, and `ng build` for local, development and production. §14's bundle change is recorded.
+	- **11/18, co-dev (CF built against the local honuware tree):** Linux 2572 passed (was 2525). honuware's own Linux gate for the new honuware tests: 58 passed.
+	- **The floor stays 2515 until the re-pin.** A pinned build will be 2572 once honuware is pushed: about 20 of today's count are honuware's new tests (CsrfGuard 3, SchemaCheck 5, ImageUploadLimit 5, ImageUploadSettings 7), which a pinned `838045f` build doesn't have. The floor goes up at §16.3.
+- [x] 16.2 Vitest green with the count, and `ng build` for local, development and production. §14's bundle change is recorded. ✅ 11/18
+	- **Vitest: 620 passed in 74 files** (was 562 in 71), against the local `@honuware/ui` build.
+	- `ng build` passes for production, development and local.
+	- **Production now:** initial 904.28 kB raw (209.06 kB transferred), main 129.12 kB, guide chunk 130.53 kB, mock code 0. §14's numbers are in §14.2.
+		- **Since §14, initial grew 7.7 kB:** the new library's `photos` entry went from 7.6 to 14.2 kB up front, because it now holds the prepare step, the limit check and the settings card.
+		- It's up front because the account pages (`/account`, `/account/submissions`) load eagerly and use `photos`. Lazy-loading them would take all 14.2 kB out of the initial bundle. That's a small follow-up for any later bucket; it isn't planned here.
+		- The 500 kB budget warning was already there.
 - [ ] 16.3 §13's bump point verified with a fresh pinned build.
 - [ ] 16.4 The manual loop (§7.4) gains:
 	- the Edit Event list and search;
@@ -516,7 +598,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 
 ### 18. Sample data that shows off CM3 (OQ22)
 
-- [ ] 18.1 **business_logic:** `PopulateSampleData` adds, all made up:
+- [x] 18.1 **business_logic:** `PopulateSampleData` adds, all made up:
 	- **Main photos** on a few sample events and one series.
 		- Generated SVG art: shapes and colour, no people, so there's no consent question, in the style of the offline demo's `demo-photo-art.ts`.
 		- Stored with `Images::ImageHelper::UploadAndAssociatePhoto(transaction, table, id, bytes, "svg")`, the same path a real upload takes.
@@ -532,7 +614,12 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the video passes the column's CHECK;
 		- the gallery is public once its event is approved;
 		- with no administrator, the gallery is skipped and reported.
-- [ ] 18.2 **README:** step 7's sample output gains the new counts line.
+- [x] 18.2 **README:** step 7's sample output gains the new counts line.
+- **As built (§18), 11/18:**
+	- `SampleDataReport` gains `photosAdded`, `galleryPhotosAdded`, `videosAdded` and `mediaAlreadyThere`. A re-run counts each photo, the gallery and each video once in `mediaAlreadyThere` instead of adding anything. It also gains `gallerySkippedNoReviewer`.
+	- `kSampleVideoUrl` is the OQ18 video, the same one the offline demo shows.
+	- **Tests** (3 new): `AddsPhotosAGalleryAndTheVideoThatThePagesShow` (each kind, the video passing its CHECK, and the gallery public once its event is approved), `ARerunLeavesThePhotosGalleryAndVideosAlone`, and `WithNoAdministratorTheGalleryIsSkippedAndSaysSo`.
+	- The database helper prints the new counts. README step 7 shows the line.
 
 # Open Questions
 
@@ -827,6 +914,21 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- **What I need from you now:** "server", "browser", "browser now, server before launch", or "player right away".
 	- Mason- Let's just do the full player. It's the best experience.
 	- **Decided (11/18): the full player, from the start.** This reverses OQ4. Built as Phase 2 §17.2: lazy-loaded and not autoplaying, with no server work.
+24. **Should someone who curates only the guide get into `/admin`?** *(Raised 11/18 while building §12.5.)*
+	- **Background:**
+		- `/admin` now lets in admins and anyone holding `manage_events` (the new Curator role).
+		- `manage_guide` gives the server's permission to edit the guide's ten tables plus venues through Manage Data (GD2 OQ3). But someone holding only `manage_guide` is still sent away from `/admin`, so they can't reach the tables they're allowed to edit. That was also true under `AdminGuard`, so nothing has got worse.
+		- Today no seeded role holds `manage_guide` except through the Administrator, so nobody is affected yet.
+	- **Rec: leave it until a Guide curator role exists,** and do it in that bucket (GD2 or later). Then the guard admits `manage_guide` as well, and such a person sees only Manage Data, listing only the guide tables. The server already cuts the list, so it's a small client change with specs.
+	- **Alternative:** widen the guard now. It's about an hour with specs, and it's ready for whenever someone is given `manage_guide` by hand.
+	- **What I need from you:** "later", or "now".
+25. **What version should the `@honuware/ui` release be?** *(Raised 11/18 for the §13 bump point.)*
+	- **Background:**
+		- The library is at 0.3.1. §13.2 adds the upload-limit seam, the prepare step, `preparePendingPhoto()`, the settings card and the mock.
+		- All of it is additive. An app that never provides the new seam keeps working, because the control doesn't block without it. knottyyoga's `ServerAccess` is untouched, because the seam isn't on `PhotoAccess`.
+	- **Rec: 0.4.0.** Below 1.0, a new minor version is the usual way to say "new features", and CF's `"@honuware/ui": "0.3.1"` pin won't pick it up by surprise.
+	- **Alternative:** 0.3.2, if you keep minor bumps for breaking changes.
+	- **What I need from you:** the number when you publish. I'll put it in CF's `package.json` at the re-pin.
 
 # Change Log
 
@@ -876,6 +978,48 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/18/2026 (v0.7)** — Phase 2 is built (§8.2, §9–15, §18), across all three repos. It waits on the §13 bump point, and on the checks that need hands (§8.1's event page, §7.3, §16.4).
+	- **CF server:**
+		- the curator search route behind Edit Event (§9);
+		- removing a flyer (§11);
+		- the Curator role, and photo-removal requests emailed to the site and its curators (§12);
+		- the startup schema check called from `main.cpp` (§8.2);
+		- sample photos, a gallery and the video (§18).
+	- **CF client:**
+		- "Coming up" and search results that tell events apart (§9);
+		- editing a gallery photo's words (§10);
+		- add, replace or remove the flyer on "My submissions" (§11);
+		- the removal-request form (§12.4);
+		- curators in `/admin` (§12.5);
+		- the offline demo out of production (§14);
+		- the real demo video (§15);
+		- the Site settings page, and flyers shrunk and checked before sending (§13.3).
+	- **honuware (uncommitted):**
+		- `DbMeta::WarnIfDatabaseIsOlderThanBuild` (§8.2);
+		- the upload limit's business logic and routes (§13.1);
+		- `CsrfGuard::AllowWithoutToken` (§12.3);
+		- `kPermissionAdminPortal` in `permissions.h`.
+	- **`@honuware/ui` (uncommitted):** the upload-limit seam and mock, the public prepare step, `preparePendingPhoto()`, and the settings card (§13.2).
+	- **Decisions beyond the plan:**
+		- a site-wide hourly cap on removal requests beside the per-visitor one;
+		- a narrow CSRF exemption for that one public route (the guard refused every visitor who'd never signed in);
+		- the upload limit as its own seam, because knottyyoga extends `PhotoAccess`;
+		- the control fails open if the limit can't be read;
+		- a flyer is prepared before anything is sent, so a too-big flyer can't leave a submission without it.
+	- **Gates:**
+		- *(the Windows line is added when its run finishes)*;
+		- CF Linux 2572 passed (co-dev) and honuware's gate 58 passed;
+		- Vitest 620 passed in 74 files;
+		- web components 550 SUCCESS, lint and build clean;
+		- `ng build` passes for all three configurations.
+		- §14 took 48.1 kB off production's initial bundle, and all 64.6 kB of mock code. The floor stays 2515 until the re-pin.
+	- **OQ24–25 added:** whether a guide-only curator gets into `/admin`, and the library's version number.
+	- **Next (the bump point):**
+		1. Mason commits and pushes honuware.
+		2. Mason commits and publishes the web components (OQ25).
+		3. I re-pin CF's `GIT_TAG`, bump `@honuware/ui` and run `npm install`, verify a fresh pinned build on both platforms, and raise the floor.
+		4. Mason commits CF.
+		5. knottyyoga follows with §8.2's call and §13.4's card.
 - **11/18/2026 (v0.6)** — OQ23 decided: the full player. Mason: *"Let's just do the full player. It's the best experience."* This reverses OQ4's click-to-play.
 	- Built as §17.2: `VideoEmbed` is now the provider's player from the start, lazy and not autoplaying, and `videoEmbedUrl` dropped autoplay.
 	- The design pin-down, §5.4's note and OQ4 are updated, and the thumbnail plans are dropped.

@@ -343,6 +343,13 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	5. Check the shared-link preview.
 	6. Follow the removal-request path.
 
+Mason- new work
+- When clicking on an event, I get: This event couldn't be loaded. Please try again in a moment.
+	- Is this something that is supposed to be implemented in a later phase or just broken. If there is no work item for this, lets add one to this document.
+- In Admin Dashboard / Events / Edit Event, I would like:
+	- A list of the ten next upcoming events I can click on to edit
+	- If I type a search term, I'd like the result to show information like the date, time, and venue in addition to the event title. Currently, I wanted to edit Board Game Night and it sho
+
 # Open Questions
 
 *(Numbered for inline answers; recommendations included so "agreed" suffices.)*
@@ -485,6 +492,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Rec: give me a YouTube or Vimeo link you're happy to show in demos,* ideally one from a Seattle venue or your own. It goes only into the demo data and never touches production.
 	- *Alternative:* keep the placeholder. The demo then shows the tile and the player opening, but not a playing video.
 	- **What I need from you:** a link, or "keep the placeholder".
+	- Mason- Use this: https://www.youtube.com/watch?v=lVhJ_A8XUgc
 
 # Change Log
 

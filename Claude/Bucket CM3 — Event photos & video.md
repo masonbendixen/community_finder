@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/18/2026
-Version: 0.4.1
+Version: 0.5
 tags:
 ---
 
@@ -349,7 +349,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 
 Planned 11/18 from Mason's answers to OQ11–18 and his two new-work items. Each section names where it came from.
 - **The rule from OQ12 applies throughout:** anything that can be created gets full CRUD.
-- **Order:** §8 first, because it blocks the manual loop (§7.4). Then the client-only items (§9–11, §14–15). §12 waits on OQ19 and §13 on OQ21. §13 is a cross-repo bump point.
+- **Order:** §8 first, because it blocks the manual loop (§7.4). Then the client-only items (§9–11, §14–15), then §12, §13 and §18. §17.2 waits on OQ23. §8.2 and §13 are cross-repo bump points.
 - **Layering:** as in §0–7. Server items go endpoints → business_logic → table_helpers. Each new endpoint is anchored in `RegisterAllEndpoints()`, and each new method gets a test.
 
 ### 8. Event pages fail on the dev database (Mason New Item 1)
@@ -367,7 +367,17 @@ The items:
 	- The recreate seeds no events. The sample events come from a second flag, `--populate_sample_data`, which can run alone or with `--recreate_database` (it runs after it). Both need `HONUWARE_ALLOW_DESTRUCTIVE=1`.
 	- [ ] Still to check: with the sample data loaded, an event page opens. Then §7.3's checklist can be ticked against the new schema.
 	- The sample data has no photos, gallery or video, so it doesn't show CM3 (**OQ22**).
-- [ ] 8.2 **If OQ20 says yes:** the startup schema check in honuware, with tests, so the next out-of-date database explains itself.
+- [ ] 8.2 **The startup schema check (OQ20), in honuware,** so the next out-of-date database explains itself. Mason: *"I've been burned by this a lot."*
+	- At startup, the server compares the tables and columns in its composed `DatabaseInfo` with what `information_schema` says the database has.
+	- Anything missing gets one clear warning, listing every missing table and column, for example: "The database is older than this build: missing table event_gallery_photos; missing column events.video_url. Run --recreate_database (dev) or --migrate."
+	- The server keeps running. Extra tables or columns the build doesn't know about are ignored.
+	- **Tests:**
+		- a current database gives no warning;
+		- a missing table is named;
+		- a missing column is named;
+		- several missing items share one message;
+		- an extra column is ignored.
+	- A cross-repo bump point: Mason pushes honuware, I re-pin CF and verify a fresh pinned build, Mason commits, and knottyyoga follows.
 
 ### 9. Edit Event: the next ten events, and search results that tell events apart (Mason New Item 2)
 
@@ -408,9 +418,9 @@ The items:
 	- The thanks page's failed-flyer message gains "You can add it from My submissions."
 	- **Specs.**
 
-### 12. Photo-removal requests reach the right people (OQ11; the design waits on OQ19)
+### 12. Photo-removal requests reach the right people (OQ11, OQ19)
 
-Assuming OQ19's recommendations:
+As OQ19 decided (all four recommendations):
 - [ ] 12.1 **The Curator role:** seeded in `create_app_tables.cpp` beside `PopulateAppPermissions`, holding `manage_events`, with both looked up by name like the Administrator grant.
 	- It's seed data, not a new table, so the three-place rule doesn't apply. `create_app_tables_test.cpp` covers it, and §7.3's live check gains a line for it.
 	- **Tests.**
@@ -422,7 +432,7 @@ Assuming OQ19's recommendations:
 	- Check whether `@honuware/ui/crud`'s table picker already hides tables a curator can't reach. If it doesn't, that's a web-components change for this phase.
 	- **Specs.**
 
-### 13. A configurable upload limit, shared with knottyyoga (OQ13; the page and range wait on OQ21)
+### 13. A configurable upload limit, shared with knottyyoga (OQ13, OQ21)
 
 A cross-repo bump point: Mason pushes honuware and publishes `@honuware/ui`, then I re-pin CF and verify a fresh pinned build, then Mason commits. knottyyoga follows the same way.
 - [ ] 13.1 **honuware server:** `GET`/`PUT /api/admin/image_upload_settings` under `admin_portal`, for `image_max_upload_bytes`, with the default and allowed range (10 MB; 1–50 MB per OQ21), refusing values out of range.
@@ -434,7 +444,7 @@ A cross-repo bump point: Mason pushes honuware and publishes `@honuware/ui`, the
 	- Its "prepare the image" step becomes a public export, so an app can shrink a file it sends itself.
 	- A settings card for the limit, for an app to put on its settings page.
 	- **Specs.**
-- [ ] 13.3 **CF:** the card on the page OQ21 chooses. The submit form's flyer and §11's "Add a flyer" go through honuware's prepare step, so a flyer is shrunk to at most 4096 px and sent as a JPEG, as a curator's upload is. **Specs.**
+- [ ] 13.3 **CF:** a new admin-only "Site settings" page (OQ21) on the admin dashboard, holding the card. The submit form's flyer and §11's "Add a flyer" go through honuware's prepare step, so a flyer is shrunk to at most 4096 px and sent as a JPEG, as a curator's upload is. **Specs.**
 - [ ] 13.4 **knottyyoga:** the card on its settings page after the bump. That's knottyyoga's own change and gate.
 
 ### 14. Leave the offline demo out of production builds (OQ16)
@@ -458,7 +468,9 @@ In its own commit.
 	- adding, replacing and removing a flyer from "My submissions";
 	- a removal request arriving in each inbox;
 	- a curator who isn't an admin, using the Events pages and kept out of Users and Roles;
-	- the video tile on an event that has a photo, after §17.
+	- the video tile showing the video's still, after §17.2;
+	- a fresh `--populate_sample_data` showing photos, a gallery and the video, after §18;
+	- a server started on an old database printing §8.2's warning.
 
 ### 17. The video tile showed the event's photo, not the video (Mason, 11/18)
 
@@ -473,9 +485,38 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- `VideoEmbed` lost its `posterUrl` input, and the event and series pages stopped passing the hero.
 	- Specs: the tile has no image; the event page's hero still appears exactly once.
 	- Vitest: 563 passed in 71 files. Prettier clean.
-- [ ] 17.2 **A real frame on the tile.** The way to do it waits on **OQ23**.
-	- If the server option: a CF endpoint per event and series, business_logic that fetches and stores the thumbnail, and the tile's image from our own server, all with tests.
-	- If the browser option: client only, plus a PL2 note for `img-src`.
+- [ ] 17.2 **The video's real still on the tile.** Mason doesn't want the plain gradient (OQ23). Who fetches the still waits on **OQ23**.
+	- **If the server option:**
+		- **db_schema:** a small `video_thumbnails` table, one row per `{provider, id}`, holding its photo and when it was fetched. As a new app table it touches three places: `MakeAppTables`, `AppTableCreationOrder` and `PopulateAppTables`.
+		- **business_logic:** fetch through honuware's `HttpClient` (YouTube's fixed address; Vimeo's oEmbed lookup), store it through `ImageHelper`, and fall back to nothing on failure.
+		- **endpoints:** `GET /api/events/<id>/video_thumbnail` and the series equivalent. Each looks up the stored video, so it can't be used to make our server fetch arbitrary videos.
+		- **client:** the tile shows the still.
+		- **Tests** with `TestHttpClient`: first view fetches; second view doesn't; a changed link fetches again; a failed fetch gives no image; there's no route to an arbitrary id.
+	- **If the browser option:**
+		- client only: the tile shows `https://i.ytimg.com/vi/<id>/hqdefault.jpg` with `referrerpolicy="no-referrer"`;
+		- Vimeo keeps the gradient;
+		- a PL2 note to add `https://i.ytimg.com` to `img-src`;
+		- specs.
+
+### 18. Sample data that shows off CM3 (OQ22)
+
+- [ ] 18.1 **business_logic:** `PopulateSampleData` adds, all made up:
+	- **Main photos** on a few sample events and one series.
+		- Generated SVG art: shapes and colour, no people, so there's no consent question, in the style of the offline demo's `demo-photo-art.ts`.
+		- Stored with `Images::ImageHelper::UploadAndAssociatePhoto(transaction, table, id, bytes, "svg")`, the same path a real upload takes.
+	- **A three-photo gallery** on one event.
+		- Rows in `event_gallery_photos` with alt text, a caption and the credit "Sample art".
+		- Consent recorded against the reviewer `PopulateSampleData` already receives.
+		- If there's no administrator (id 0), the gallery is skipped and reported. `consent_confirmed_by_person_id` is a plain required id, not a link, so the database would accept 0. But that would record consent from nobody.
+	- **The OQ18 video**, `https://www.youtube.com/watch?v=lVhJ_A8XUgc`, on one event and one series.
+	- **Re-running** leaves existing photos, gallery rows and videos alone and never adds a second gallery, as it does for the listings. `SampleDataReport` gains photo, gallery and video counts.
+	- **Tests** in `populate_sample_data_test.cpp`:
+		- the first run adds each kind;
+		- a second run adds nothing;
+		- the video passes the column's CHECK;
+		- the gallery is public once its event is approved;
+		- with no administrator, the gallery is skipped and reported.
+- [ ] 18.2 **README:** step 7's sample output gains the new counts line.
 
 # Open Questions
 
@@ -635,7 +676,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- Mason- Use this: https://www.youtube.com/watch?v=lVhJ_A8XUgc
 	- **Decided (11/18): the demo uses YouTube video `lVhJ_A8XUgc`.** Planned as Phase 2 §15.
 
-*Added 11/18 from the answers above and Mason's new work. They shape Phase 2 §8, §12 and §13.*
+*Added 11/18 from the answers above and Mason's new work. They shape Phase 2 §8, §12, §13, §17 and §18. OQ19–22 were answered on 11/18. OQ23 has an answer to Mason's follow-up question and still needs his choice.*
 
 19. **How should photo-removal requests and the new curator role work? (Follows OQ11.)** Four parts, each with a recommendation, so "agreed" covers all four.
 	1. **How a request is sent.**
@@ -657,6 +698,12 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- *Alternative:* require sign-in, which keeps out abuse but turns away exactly the people most likely to ask.
 	- **What I need from you:** "agreed", or your choice on any of the four parts.
 	- Mason- I'll go with your recommendations.
+	- **Decided (11/18): all four recommendations.**
+		1. A short form on the page, sent by the server, with a honeypot and a rate limit.
+		2. It goes to the site address plus everyone holding `manage_events`.
+		3. A new Curator role holding only `manage_events`.
+		4. No sign-in; the message and the reply address are optional.
+	- Planned as Phase 2 §12.
 
 20. **Should the server say plainly when the database is older than the code?**
 	- **What happened (11/18):** clicking any event showed "This event couldn't be loaded. Please try again in a moment."
@@ -669,6 +716,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- *Alternative:* leave it, and remember to recreate after schema changes.
 	- **What I need from you:** "yes", "refuse to start", or "leave it".
 	- Mason- I like the recommendation to warn people that the database is out of sync. I've been burned by this a lot.
+	- **Decided (11/18): yes. Warn at startup, and keep running.** It's built in honuware, so knottyyoga gets it too. Planned as Phase 2 §8.2, a cross-repo bump point.
 
 21. **Where should the upload limit be set, and what range should it allow? (Follows OQ13.)**
 	- **Where:** CF's admin has an Event settings page, but nothing for the site as a whole.
@@ -681,6 +729,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- *Rec: admins only,* since it affects the whole site and server load.
 	- **What I need from you:** "agreed", or the page, range or permission you want.
 	- Mason- Agreed.
+	- **Decided (11/18): a new admin-only "Site settings" page; 1 to 50 MB, default 10 MB.** Planned as Phase 2 §13.
 
 22. **Should the sample data show off CM3's photos and video?**
 	- **Today:** `database_helper --populate_sample_data` adds a small guide and four weeks of events from the day it runs. It has no photos, galleries or video (`populate_sample_data.cpp` never mentions them). So a freshly loaded dev site looks as it did before CM3, and the manual loop (§7.4) starts with uploading pictures by hand.
@@ -695,6 +744,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- *Alternative:* leave it, and add pictures by hand when trying CM3.
 	- **What I need from you:** "yes", "video only", or "leave it".
 	- Mason- I like the recommendation.
+	- **Decided (11/18): yes, a little.** A main photo on a few events and one series, a three-photo gallery on one event, and the OQ18 video on one event and one series. The art is generated, with no people in it. Planned as Phase 2 §18.
 
 23. **How should the video tile show a real frame from the video? (Follows Phase 2 §17.)**
 	- **Background:**
@@ -719,7 +769,36 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- Vimeo has no fixed thumbnail address, so Vimeo tiles would stay the gradient.
 	- *Alternative:* keep the plain gradient tile as it is now.
 	- **What I need from you:** "server", "browser", or "keep it plain".
-	- Mason- I'm a bit puzzled by this. When I've embedded YouTube videos on a page before, it s
+	- Mason- I'm a bit puzzled by this. When I've embedded YouTube videos on a page before, it definitely showed a still from the video. I won't want the plain gradient. Why is it bad to have the client's contact Google?
+	- **Decided (11/18): not the plain gradient.** The tile shows the video's real still. Who fetches it is still open (below).
+	- **Answer to Mason's questions (11/18):**
+		- **What you saw before was YouTube's full player.**
+			- A normal YouTube embed loads YouTube's player as soon as the page opens: a frame from youtube.com, several hundred KB of its script, and the requests that script makes. The still you saw was the player's own picture.
+			- That's the "load the player right away" option OQ4 turned down for click-to-play. Click-to-play shows a stand-in until someone presses play, so the only question is what the stand-in shows.
+		- **My recommendation shows that same still too.** The server option and the browser option show the identical picture from YouTube. The only difference is which computer asks Google for it:
+			- in the server option, our server asks, once per video;
+			- in the browser option, every visitor's browser asks, on every page view.
+			- *My write-up above made the server option sound like it showed something else. It doesn't.*
+		- **Why it matters that visitors' browsers contact Google, and how much:**
+			- **What Google receives** from a thumbnail request: the visitor's IP address, their browser, and the video's id. Unless we set `no-referrer`, it also gets the address of the page they're on. No cookie or script is involved.
+			- **Why that's sensitive here:** for most sites it's nothing. For this one, it amounts to "this IP address was looking at Leather Night." The outline's no-outing rule (GD1 §6.9) says being at an event is never reported as identity, and a third party's log of who looked at which event is a mild version of exactly that. An IP address isn't a name, but Google can often connect it to an account, for example when the same household is signed into Gmail.
+			- **The honest size of the risk is small.**
+				- Google already sees a lot of this from visitors on Chrome or Android. A site using Google Fonts or Google Maps sends the same kind of request.
+				- Anyone who presses play sends all of this and more anyway.
+				- So click-to-play protects the people who look but don't watch, who are often the curious ones who aren't out.
+			- **Legally,** it's not a concern for a US site today. For context: in January 2022 a court in Munich ruled that a site sending visitors' IP addresses to Google through Google Fonts, without consent, broke the GDPR. That's why many sites now serve fonts and thumbnails from their own servers.
+		- **So the choice is between:**
+			- **Server:**
+				- Google sees only our server, once per video, and Vimeo works too.
+				- It's a slice of server work with tests: a small new table that keeps each video's thumbnail, a fetch through honuware's `HttpClient`, one route each for events and series, and the client using it.
+			- **Browser:**
+				- About an hour of client work, plus `https://i.ytimg.com` added to the page's `img-src` (PL2).
+				- Each visitor's IP address reaches Google when the page opens.
+				- Vimeo would need a lookup on vimeo.com from every browser too, or keep the gradient.
+			- **Browser now, server before launch:** you see stills right away, since the site isn't live. The browser version (about an hour's work) is thrown away when the server version replaces it.
+			- *(Loading the player right away, which is what you've done before, is also possible. But it sends Google the most, and it makes the page heaviest. I wouldn't.)*
+		- *Rec: still the server,* because this site's visitors are the people the no-outing rule protects, and the cost is one slice of work, not a redesign. The browser option is a reasonable call if you judge the risk small: it's what any site using Google Fonts does.
+	- **What I need from you now:** "server", "browser", or "browser now, server before launch".
 
 # Change Log
 
@@ -769,6 +848,15 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/18/2026 (v0.5)** — Mason answered OQ19–23. No code changed.
+	- **Decided:**
+		- OQ19: all four recommendations, so §12 is no longer waiting;
+		- OQ20: warn at startup and keep running, in honuware (§8.2, now fully planned);
+		- OQ21: a new admin-only Site settings page, 1–50 MB (§13);
+		- OQ22: sample photos, a gallery and the video (new §18).
+	- **OQ23 needs more discussion.** Mason doesn't want the plain gradient, and asked why it's bad for visitors' browsers to contact Google.
+		- The answer is written under OQ23: what he saw before was YouTube's full player; my recommendation shows the same still; and what a visitor's browser sends Google, why that matters on this site, and how small the risk honestly is.
+		- §17.2 has both versions planned. It waits on "server", "browser", or "browser now, server before launch".
 - **11/18/2026 (v0.4.1)** — The video tile showed the event's photo, which read as a frame of the video (Mason).
 	- The tile is now the plain gradient (Phase 2 §17.1). Vitest: 563 passed.
 	- How to show a real frame is **OQ23**.

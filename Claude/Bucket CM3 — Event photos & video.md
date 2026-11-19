@@ -668,6 +668,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- *Alternative:* the server refuses to start with an old database, which is louder but blocks all work until the recreate.
 	- *Alternative:* leave it, and remember to recreate after schema changes.
 	- **What I need from you:** "yes", "refuse to start", or "leave it".
+	- Mason- I like the recommendation to warn people that the database is out of sync. I've been burned by this a lot.
 
 21. **Where should the upload limit be set, and what range should it allow? (Follows OQ13.)**
 	- **Where:** CF's admin has an Event settings page, but nothing for the site as a whole.
@@ -679,6 +680,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- **Who can change it:**
 		- *Rec: admins only,* since it affects the whole site and server load.
 	- **What I need from you:** "agreed", or the page, range or permission you want.
+	- Mason- Agreed.
 
 22. **Should the sample data show off CM3's photos and video?**
 	- **Today:** `database_helper --populate_sample_data` adds a small guide and four weeks of events from the day it runs. It has no photos, galleries or video (`populate_sample_data.cpp` never mentions them). So a freshly loaded dev site looks as it did before CM3, and the manual loop (§7.4) starts with uploading pictures by hand.
@@ -692,6 +694,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- *Alternative:* the video only. That's one column, with no image storage involved.
 	- *Alternative:* leave it, and add pictures by hand when trying CM3.
 	- **What I need from you:** "yes", "video only", or "leave it".
+	- Mason- I like the recommendation.
 
 23. **How should the video tile show a real frame from the video? (Follows Phase 2 §17.)**
 	- **Background:**
@@ -716,6 +719,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- Vimeo has no fixed thumbnail address, so Vimeo tiles would stay the gradient.
 	- *Alternative:* keep the plain gradient tile as it is now.
 	- **What I need from you:** "server", "browser", or "keep it plain".
+	- Mason- I'm a bit puzzled by this. When I've embedded YouTube videos on a page before, it s
 
 # Change Log
 

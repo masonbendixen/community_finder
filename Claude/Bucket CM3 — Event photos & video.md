@@ -543,7 +543,7 @@ In its own commit.
 ### 16. Gates for Phase 2
 
 - [ ] 16.1 Docker plus Windows green after each server slice ("Windows: N passed. Linux: M passed."), with the floor raised at the end.
-	- **11/18, co-dev (CF built against the local honuware tree):** Linux 2572 passed (was 2525). honuware's own Linux gate for the new honuware tests: 58 passed.
+	- **11/18, co-dev (CF built against the local honuware tree): Windows 2572 passed. Linux 2572 passed** (was 2525). honuware's own Linux gate for the new honuware tests: 58 passed.
 	- **The floor stays 2515 until the re-pin.** A pinned build will be 2572 once honuware is pushed: about 20 of today's count are honuware's new tests (CsrfGuard 3, SchemaCheck 5, ImageUploadLimit 5, ImageUploadSettings 7), which a pinned `838045f` build doesn't have. The floor goes up at §16.3.
 - [x] 16.2 Vitest green with the count, and `ng build` for local, development and production. §14's bundle change is recorded. ✅ 11/18
 	- **Vitest: 620 passed in 74 files** (was 562 in 71), against the local `@honuware/ui` build.
@@ -1007,8 +1007,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the control fails open if the limit can't be read;
 		- a flyer is prepared before anything is sent, so a too-big flyer can't leave a submission without it.
 	- **Gates:**
-		- *(the Windows line is added when its run finishes)*;
-		- CF Linux 2572 passed (co-dev) and honuware's gate 58 passed;
+		- CF co-dev: Windows 2572 passed, Linux 2572 passed; honuware's gate 58 passed;
 		- Vitest 620 passed in 74 files;
 		- web components 550 SUCCESS, lint and build clean;
 		- `ng build` passes for all three configurations.

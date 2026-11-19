@@ -4,7 +4,7 @@ Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
 Last Updated: 11/18/2026
-Version: 0.5
+Version: 0.5.1
 tags:
 ---
 
@@ -796,9 +796,18 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 				- Each visitor's IP address reaches Google when the page opens.
 				- Vimeo would need a lookup on vimeo.com from every browser too, or keep the gradient.
 			- **Browser now, server before launch:** you see stills right away, since the site isn't live. The browser version (about an hour's work) is thrown away when the server version replaces it.
-			- *(Loading the player right away, which is what you've done before, is also possible. But it sends Google the most, and it makes the page heaviest. I wouldn't.)*
+			- **Load YouTube's player right away.** This is what Mason has done before, and it reverses OQ4's click-to-play. *(Mason asked 11/18: "Why can't we load YouTube's whole player?" We can.)*
+				- **The least work:**
+					- The tile goes, and the page shows the player from the start, still from `youtube-nocookie.com`. Vimeo works the same way.
+					- It's minutes of client work plus spec updates. The page's `frame-src` already allows both players.
+				- **It looks and works exactly like YouTube:** the still, the title, and one tap to play.
+					- On some phones the click-to-play tile needs a second tap, because the browser blocks autoplay once the player appears. The full player doesn't have that problem.
+				- **The cost is page weight and privacy:**
+					- Before anyone presses play, every event or series page with a video downloads YouTube's player. That's commonly measured at roughly half a megabyte to over a megabyte of script, which is slower on phones. The lists aren't affected.
+					- Each visitor's browser also talks to several Google servers, so Google sees the visit in more detail than a thumbnail request shows. YouTube says its no-cookie mode stores nothing about the visitor until play, but its scripts still run.
+				- **It gives the same look as the browser-thumbnail option, at many times the weight and with more sent to Google.** Its one real advantage over that option is the single tap on phones.
 		- *Rec: still the server,* because this site's visitors are the people the no-outing rule protects, and the cost is one slice of work, not a redesign. The browser option is a reasonable call if you judge the risk small: it's what any site using Google Fonts does.
-	- **What I need from you now:** "server", "browser", or "browser now, server before launch".
+	- **What I need from you now:** "server", "browser", "browser now, server before launch", or "player right away".
 
 # Change Log
 
@@ -848,6 +857,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/18/2026 (v0.5.1)** — OQ23 gains a fourth option after Mason asked why we can't load YouTube's whole player: we can (it reverses OQ4). Its costs and benefits are written up beside the other three.
 - **11/18/2026 (v0.5)** — Mason answered OQ19–23. No code changed.
 	- **Decided:**
 		- OQ19: all four recommendations, so §12 is no longer waiting;

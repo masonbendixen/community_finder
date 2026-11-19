@@ -348,7 +348,7 @@ Mason- new work
 	- Is this something that is supposed to be implemented in a later phase or just broken. If there is no work item for this, lets add one to this document.
 - In Admin Dashboard / Events / Edit Event, I would like:
 	- A list of the ten next upcoming events I can click on to edit
-	- If I type a search term, I'd like the result to show information like the date, time, and venue in addition to the event title. Currently, I wanted to edit Board Game Night and it sho
+	- If I type a search term, I'd like the result to show information like the date, time, and venue in addition to the event title. Currently, I wanted to edit Board Game Night and it is a series and showed a bunch of items with the same name and I had to try each one to edit the right one.
 
 # Open Questions
 

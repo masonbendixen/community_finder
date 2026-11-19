@@ -254,7 +254,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *As built (11/18):* `PhotoRef`, `VideoRef` and `GalleryPhoto` in `core/types/events.types.ts`, with `toPhotoRef`, `toVideoRef`, `normalizeGallery` and `normalizeEventDetail`. `getEvent` now returns an `EventDetail` (the event plus its gallery).
 	- The mock follows the server's fallback: Leather Night (103) has its own photo, a gallery of four and the demo video; Bear Happy Hour's series (11) and The Lantern Room (venue 2) have photos.
 	- `core/mock/demo-photo-art.ts` draws the placeholders as SVG shapes, and `DemoPhotoUrlBuilder` stands in for honuware's `PhotoUrlBuilder` in mock mode only.
-	- **The demo's video id `demoVideo01` is made up.** It has the right shape, but it plays nothing: offline there's no YouTube to play it anyway.
+	- **The demo's video id `demoVideo01` is made up.** It has the right shape, but YouTube's player says "Video unavailable". A real one is **OQ18**.
 - [x] 5.2 **One place for photo addresses:** `photoFor(event, width, height)`. Event rows and the event page switch to it, and the event page drops its `has_photo` call. **Specs:** each owner, and none.
 	- *As built:* `EventPhotos` (`core/services/event-photos.service.ts`): `photoFor(owner, size)` and `galleryPhotoUrl(photo, size)`, with the sizes as constants (list thumb 160, hero 1200×630, gallery thumb 480×360, full view 1600×1200). The event page no longer asks `has_photo`.
 - [x] 5.3 `shared/components/photo-gallery`:
@@ -291,16 +291,16 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 			- "Add photo" checks the alt text, the consent box and the chosen file before sending anything. Then it makes the row and uploads the photo against it. If the upload fails, the row is deleted again, so no row is ever left without a picture.
 			- What was typed stays after a refusal, so a `GALLERY_FULL` can be fixed by removing a photo and pressing Add again.
 		- **The cap** is a card under a new "Photo galleries" heading on the Event settings page (`gallery-settings-card.*`), checked against 1–60 before sending.
-		- **Not built:** changing a gallery photo's alt text, caption or credit after it's added. For now, remove and re-add the photo, or edit the row in the generic admin.
+		- **Not built:** changing a gallery photo's alt text, caption or credit after it's added. For now, remove and re-add the photo, or edit the row in the generic admin. Whether to add it is **OQ12**.
 		- 15 new gallery specs, 6 for the cap card, and 9 more in the editor and form specs.
 - [x] 5.7 The submit form gets an optional "Video link" with the same feedback, and an optional "Flyer" (JPEG or PNG), uploaded after the submit succeeds to `/api/event_submissions/<id>/photo/<type>`. "My submissions" shows them. **Specs.**
 	- *As built (11/18):* the video link is checked before sending (field `video_url`) and sent canonical.
 	- **The flyer** is picked with `hw-photo-upload` in `deferUpload` mode, so it looks like every other upload. The page then sends the file's own bytes.
 		- The picker accepts any image, so the page refuses anything but a JPEG or PNG before sending (by type, or by extension when the file has none).
-		- No re-encode: `hw-photo-upload`'s resize is private. A flyer over the server's 10 MB limit gets the server's "The flyer is too large."
-	- The flyer goes up only after the submission is in. If it fails, the submission stands, and the thanks say "Your event was sent, but its flyer couldn't be added." with the server's reason.
+		- No re-encode: `hw-photo-upload`'s resize is private. A flyer over the server's 10 MB limit gets the server's "The flyer is too large." (**OQ13**).
+	- The flyer goes up only after the submission is in. If it fails, the submission stands, and the thanks say "Your event was sent, but its flyer couldn't be added." with the server's reason. There's no way to retry yet (**OQ14**).
 	- A honeypot send (`submission_id` 0) uploads nothing.
-	- **A gap:** if submissions are paused between opening the form and sending it, the form comes back with what was typed, but the chosen flyer has to be picked again.
+	- **A gap:** if submissions are paused between opening the form and sending it, the form comes back with what was typed, but the chosen flyer has to be picked again (**OQ15**).
 	- **"My submissions"** says "With a photo · With a Vimeo video" under each date. For that, the server's `/mine` now sends `has_photo` and `video` per date (`submission_helper.*`, `event_submissions.*`, `events_json.*`, with a test in each layer). **These server changes aren't committed yet.**
 
 ### 6. test_helper
@@ -326,7 +326,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- The 500 kB initial budget warning was already there before this bucket.
 	- **Lazy as required:** the player and the viewer ("Plays from YouTube", "Photo removal") are only in the `events-routes` chunk, and the gallery editor only in `admin-routes`.
 	- **Why initial grew:** mostly the offline mock. `app.config.ts` picks mock or HTTP at runtime from `environment.useMock`, so the mock's data and handlers ship in every build, production included. That was true before CM3. This bucket adds the demo gallery, the placeholder art, the gallery mock and the video-link parser the mocks use.
-	- *A possible follow-up, not in scope:* replace the mocks by file replacement in the `local` config, so production drops them.
+	- *A possible follow-up, not in scope:* swap the mocks in at build time for the `local` config, so production leaves them out. That's **OQ16**, with measurements: 61.7 kB of mock code in production, 44.0 kB of it up front.
 - [ ] 7.3 **Live seed check after §1** (destructive, announced):
 	- `event_gallery_photos` with its CHECKs and indexes;
 	- `video_url` on both tables, with its CHECK;
@@ -382,7 +382,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Rec: the site's contact address,* with the photo's page in the subject, and a curator acts within a day. CM1's report flag replaces it.
 	- Mason- Your recommendation is fine.
 	- **Decided (11/4): the site's contact address.** This is client work (§5.3).
-	- *Built (11/18):* `SiteConfig.contactEmail`, set to `community.finder.seattle@gmail.com`, the site's sending address. **Mason, please confirm that inbox is watched,** or name another address.
+	- *Built (11/18):* `SiteConfig.contactEmail`, set to `community.finder.seattle@gmail.com`, the site's sending address. Whether that's the right inbox is **OQ11**.
 9. **Which stream owns it, and when?** The outline puts CM3 in Stream D, gated on traction. But almost every file is Stream A's (the events tables, the event pages, the curator editor, the submit form), and Mason wants it for marketing now.
 	- *Rec: run it in Stream A after EV3's gates, with Levi or Mason as owner.* Update the outline's Stream D row to point here.
 	- Mason- Sounds good.
@@ -392,6 +392,92 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Alternative:* keep 800×800 and use the smaller sizes everywhere.
 	- Mason- I'll go with your recommendation.
 	- **Decided (11/18): CF raises the cap to 1600×1200** in its seed. honuware's defaults stay 800×800, so knottyyoga is unchanged. Built the same day (§1.5).
+
+*Added 11/18 after the client build (§5). OQ11–15 and OQ18 are about CM3. OQ16 and OQ17 came up while measuring the bundle and reach beyond it. OQ17 is the most urgent.*
+
+11. **Which address should photo-removal requests go to?**
+	- **What it does:** every gallery on an event or series page has an "Ask us to remove a photo" link, and the full-size viewer has "Ask us to remove this photo" for the picture on screen.
+		- Either link opens the visitor's own email app, addressed to us, with the subject "Photo removal: Leather Night" and the page's address in the body. The viewer's link also says which photo, for example "Photo 2 of 4 ("Midnight on the floor.")".
+		- The photo policy promises a photo comes down within a day of a request, so a person has to read this inbox every day.
+	- **What I did:** OQ8 said "the site's contact address". The only address the app knows is the one it sends mail from, `community.finder.seattle@gmail.com`, so I used that (`SiteConfig.contactEmail` in `ui/src/app/core/services/site-config.service.ts`).
+	- **Why I'm asking:** I don't know if anyone reads that inbox. It's the sending address, and a sending address often isn't watched.
+	- *Rec: keep it, if someone checks that inbox at least daily.*
+	- *Alternative:* name another address, for example a shared inbox for curators. It's one line in the client, so a change later needs a deploy. CM1's report flag will replace this link eventually.
+	- **What I need from you:** "keep it", or the address to use.
+
+12. **Should curators be able to fix a gallery photo's words after adding it?**
+	- **Now:** the event editor's gallery lists each photo's alt text, caption and credit, but can't change them. To fix a typo, a curator has to:
+		- remove the photo and add it again, which means uploading it again and re-ticking the consent box; or
+		- find the row in the generic admin (the "Gallery Photos" table) and edit it there.
+	- **Why it matters:** the policy says captions name performers or organizers only with their agreement. If a DJ asks to have their name taken off a caption, a curator should be able to do it in a few seconds without touching the photo.
+	- *Rec: add an "Edit" button to each row.* It would open the three fields in place, with the same length limits and alt text still required, and save through generic CRUD.
+		- The server already allows this edit, and the database refuses blank alt text even on an edit.
+		- It's a client-only change to `event-gallery-editor.*`, with specs.
+	- *Alternative:* leave it as it is until a curator asks. §5.6 only asked for the words to be shown.
+	- **What I need from you:** "add it" or "leave it".
+
+13. **Should a big flyer be shrunk in the browser before it's sent?**
+	- **Now:** the submit form sends the flyer exactly as picked. The server refuses anything over 10 MB (`image_max_upload_bytes`).
+		- Most flyers fit: a phone photo of a paper flyer is usually 2–5 MB.
+		- Some don't: photos from 48-megapixel phone cameras, and PNG exports of designed flyers, can go over 10 MB.
+		- When one doesn't fit, the person sees "Your event was sent, but its flyer couldn't be added. The flyer is too large." The submission is in, but there's no way to retry from that page (see OQ14).
+	- **Why curators don't hit this:** `hw-photo-upload` shrinks every image to at most 4096 px and re-saves it as a JPEG before upload. That step is private inside `@honuware/ui`, so CF's flyer code can't call it.
+	- **The options:**
+		1. **A web-components change:** make that "prepare the image" step public, for example as an exported `prepareImageForUpload(file)` function. You'd make and publish the change in honuware-web-components, then CF shrinks flyers exactly as curators' uploads are shrunk. Flyers would always go up as JPEGs.
+		2. **Copy about 40 lines of resizing code into CF.** That duplicates honuware's code, which the house rules discourage.
+		3. **Leave it.** Most flyers fit.
+	- *Rec: option 1,* because it keeps one copy of the code and knottyyoga could use it too. Until it's published, option 3.
+	- **What I need from you:** which option, and for option 1, whether you'll make the web-components change or want me to draft it.
+
+14. **Should someone be able to add or replace a flyer after sending, from "My submissions"?**
+	- **Now:** a flyer can only be attached in the moment the form is sent. If that upload fails (too large, or a dropped connection), nothing else on the site lets them add one. The form also says we don't take events by email, so they can't send it any other way.
+	- **The server already supports it:** the flyer route takes a flyer for any of your own submissions that still has a date waiting for review, and puts it on every waiting date. Sending another one replaces it.
+	- *Rec: yes.* Add an "Add a flyer" button to each submission on "My submissions" while any of its dates is waiting, which becomes "Replace the flyer" once one is attached. The failed-flyer message on the thanks page would point there.
+		- It's client-only, and small.
+		- It also covers the gap in OQ15.
+	- *Alternative:* leave it; a curator can add a photo when they review.
+	- **What I need from you:** "yes" or "leave it".
+
+15. **Keep the chosen flyer when submissions pause mid-form?**
+	- **Now:** if curators pause submissions while someone has the form open, pressing Send shows the "We're not taking event submissions right now" notice. After "Check again", the form comes back with everything typed, but the flyer they picked is gone and has to be picked again. The picker is rebuilt along with the form.
+	- *Rec: keep it.* The page holds on to the chosen file and gives it back to the new picker. This is a small fix, with a spec.
+	- *Alternative:* leave it. A pause is rare, and the person can pick the file again.
+	- **What I need from you:** "agreed" or "leave it".
+
+16. **Should production builds leave out the offline demo?**
+	- **Background:** `app.config.ts` decides at runtime, from `environment.useMock`, whether to use the offline mock or the real server. So every production visitor downloads all the mock code and demo data, though the site never runs it.
+	- **Measured 11/18:**
+		- 61.7 kB of production JavaScript is mock code: 44.0 kB of the 168.4 kB `main` file that every page loads first, and 17.6 kB in the guide pages' chunk;
+		- the biggest pieces are the guide's demo data (13.1 kB), the events demo data (9.3 kB) and the submissions mock (8.8 kB);
+		- CM3 added 2.4 kB of new mock files, plus its additions to existing ones.
+	- **The fix:** a build-time swap. `app.config.ts` gets its providers from one small file, and the `local` configuration replaces that file with the mock version, using Angular's `fileReplacements`. Production then contains only the real-server code. The tests aren't affected, because they import the mocks directly.
+		- The up-front bundle would drop from about 932 kB to about 888 kB.
+		- It wouldn't clear the 500 kB budget warning, which was there long before CM3.
+	- *Rec: yes, as its own small change after CM3,* so this bucket's diff stays about photos.
+	- *Alternative:* leave it. 44 kB is noticeable on a slow phone, but not serious.
+	- **What I need from you:** "yes" (and whether now or later) or "leave it".
+
+17. **Are the three seeded accounts still using the password `changeme`? (Outside CM3, but it's a security question.)**
+	- **What I found while measuring OQ16:** `create_database.cpp` (lines 108–113) creates your, Levi's and Caleb's accounts with the password `changeme`.
+		- The seed doesn't make anyone change it when they first sign in.
+		- The repository's README also mentions the word.
+		- The offline demo's login uses the same password, so it's also in the production JavaScript (OQ16). That copy only works against the in-memory demo, though.
+	- **The risk:** if any live database was seeded this way and those passwords were never changed, anyone who guesses or reads `changeme` can sign in as an administrator.
+	- *Rec:*
+		1. Check now that all three accounts on every live database have their own passwords.
+		2. Change the seed so these accounts must change their password on first sign-in. honuware already has a must-change-password flag, so this is a small server change with a test.
+		3. Change the demo login's password, whether or not OQ16 goes ahead.
+	- *Alternative:* the seed reads the starting passwords from environment variables, as the scheduler service account's already does (`SCHEDULER_SERVICE_ACCOUNT_PASSWORD`).
+	- **What I need from you:**
+		- whether the live accounts are still on `changeme`;
+		- which seed fix you want;
+		- whether this belongs in CM3 or in a separate security item.
+
+18. **What should the offline demo's video be?**
+	- **Now:** in the local build, Leather Night has a video. Its id, `demoVideo01`, is made up. The play tile works, but pressing it opens YouTube's player showing "Video unavailable". The browser still has internet in the local build, so a real id would play.
+	- *Rec: give me a YouTube or Vimeo link you're happy to show in demos,* ideally one from a Seattle venue or your own. It goes only into the demo data and never touches production.
+	- *Alternative:* keep the placeholder. The demo then shows the tile and the player opening, but not a playing video.
+	- **What I need from you:** a link, or "keep the placeholder".
 
 # Change Log
 
@@ -433,9 +519,11 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- on the submit form, a video link and a flyer; "My submissions" shows both.
 	- **A small server addition for §5.7:** `/api/event_submissions/mine` sends `has_photo` and `video` for each date. It has a test in business_logic and one in endpoints.
 	- **Gates:** Windows 2525 passed. Linux 2525 passed (pinned `838045f`). The floor is now 2515. Vitest: 563 passed. `ng build` passes for local, development and production. The bundle change is noted in §7.2.
-	- **Choices to look at:**
-		- the removal-request address (OQ8);
-		- the demo's made-up video id (§5.1);
-		- gallery photos can't be edited after they're added (§5.6);
-		- a flyer has to be picked again after a pause (§5.7).
+	- **OQ11–18 added** for Mason:
+		- the removal-request address (OQ11);
+		- editing a gallery photo's words (OQ12);
+		- shrinking big flyers (OQ13), retrying a flyer from "My submissions" (OQ14), and keeping the flyer over a pause (OQ15);
+		- leaving the offline demo out of production (OQ16);
+		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
+		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).

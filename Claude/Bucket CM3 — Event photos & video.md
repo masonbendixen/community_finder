@@ -370,7 +370,7 @@ The items:
 	- The recreate seeds no events. The sample events come from a second flag, `--populate_sample_data`, which can run alone or with `--recreate_database` (it runs after it). Both need `HONUWARE_ALLOW_DESTRUCTIVE=1`.
 	- [ ] Still to check: with the sample data loaded, an event page opens. Then §7.3's checklist can be ticked against the new schema.
 	- The sample data has no photos, gallery or video, so it doesn't show CM3 (**OQ22**).
-- [x] 8.2 **The startup schema check (OQ20), in honuware,** so the next out-of-date database explains itself. Mason: *"I've been burned by this a lot."* ✅ 11/18, built; waiting on the bump point.
+- [x] 8.2 **The startup schema check (OQ20), in honuware,** so the next out-of-date database explains itself. Mason: *"I've been burned by this a lot."* ✅ 11/18. It's in honuware `0b249be`, which CF pins from 11/19.
 	- At startup, the server compares the tables and columns in its composed `DatabaseInfo` with what `information_schema` says the database has.
 	- Anything missing gets one clear warning, listing every missing table and column, for example: "The database is older than this build: missing table event_gallery_photos; missing column events.video_url. Run --recreate_database (dev) or --migrate."
 	- The server keeps running. Extra tables or columns the build doesn't know about are ignored.
@@ -477,16 +477,16 @@ As OQ19 decided (all four recommendations):
 ### 13. A configurable upload limit, shared with knottyyoga (OQ13, OQ21)
 
 A cross-repo bump point: Mason pushes honuware and publishes `@honuware/ui`, then I re-pin CF and verify a fresh pinned build, then Mason commits. knottyyoga follows the same way.
-- [x] 13.1 **honuware server:** `GET`/`PUT /api/admin/image_upload_settings` under `admin_portal`, for `image_max_upload_bytes`, with the default and allowed range (10 MB; 1–50 MB per OQ21), refusing values out of range. ✅ 11/18, built; waiting on the bump point.
+- [x] 13.1 **honuware server:** `GET`/`PUT /api/admin/image_upload_settings` under `admin_portal`, for `image_max_upload_bytes`, with the default and allowed range (10 MB; 1–50 MB per OQ21), refusing values out of range. ✅ 11/18. It's in honuware `0b249be`, which CF pins from 11/19.
 	- A read that any signed-in session can call returns the limit, so the upload control knows it.
 	- The upload routes' existing check stays the last word.
 	- **Tests.**
-- [x] 13.2 **honuware web components:** ✅ 11/18, built; waiting on publishing.
+- [x] 13.2 **honuware web components:** ✅ 11/18. Published as `@honuware/ui` 0.4.0 on 11/19, which CF uses.
 	- `hw-photo-upload` reads the limit. It says before uploading when a file is still too big after shrinking, instead of waiting for the server's refusal.
 	- Its "prepare the image" step becomes a public export, so an app can shrink a file it sends itself.
 	- A settings card for the limit, for an app to put on its settings page.
 	- **Specs.**
-- [x] 13.3 **CF:** a new admin-only "Site settings" page (OQ21) on the admin dashboard, holding the card. The submit form's flyer and §11's "Add a flyer" go through honuware's prepare step, so a flyer is shrunk to at most 4096 px and sent as a JPEG, as a curator's upload is. **Specs.** ✅ 11/18, built against the local library.
+- [x] 13.3 **CF:** a new admin-only "Site settings" page (OQ21) on the admin dashboard, holding the card. The submit form's flyer and §11's "Add a flyer" go through honuware's prepare step, so a flyer is shrunk to at most 4096 px and sent as a JPEG, as a curator's upload is. **Specs.** ✅ 11/18. Re-checked against the published 0.4.0 on 11/19.
 - [ ] 13.4 **knottyyoga:** the card on its settings page after the bump. That's knottyyoga's own change and gate.
 - **As built (§13), 11/18:**
 	- **13.1, honuware server:**
@@ -516,7 +516,10 @@ A cross-repo bump point: Mason pushes honuware and publishes `@honuware/ui`, the
 			- Otherwise the prepared JPEG is attached, so the flyer type sent is always `jpeg`.
 			- *This is a decision beyond the plan:* checking first means a too-big flyer can't leave a submission without its flyer.
 		- **Specs:** the page (it shows the limit, saves through the card, and links back), the dashboard's admin tiles, the guard keeping a curator out of `/admin/settings`, and too-big and unreadable flyers on both pages.
-	- **For the bump point:** CF's `node_modules/@honuware/ui` is currently overlaid with the local build, so CF builds and tests against the unpublished library. The published 0.3.1 is backed up at `C:\Users\mason\AppData\Local\Temp\claude\b5d20db9e86cf1f8\96e18d45-ccc9-47aa-91b9-9a3bcedb7877\scratchpad\honuware-ui-0.3.1-npm`. `npm install` after the version bump replaces the overlay. The library's version is OQ25.
+	- **The bump point (11/19):**
+		- honuware was pushed as `0b249be` ("CM3 Phase 2 — Schema check, upload limit, CSRF exemption"), and the web components as `@honuware/ui` 0.4.0 (tag `v0.4.0` at `1c4eb96`).
+		- CF's `GIT_TAG` is now `0b249be`, and `package.json` asks for `0.4.0`. `npm install` replaced the local overlay with the published package, and the lock file changed only that entry.
+		- *The first publish run stopped at the CI's version check:* the release commit hadn't bumped `projects/honuware-ui/package.json`, so nothing went out. A second commit bumped it, and the tag was moved there.
 
 ### 14. Leave the offline demo out of production builds (OQ16)
 
@@ -929,6 +932,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- **Rec: 0.4.0.** Below 1.0, a new minor version is the usual way to say "new features", and CF's `"@honuware/ui": "0.3.1"` pin won't pick it up by surprise.
 	- **Alternative:** 0.3.2, if you keep minor bumps for breaking changes.
 	- **What I need from you:** the number when you publish. I'll put it in CF's `package.json` at the re-pin.
+	- **Decided (11/19): 0.4.0.** Mason published it, and CF uses it.
 
 # Change Log
 

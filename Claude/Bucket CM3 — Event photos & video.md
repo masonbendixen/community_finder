@@ -430,6 +430,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		3. **Leave it.** Most flyers fit.
 	- *Rec: option 1,* because it keeps one copy of the code and knottyyoga could use it too. Until it's published, option 3.
 	- **What I need from you:** which option, and for option 1, whether you'll make the web-components change or want me to draft it.
+	- Mason- I like having a limit but this should be configurable in the site settings (and defaul to 10MB). We can change this in web components as well and have knotty yoga get the same feature.
 
 14. **Should someone be able to add or replace a flyer after sending, from "My submissions"?**
 	- **Now:** a flyer can only be attached in the moment the form is sent. If that upload fails (too large, or a dropped connection), nothing else on the site lets them add one. The form also says we don't take events by email, so they can't send it any other way.
@@ -439,12 +440,14 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- It also covers the gap in OQ15.
 	- *Alternative:* leave it; a curator can add a photo when they review.
 	- **What I need from you:** "yes" or "leave it".
+	- Mason- Yes
 
 15. **Keep the chosen flyer when submissions pause mid-form?**
 	- **Now:** if curators pause submissions while someone has the form open, pressing Send shows the "We're not taking event submissions right now" notice. After "Check again", the form comes back with everything typed, but the flyer they picked is gone and has to be picked again. The picker is rebuilt along with the form.
 	- *Rec: keep it.* The page holds on to the chosen file and gives it back to the new picker. This is a small fix, with a spec.
 	- *Alternative:* leave it. A pause is rare, and the person can pick the file again.
 	- **What I need from you:** "agreed" or "leave it".
+	- Mason- I say leave it. This is extreme edge case to me that isn't worth complicating the system for.
 
 16. **Should production builds leave out the offline demo?**
 	- **Background:** `app.config.ts` decides at runtime, from `environment.useMock`, whether to use the offline mock or the real server. So every production visitor downloads all the mock code and demo data, though the site never runs it.
@@ -458,6 +461,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 	- *Rec: yes, as its own small change after CM3,* so this bucket's diff stays about photos.
 	- *Alternative:* leave it. 44 kB is noticeable on a slow phone, but not serious.
 	- **What I need from you:** "yes" (and whether now or later) or "leave it".
+	- Mason- Yes, let's go with your recommendation.
 
 17. **Are the three seeded accounts still using the password `changeme`? (Outside CM3, but it's a security question.)**
 	- **What I found while measuring OQ16:** `create_database.cpp` (lines 108–113) creates your, Levi's and Caleb's accounts with the password `changeme`.
@@ -474,6 +478,7 @@ That's the outline's **CM3 — Event photos**, "galleries on events/venues + the
 		- whether the live accounts are still on `changeme`;
 		- which seed fix you want;
 		- whether this belongs in CM3 or in a separate security item.
+	- Mason- The site isn't live. Please leave this as is. We will change those passwords during deploy.
 
 18. **What should the offline demo's video be?**
 	- **Now:** in the local build, Leather Night has a video. Its id, `demoVideo01`, is made up. The play tile works, but pressing it opens YouTube's player showing "Video unavailable". The browser still has internet in the local build, so a real id would play.

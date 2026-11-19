@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
-Last Updated: 11/18/2026
-Version: 0.7
+Last Updated: 11/19/2026
+Version: 0.7.1
 tags:
 ---
 
@@ -545,9 +545,10 @@ In its own commit.
 
 ### 16. Gates for Phase 2
 
-- [ ] 16.1 Docker plus Windows green after each server slice ("Windows: N passed. Linux: M passed."), with the floor raised at the end.
+- [x] 16.1 Docker plus Windows green after each server slice ("Windows: N passed. Linux: M passed."), with the floor raised at the end. ✅ 11/19
+	- **Strict pinned to honuware `0b249be` (fresh clone, no override): Windows 2572 passed. Linux 2572 passed.** The floor is raised from 2515 to 2562 (`server/docker/build_and_test.sh`).
 	- **11/18, co-dev (CF built against the local honuware tree): Windows 2572 passed. Linux 2572 passed** (was 2525). honuware's own Linux gate for the new honuware tests: 58 passed.
-	- **The floor stays 2515 until the re-pin.** A pinned build will be 2572 once honuware is pushed: about 20 of today's count are honuware's new tests (CsrfGuard 3, SchemaCheck 5, ImageUploadLimit 5, ImageUploadSettings 7), which a pinned `838045f` build doesn't have. The floor goes up at §16.3.
+	- The floor stayed 2515 until the re-pin, because 20 of those tests are honuware's new ones (CsrfGuard 3, SchemaCheck 5, ImageUploadLimit 5, ImageUploadSettings 7), which a build pinned to `838045f` didn't have.
 - [x] 16.2 Vitest green with the count, and `ng build` for local, development and production. §14's bundle change is recorded. ✅ 11/18
 	- **Vitest: 620 passed in 74 files** (was 562 in 71), against the local `@honuware/ui` build.
 	- `ng build` passes for production, development and local.
@@ -555,7 +556,9 @@ In its own commit.
 		- **Since §14, initial grew 7.7 kB:** the new library's `photos` entry went from 7.6 to 14.2 kB up front, because it now holds the prepare step, the limit check and the settings card.
 		- It's up front because the account pages (`/account`, `/account/submissions`) load eagerly and use `photos`. Lazy-loading them would take all 14.2 kB out of the initial bundle. That's a small follow-up for any later bucket; it isn't planned here.
 		- The 500 kB budget warning was already there.
-- [ ] 16.3 §13's bump point verified with a fresh pinned build.
+- [x] 16.3 §13's bump point verified with a fresh pinned build. ✅ 11/19
+	- **C++:** Windows 2572 passed, Linux 2572 passed, both fresh at `0b249be` (§16.1). The Linux log says "pinned SHA". The Windows tree's override is empty, and its `_deps/honuware-src` is at `0b249be`.
+	- **Client, on the published `@honuware/ui` 0.4.0:** Vitest 620 passed in 74 files. `ng build` passes for production, development and local. Production's initial bundle is 904.28 kB, the same as against the local build.
 - [ ] 16.4 The manual loop (§7.4) gains:
 	- the Edit Event list and search;
 	- editing a gallery photo's words;
@@ -982,6 +985,19 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/19/2026 (v0.7.1)** — §13's bump point is done (§16.3).
+	- Mason pushed honuware as `0b249be` and published `@honuware/ui` 0.4.0 (OQ25 decided).
+	- CF re-pinned to both:
+		- `GIT_TAG` is `0b249be`;
+		- `package.json` asks for `0.4.0`, and `npm install` replaced the local overlay.
+	- **Strict pinned gates:** Windows 2572 passed. Linux 2572 passed. The floor is now 2562.
+	- **Client on the published library:** Vitest 620 passed. All three builds pass.
+	- *The first publish stopped at the CI's tag-and-version check* (the version file still said 0.3.1). A second commit bumped it and the tag moved there. Nothing was published until that run.
+	- **Still to do:**
+		- Mason commits CF;
+		- knottyyoga's own follow-up (§8.2's call and §13.4's card);
+		- the checks that need hands (§8.1, §7.3, §7.4, §16.4);
+		- OQ24.
 - **11/18/2026 (v0.7)** — Phase 2 is built (§8.2, §9–15, §18), across all three repos. It waits on the §13 bump point, and on the checks that need hands (§8.1's event page, §7.3, §16.4).
 	- **CF server:**
 		- the curator search route behind Edit Event (§9);

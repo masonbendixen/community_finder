@@ -585,7 +585,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 - [x] 17.2 **The video's real still: YouTube's or Vimeo's own player, on the page from the start** (OQ23: "the full player"). ✅ 11/18
 	- **`VideoEmbed`:**
 		- The tile, the play button, "Plays from …" and the press handling are gone.
-		- It's now one frame, titled "Video: <title>", with fullscreen allowed.
+		- It's now one frame, titled `Video: <title>`, with fullscreen allowed.
 		- It has `loading="lazy"`, so a visitor who never scrolls near it never loads the player.
 		- The address is still built only from `{provider, id}` and trusted once per video.
 	- **`videoEmbedUrl`:** no autoplay any more, since nobody has pressed anything. It's now `youtube-nocookie.com/embed/<id>` and `player.vimeo.com/video/<id>?dnt=1`.

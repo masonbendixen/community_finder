@@ -928,6 +928,7 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- **Rec: leave it until a Guide curator role exists,** and do it in that bucket (GD2 or later). Then the guard admits `manage_guide` as well, and such a person sees only Manage Data, listing only the guide tables. The server already cuts the list, so it's a small client change with specs.
 	- **Alternative:** widen the guard now. It's about an hour with specs, and it's ready for whenever someone is given `manage_guide` by hand.
 	- **What I need from you:** "later", or "now".
+	- Mason- Let's do it now.
 25. **What version should the `@honuware/ui` release be?** *(Raised 11/18 for the §13 bump point.)*
 	- **Background:**
 		- The library is at 0.3.1. §13.2 adds the upload-limit seam, the prepare step, `preparePendingPhoto()`, the settings card and the mock.

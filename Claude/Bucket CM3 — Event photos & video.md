@@ -951,6 +951,15 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- **Alternative:** 0.3.2, if you keep minor bumps for breaking changes.
 	- **What I need from you:** the number when you publish. I'll put it in CF's `package.json` at the re-pin.
 	- **Decided (11/19): 0.4.0.** Mason published it, and CF uses it.
+26. **`--recreate_database` ignores `HONUWARE_DB_NAME` when it drops the database.** *(Found 11/20 while writing the Phase 2 test steps.)*
+	- **Background:**
+		- `CreateAndPopulateDatabases` (`database_helper/create_database.cpp`) drops and re-creates the database named in code, `communityfinder`.
+		- It then connects through `MakeProductionDatabaseHelper`, which honors `HONUWARE_DB_NAME`.
+		- So with `HONUWARE_DB_NAME=scratch` set, the helper **drops the dev database** `communityfinder`, then builds the schema in `scratch` (or fails if `scratch` doesn't exist). Pointing a recreate at a throwaway database, which is the obvious way to try something destructive, destroys the real one.
+		- Nothing has gone wrong yet. The live-gate recipe avoids it by renaming the dev database aside first.
+	- **Rec: make the drop-and-create use the same resolved name as the connection,** in CF's `create_database.cpp`, and log that name before dropping. It's a few lines. A test can't run a real drop, so the test would check the resolved name instead. knottyyoga probably has the same shape and would want the same fix.
+	- **Alternative:** have the helper refuse to run when `HONUWARE_DB_NAME` is set. That's safer still, but it gives up recreating a scratch database by name.
+	- **What I need from you:** "fix it" (Rec), "refuse", or "leave it".
 
 # Change Log
 

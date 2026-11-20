@@ -472,7 +472,13 @@ As OQ19 decided (all four recommendations):
 		- **The table picker needed no change:** honuware's `get_db_schema` already cuts `root_tables` to what the caller's permissions reach, so a curator's picker lists only the events tables.
 		- The header's Admin link shows for curators too.
 		- **Specs:** the guard (a curator in and kept out, an admin everywhere, a member and a signed-out visitor), the dashboard per role, and the header.
-		- *Unchanged, and worth deciding:* someone holding only `manage_guide` still can't reach `/admin`, so they can't reach the guide tables the server would let them edit. That was true under `AdminGuard` too (OQ24).
+		- **OQ24 (11/20):** guide curators (`manage_guide`) now get in too.
+			- `/admin`'s door is `AdminAreaGuard` (an admin, or `manage_events`, or `manage_guide`). `ManageEventsGuard` moved onto the two Events routes.
+			- A guide curator sees Manage Data alone, listing the guide tables.
+			- **Specs:**
+				- `admin-area.guard.spec.ts` covers every kind of person through the real routes: events curator, guide curator, both, admin, member, signed out.
+				- The dashboard and the header cover a guide curator, and someone curating both.
+			- **Server test:** `EachCuratorsTableListHoldsOnlyTheirOwnTables`. Each kind of curator's `root_tables` holds their own tables and the shared `venues`. Neither sees the other's private tables, or `people` and `roles`.
 
 ### 13. A configurable upload limit, shared with knottyyoga (OQ13, OQ21)
 
@@ -565,6 +571,7 @@ In its own commit.
 	- adding, replacing and removing a flyer from "My submissions";
 	- a removal request arriving in each inbox;
 	- a curator who isn't an admin, using the Events pages and kept out of Users and Roles;
+	- a guide curator (OQ24), seeing only Manage Data with the guide tables, and kept out of the Events pages;
 	- the video showing as YouTube's player, with its still, on an event and a series. Check one Vimeo video too (§17.2);
 	- a fresh `--populate_sample_data` showing photos, a gallery and the video, after §18;
 	- a server started on an old database printing §8.2's warning.
@@ -929,6 +936,13 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 	- **Alternative:** widen the guard now. It's about an hour with specs, and it's ready for whenever someone is given `manage_guide` by hand.
 	- **What I need from you:** "later", or "now".
 	- Mason- Let's do it now.
+	- **Decided (11/20): now.** Built (see §12.5's as-built notes):
+		- **The door:** `core/guards/admin-area.guard.ts` adds `canManageGuide`, `canUseAdminArea` and `AdminAreaGuard`. `/admin` now lets in admins, events curators and guide curators.
+		- **The Events pages:** `/admin/events` and `/admin/events/settings` now carry `ManageEventsGuard` of their own, so a guide curator can't reach them.
+		- **Manage Data** stays open to everyone the door lets in.
+		- **The dashboard:** a guide curator sees only Manage Data, described as "Browse and edit the guide tables". Someone holding both permissions gets "the events and guide tables". The header's Admin links follow the door.
+		- **Server:** no code change. A new test pins down what each curator's table list holds: `CommunityFinderCrudTest.EachCuratorsTableListHoldsOnlyTheirOwnTables`.
+		- **Still true:** no seeded role holds `manage_guide`. To try it, make a role holding `manage_guide` in Manage Data (`roles` + `role_permissions`), then assign it on the Roles page.
 25. **What version should the `@honuware/ui` release be?** *(Raised 11/18 for the §13 bump point.)*
 	- **Background:**
 		- The library is at 0.3.1. §13.2 adds the upload-limit seam, the prepare step, `preparePendingPhoto()`, the settings card and the mock.

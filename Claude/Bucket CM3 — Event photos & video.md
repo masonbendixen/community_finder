@@ -3,8 +3,8 @@ fileClass: Project
 Category: Claude
 Status: Draft
 Authors: Claude (draft) · Mason Bendixen
-Last Updated: 11/19/2026
-Version: 0.7.1
+Last Updated: 11/20/2026
+Version: 0.7.2
 tags:
 ---
 
@@ -1009,6 +1009,17 @@ Mason: *"I put a video in the event. When I click on the event, it shows the mai
 		- the seeded accounts' `changeme` password (OQ17, outside CM3, and the most urgent);
 		- a real video for the demo (OQ18).
 	- **Still to do:** §7.3, the live seed check (destructive, needs Mason's go-ahead), and §7.4, the manual loop (Mason or Levi).
+- **11/20/2026 (v0.7.2)** — OQ24 decided ("Let's do it now") and built: guide curators get into `/admin`.
+	- **Client:**
+		- `AdminAreaGuard` is the door: an admin, `manage_events` or `manage_guide`. `ManageEventsGuard` now guards the two Events routes.
+		- A guide curator's dashboard is Manage Data alone, "Browse and edit the guide tables". The header follows the door.
+		- Specs for every kind of person, through the real routes.
+	- **Server:** no code change. The new test `EachCuratorsTableListHoldsOnlyTheirOwnTables` shows each curator's table list holds only their own tables.
+	- **Gates:**
+		- Windows 2573 passed (pinned `0b249be`). Linux 2573 passed (built against the local honuware tree, which is exactly `0b249be`).
+		- Vitest 629 passed in 75 files. All three `ng build`s pass.
+		- The floor stays 2562.
+	- **OQ26 added:** `--recreate_database` drops `communityfinder` even when `HONUWARE_DB_NAME` names another database.
 - **11/19/2026 (v0.7.1)** — §13's bump point is done (§16.3).
 	- Mason pushed honuware as `0b249be` and published `@honuware/ui` 0.4.0 (OQ25 decided).
 	- CF re-pinned to both:
